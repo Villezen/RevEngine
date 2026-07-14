@@ -126,17 +126,17 @@ class MusicBeatSubState extends FlxSubState
      * Triggered every time the step changes.
      * @param step The current step index.
      */
-    public function stepHit(step:Float):Void {}
+    public function stepHit(step:Int):Void {}
 
     /**
      * Triggered every time the beat changes.
      * @param beat The current beat index.
      */
-	public function beatHit(beat:Float):Void {}
+	public function beatHit(beat:Int):Void {}
 
     /**
      * Triggered every time the measure changes.
      * @param measure The current measure index.
      */
-	public function measureHit(measure:Float):Void {}
+	public function measureHit(measure:Int):Void {}
 }

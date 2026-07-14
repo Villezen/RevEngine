@@ -39,8 +39,7 @@ class AsyncPaths
         }
 
         var realPath = Paths.getPath(cacheKey);
-        ThreadUtil.execAsync(function()
-        {
+        ThreadUtil.execAsync(() -> {
             var bmp:BitmapData = null;
 
             if (FileSystem.exists(realPath))
@@ -48,8 +47,7 @@ class AsyncPaths
             else if (!Path.isAbsolute(cacheKey) && Assets.exists(cacheKey))
                 bmp = Assets.getBitmapData(cacheKey, false);
 
-            MainLoop.runInMainThread(function()
-            {
+            MainLoop.runInMainThread(() -> {
                 if (bmp == null)
                 {
                     if (onComplete != null) onComplete(null);
@@ -96,8 +94,7 @@ class AsyncPaths
             return;
         }
 
-        ThreadUtil.execAsync(function()
-        {
+        ThreadUtil.execAsync(() -> {
             var audioBuffer:AudioBuffer = null;
             var snd:Sound = null;
             var wantsStream = stream && !preload && FileSystem.exists(realPath);
@@ -108,8 +105,7 @@ class AsyncPaths
                     audioBuffer = createEmbeddedBuffer(realPath, cacheKey);
             }
 
-            MainLoop.runInMainThread(function()
-            {
+            MainLoop.runInMainThread(() -> {
                 if (audioBuffer != null)
                     snd = Sound.fromAudioBuffer(audioBuffer);
                 else if (!wantsStream && !Path.isAbsolute(cacheKey) && Assets.exists(cacheKey))
@@ -164,12 +160,12 @@ class AsyncPaths
             {
                 if (onComplete != null)
                     onComplete(cacheKey);
+
                 return;
             }
         }
 
-        ThreadUtil.execAsync(function()
-        {
+        ThreadUtil.execAsync(() -> {
             var fnt:Font = null;
 
             if (FileSystem.exists(realPath))
@@ -177,8 +173,7 @@ class AsyncPaths
             else if (!Path.isAbsolute(cacheKey) && Assets.exists(cacheKey))
                 fnt = Assets.getFont(cacheKey, true);
 
-            MainLoop.runInMainThread(function()
-            {
+            MainLoop.runInMainThread(() -> {
                 if (Assets.cache.hasFont(cacheKey))
                 {
                     if (onComplete != null) onComplete(cacheKey);
@@ -229,8 +224,7 @@ class AsyncPaths
         var cacheKey = absolute ? file : 'assets/$folder/$file';
         var realPath = Paths.getPath(cacheKey);
 
-        ThreadUtil.execAsync(function()
-        {
+        ThreadUtil.execAsync(() -> {
             var raw:String = "";
 
             if (!Path.isAbsolute(cacheKey) && Assets.exists(cacheKey))
@@ -238,10 +232,8 @@ class AsyncPaths
             else if (FileSystem.exists(realPath))
                 raw = File.getContent(realPath);
 
-            MainLoop.runInMainThread(function()
-            {
-                if (onComplete != null)
-                    onComplete(raw);
+            MainLoop.runInMainThread(() -> {
+                if (onComplete != null) onComplete(raw);
             });
         });
     }

@@ -137,6 +137,9 @@ class MusicBeatState extends FlxState implements IEventHandler
         ModuleHandler.call(event);
     }
 
+    /**
+     * Gets called for scripts when an event gets dispatched.
+     */
     public function onDispatchEvent(event:ScriptEvent)
     {
         dispatchEvent(event);
@@ -149,6 +152,7 @@ class MusicBeatState extends FlxState implements IEventHandler
     {
         isResetting = true;
 
+        TransitionLoader.skipTransitions = true;
         PolymodManager.reloadMods();
         Manager.resetState();
 

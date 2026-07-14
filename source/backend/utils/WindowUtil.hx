@@ -8,7 +8,7 @@ import lime.ui.MessageBoxType;
 /**
  * A class focused around utulizing the game's window.
  */
-class WindowUtil
+final class WindowUtil
 {
     private static var initialized:Bool = false;
     

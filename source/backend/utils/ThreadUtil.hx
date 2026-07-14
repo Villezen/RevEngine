@@ -6,92 +6,96 @@ import sys.thread.Mutex;
 
 final class ThreadUtil
 {
+    /**
+     * The maximum amount of threads that this class can use.
+     */
     public static var maxThreads:Int = 4;
 
+    /**
+     * Threads in use for a process.
+     */
     static var threads:Array<Thread> = [];
-    static var pendingExecs:Deque<Void->Void> = new Deque();
-    static var threadMutex:Mutex = new Mutex();
-    static var threadUsed:Int = 0;
 
     /**
-     * Creates a new Thread with an error handler.
+     * Pending async executions.
      */
-    public static function createSafe(func:Void->Void, autoRestart:Bool = false):Thread
-    {
-        try
-        {
-            return if (autoRestart) Thread.create(() ->
-            {
-                var restart = true;
-                while (restart) try
-                {
-                    func();
-                    restart = false;
-                }
-                catch (e) trace(e.details());
-            })
-            else Thread.create(() ->
-            {
-                try {func();}
-                catch (e) trace(e.details());
-            });
-        }
-        catch (e) trace("Failed to safely create a thread: " + e.details());
+    static var pendingExecs:Deque<Void->Void> = new Deque();
 
-        return null;
-    }
+    /**
+     * Thread in mutual exclusion.
+     */
+    static var threadMutex:Mutex = new Mutex();
 
-    static function threadExecAsync()
+    /**
+     * Threads with an active task.
+     */
+    static var threadUsed:Int = 0;
+
+    static function threadExecAsync():Void
     {
         var callback:Void->Void;
 
         while ((callback = pendingExecs.pop(true)) != null)
         {
-            threadMutex.acquire();
-            threadUsed++;
-            threadMutex.release();
+            updateMutex(threadMutex, threadUsed, true);
+            
+            trace(threadUsed);
 
-            try 
+            try
             {
                 callback();
             }
             catch (e)
-                trace("[X] ASYNC THREADING ERROR: " + e.details());
-
-            threadMutex.acquire();
-            threadUsed--;
-            threadMutex.release();
+                trace("ASYNC THREADING ERROR: " + e.details(), "ERROR");
+            
+            updateMutex(threadMutex, threadUsed, false);
         }
     }
 
-    public static function execAsync(func:Void->Void)
+    /**
+     * Acquires to the mutex, adds or removes to the used threads and then releases from the mutex.
+     */
+    static function updateMutex(mutex:Mutex, used:Int, add:Bool):Void
     {
-        if (func == null) return;
+        mutex.acquire();
+        used += (add ? 1 : -1);
+        mutex.release();
+    }
+
+    /**
+     * Executes a function asynchronously.
+     * @param func Function to execute.
+     */
+    public static function execAsync(?func:Void->Void):Void
+    {
+        // Stop execution in case func gets destroyed.
+        if (func == null) 
+        {
+            return;
+        }
 
         pendingExecs.add(func);
-
         threadMutex.acquire();
 
-        var currentUsed = threadUsed;
-        var currentTotal = threads.length;
+        var currentUsed:Int = threadUsed;
+        var currentTotal:Int = threads.length;
 
         threadMutex.release();
 
-        if (currentUsed >= currentTotal)
+        if (currentUsed < currentTotal || currentTotal >= maxThreads) 
         {
-            if (currentTotal >= maxThreads) 
-                return;
-
-            threadMutex.acquire();
-            try
-            {
-                var thread = Thread.create(threadExecAsync);
-                threads.push(thread);
-            }
-            catch (e) 
-                trace(e.details());
-            
-            threadMutex.release();
+            return;
         }
+
+        threadMutex.acquire();
+
+        try
+        {
+            threads.push(Thread.create(threadExecAsync));
+        }
+        catch (e) 
+            trace("ERROR WHILE ATTEMPTING TO PUSH THREAD: " + e.details(), "ERROR");
+        
+        threadMutex.release();
     }
 }

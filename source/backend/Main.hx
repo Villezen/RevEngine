@@ -61,7 +61,4 @@ class Main extends Sprite
 		for (debugDisplay in [displayBox, framerateCounter, memoryCounter])
 			addChild(debugDisplay);
     }
-
-	// Temporary (?)
-	public static function execAsync(func:Void->Void) ThreadUtil.execAsync(func);
 }

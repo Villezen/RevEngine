@@ -14,39 +14,11 @@ import flixel.math.FlxMath;
  * @see cpp.vm.Gc
  */
 @:nullSafety
-class MemoryUtil
+final class MemoryUtil
 {
-    public static function buildGCInfo():String
-    {
-        #if cpp
-        var result:String = 'HXCPP-Immix:';
-        result += '\n- Memory Used: ${cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_USAGE)} bytes';
-        result += '\n- Memory Reserved: ${cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_RESERVED)} bytes';
-        result += '\n- Memory Current Pool: ${cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_CURRENT)} bytes';
-        result += '\n- Memory Large Pool: ${cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_LARGE)} bytes';
-        result += '\n- HXCPP Debugger: ${#if HXCPP_DEBUGGER 'Enabled' #else 'Disabled' #end}';
-        result += '\n- HXCPP Exp Generational Mode: ${#if HXCPP_GC_GENERATIONAL 'Enabled' #else 'Disabled' #end}';
-        result += '\n- HXCPP Exp Moving GC: ${#if HXCPP_GC_MOVING 'Enabled' #else 'Disabled' #end}';
-        result += '\n- HXCPP Exp Moving GC: ${#if HXCPP_GC_DYNAMIC_SIZE 'Enabled' #else 'Disabled' #end}';
-        result += '\n- HXCPP Exp Moving GC: ${#if HXCPP_GC_BIG_BLOCKS 'Enabled' #else 'Disabled' #end}';
-        result += '\n- HXCPP Debug Link: ${#if HXCPP_DEBUG_LINK 'Enabled' #else 'Disabled' #end}';
-        result += '\n- HXCPP Stack Trace: ${#if HXCPP_STACK_TRACE 'Enabled' #else 'Disabled' #end}';
-        result += '\n- HXCPP Stack Trace Line Numbers: ${#if HXCPP_STACK_LINE 'Enabled' #else 'Disabled' #end}';
-        result += '\n- HXCPP Pointer Validation: ${#if HXCPP_CHECK_POINTER 'Enabled' #else 'Disabled' #end}';
-        result += '\n- HXCPP Profiler: ${#if HXCPP_PROFILER 'Enabled' #else 'Disabled' #end}';
-        result += '\n- HXCPP Local Telemetry: ${#if HXCPP_TELEMETRY 'Enabled' #else 'Disabled' #end}';
-        result += '\n- HXCPP C++11: ${#if HXCPP_CPP11 'Enabled' #else 'Disabled' #end}';
-        result += '\n- Source Annotation: ${#if annotate_source 'Enabled' #else 'Disabled' #end}';
-        #elseif js
-        var result:String = 'JS-MNS:';
-        result += '\n- Memory Used: ${getGCMemory()} bytes';
-        #else
-        var result:String = 'Unknown GC';
-        #end
-
-        return result;
-    }
-
+    /**
+     * If the system can get the program's memory amount from its task.
+     */
     public static function supportsTaskMem():Bool
     {
         #if ((cpp && (windows || ios || macos)) || linux || android)
@@ -56,6 +28,9 @@ class MemoryUtil
         #end
     }
 
+    /**
+     * Gets the actual amount of memory the task of the program is using in MegaBytes.
+     */
     public static function getTaskMemory():Float
     {
         var rawMemory:Float = 0.0;
@@ -101,6 +76,9 @@ class MemoryUtil
         return rawMemory;
     }
 
+    /**
+     * Get the memory amount reported by openfl's Garbage collector
+     */
     public static function getGCMemory():Float
     {
         return openfl.system.System.totalMemoryNumber;
@@ -159,6 +137,9 @@ class MemoryUtil
         #end
     }
 
+    /**
+     * Frees the unused memory from the task.
+     */
     public static function freeUnusedMemory():Void
     {
         #if cpp
@@ -226,6 +207,9 @@ class MemoryUtil
 
     // Functions down below are used for the Memory Counter.
 
+    /**
+     * Rounds the memory amount, can also format the amount to be used as a gigabyte count.
+     */
     public static function roundMemory(memValue:Float, roundToGB:Bool = true, roundToInt:Bool = false):Float
     {
         var megabytesMemory:Float = (Math.abs(FlxMath.roundDecimal(memValue / (1024 * 1024), 1)));
@@ -240,11 +224,12 @@ class MemoryUtil
     }
 
     /**
-     * Tells the counter what type of memory measurement to display
-     * If the megabytes count is 1024 or over, display it as "GB", otherwise just displays "MB"
+     * What type of memory measurement to display based on the current @param memValue amount.
+     * If the megabytes count equal or more than 1024, returns "GB", otherwise it will just display "MB"
      */
-    public static function setMemoryUnitString(memValue:Float):String
+    public static function setMemoryUnitString(memValue:Float, rounded:Bool = true):String
     {
-        return (roundMemory(memValue, false, false) >= 1024 ? "GB" : "MB");
+        var mem:Float = (!rounded ? roundMemory(memValue, false, false) : memValue*0.000001);
+        return mem >= 1024 ? "GB" : "MB";
     }
 }
