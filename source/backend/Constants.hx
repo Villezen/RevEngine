@@ -64,7 +64,7 @@ class Constants
     /**
      * Descriptive string identifying the current build version.
      */
-    public static final VERSION_STRING:String = '0.0.1';
+    public static final VERSION_STRING:String = '0.0.2';
 
     /**
      * Checks if this build is in debugging mode or not.
