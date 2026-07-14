@@ -49,8 +49,14 @@ class FreeplaySubStateScript extends MusicBeatSubState
 
     var difficultySelector:DifficultySelector;
 
+    var cardLayer = null;
+    var currentCard:BackingCard = null;
+    var introFinished:Bool = false;
+
     override function create()
     {
+        BackingCardHandler.load();
+
         camCapsules = new FlxCamera();
         camCapsules.bgColor = 0x00000000;
         FlxG.cameras.add(camCapsules, false);
@@ -75,8 +81,11 @@ class FreeplaySubStateScript extends MusicBeatSubState
         card.setGraphicSize(0, FlxG.height + 1);
         card.updateHitbox();
         card.color = 0xFFFFD4E9;
-        card.x -= card.width; 
+        card.x -= card.width;
         add(card);
+
+        cardLayer = BackingCard.createLayer();
+        add(cardLayer);
 
         FlxTween.tween(card, {x: 0}, 0.6, {ease: FlxEase.quartOut});
 
@@ -144,7 +153,35 @@ class FreeplaySubStateScript extends MusicBeatSubState
         buildDifficultySelector();
         rebuildSongList();
 
+        activateCard();
+
         super.create();
+    }
+
+    function activateCard()
+    {
+        currentCard = BackingCardHandler.get(CURRENT_CHARACTER);
+
+        if (currentCard == null) return;
+
+        currentCard.onCreate(this);
+        currentCard.onCardCreate(this);
+        currentCard.onPostCreate(this);
+
+        if (introFinished)
+            currentCard.onIntroDone(this);
+    }
+
+    function deactivateCard()
+    {
+        if (currentCard != null)
+        {
+            currentCard.onDestroy(this);
+            currentCard = null;
+        }
+
+        if (cardLayer != null)
+            cardLayer.clear();
     }
 
     override function update(elapsed)
@@ -202,6 +239,9 @@ class FreeplaySubStateScript extends MusicBeatSubState
         var targetAmt:Float = (Math.sin(hintTimer) + 1) / 2;
         charSelectHint.alpha = FlxMath.lerp(0.3, 0.9, targetAmt);
 
+        if (currentCard != null && currentCard.active)
+            currentCard.onUpdate(this, elapsed);
+
         super.update(elapsed);
     }
 
@@ -209,6 +249,9 @@ class FreeplaySubStateScript extends MusicBeatSubState
     {
         if (bopper != null && beat % 2 == 0 && !busy)
             bopper.playAnim("idle", {force: true});
+
+        if (currentCard != null && currentCard.active)
+            currentCard.onBeatHit(this, Std.int(beat));
 
         super.beatHit(beat);
     }
@@ -239,6 +282,11 @@ class FreeplaySubStateScript extends MusicBeatSubState
         card.color = 0xFFFFD863;
 
         bopper.playAnim("idle", {force: true});
+
+        introFinished = true;
+
+        if (currentCard != null)
+            currentCard.onIntroDone(this);
 
         if (menuSong != null)
             menuSong.play();
@@ -344,12 +392,16 @@ class FreeplaySubStateScript extends MusicBeatSubState
         idx = (idx + change) % availableCharacters.length;
         if (idx < 0) idx += availableCharacters.length;
 
+        deactivateCard();
+
         CURRENT_CHARACTER = availableCharacters[idx];
 
         FunkinSound.playOnce(Paths.sound('engine/scroll'), 0.4);
 
         rebuildSongList();
         updateDots();
+
+        activateCard();
     }
 
     function filterSongs()
@@ -633,6 +685,9 @@ class FreeplaySubStateScript extends MusicBeatSubState
         FunkinSound.playOnce(Paths.sound('engine/confirm'));
         item.confirm();
 
+        if (currentCard != null)
+            currentCard.onSelect(this, song);
+
         FlxTimer.wait(1, () -> shouldEnter = true);
 
         pendingSong = song.id;
@@ -660,6 +715,9 @@ class FreeplaySubStateScript extends MusicBeatSubState
 
     override function destroy()
     {
+        deactivateCard();
+        BackingCardHandler.clear();
+
         if (camCapsules != null)
         {
             FlxG.cameras.remove(camCapsules);

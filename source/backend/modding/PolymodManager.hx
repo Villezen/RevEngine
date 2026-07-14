@@ -89,6 +89,8 @@ class PolymodManager
         Polymod.addDefaultImport(backend.modding.ModState);
         Polymod.addDefaultImport(backend.modding.events.ScriptEvent);
         Polymod.addDefaultImport(backend.modding.modules.Module);
+        Polymod.addDefaultImport(backend.modding.modules.BackingCard);
+        Polymod.addDefaultImport(backend.modding.handlers.BackingCardHandler);
         Polymod.addDefaultImport(backend.modding.songs.SongModule);
         Polymod.addDefaultImport(backend.modding.songs.SongEventModule);
 
@@ -129,6 +131,7 @@ class PolymodManager
         Polymod.addDefaultImport(backend.ui.Bar);
         Polymod.addDefaultImport(backend.ui.Checkbox);
         Polymod.addDefaultImport(backend.ui.InputBox);
+        Polymod.addDefaultImport(backend.ui.BGScrollingText);
 
         Polymod.addDefaultImport(flixel.FlxBasic);
         Polymod.addDefaultImport(flixel.FlxCamera);
@@ -139,6 +142,7 @@ class PolymodManager
         Polymod.addDefaultImport(flixel.FlxState);
         Polymod.addDefaultImport(flixel.FlxStrip);
         Polymod.addDefaultImport(flixel.FlxSubState);
+        Polymod.addDefaultImport(flixel.group.FlxSpriteGroup);
 
         Polymod.addDefaultImport(flixel.graphics.FlxGraphic);
 
