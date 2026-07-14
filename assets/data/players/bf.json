@@ -1,0 +1,26 @@
+{
+    "name": "Boyfriend",
+
+    "characters":
+    [
+        "bf"
+    ],
+
+    "freeplay": 
+    {
+        "skin": "bf",
+
+        "bands":
+        {
+            "text": ["BOYFRIEND", "HOT BLOODED IN MORE WAYS THAN ONE", "PROTECT YO NUTS"],
+            "color": ["#FF9963", "#FFF383", "#FFFFFF"],
+            "speed": [-3.8, 6.8, 3.5]
+        }
+    },
+
+    "characterSelect":
+    {
+        "unlocked": true,
+        "position": 4
+    }
+}

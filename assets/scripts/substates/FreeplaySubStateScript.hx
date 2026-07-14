@@ -17,7 +17,7 @@ class FreeplaySubStateScript extends MusicBeatSubState
 
     var menuSong:FunkinSound;
 
-    var card:FunkinSprite;
+    public var card:FunkinSprite;
     var backingImage:FunkinSprite;
     var blackOverlay:FunkinSprite;
     var bopper:FunkinSprite;
@@ -52,6 +52,26 @@ class FreeplaySubStateScript extends MusicBeatSubState
     var cardLayer = null;
     var currentCard:BackingCard = null;
     var introFinished:Bool = false;
+
+    var bands:Array<BGScrollingText> = [];
+
+    var cardGlow:FunkinSprite;
+    var orangeBox:FunkinSprite;
+    var orangeAccent:FunkinSprite;
+    var confirmGlow:FunkinSprite;
+    var confirmGlow2:FunkinSprite;
+
+    var yeahText:FunkinSprite;
+    var bigShoesText:FunkinSprite;
+    var yesYesYesText:FunkinSprite;
+    var getItText:FunkinSprite;
+
+    var yeahTextBlurred:FunkinSprite;
+    var bigShoesTextBlurred:FunkinSprite;
+    var yesYesYesTextBlurred:FunkinSprite;
+    var getItTextBlurred:FunkinSprite;
+
+    var revealed:Bool = false;
 
     override function create()
     {
@@ -162,18 +182,29 @@ class FreeplaySubStateScript extends MusicBeatSubState
     {
         currentCard = BackingCardHandler.get(CURRENT_CHARACTER);
 
-        if (currentCard == null) return;
+        resetBackingCard();
+        createBackingCard();
 
-        currentCard.onCreate(this);
-        currentCard.onCardCreate(this);
-        currentCard.onPostCreate(this);
+        if (currentCard != null)
+        {
+            currentCard.onCreate(this);
+            currentCard.onCardCreate(this);
+            currentCard.onPostCreate(this);
+        }
 
         if (introFinished)
-            currentCard.onIntroDone(this);
+        {
+            revealBackingCard();
+
+            if (currentCard != null)
+                currentCard.onIntroDone(this);
+        }
     }
 
     function deactivateCard()
     {
+        destroyBackingCard();
+
         if (currentCard != null)
         {
             currentCard.onDestroy(this);
@@ -181,7 +212,295 @@ class FreeplaySubStateScript extends MusicBeatSubState
         }
 
         if (cardLayer != null)
+        {
+            var oldMembers = cardLayer.members.copy();
             cardLayer.clear();
+
+            for (member in oldMembers)
+            {
+                if (member != null)
+                {
+                    FlxTween.cancelTweensOf(member);
+                    member.destroy();
+                }
+            }
+        }
+    }
+
+    function resetBackingCard()
+    {
+        bands = [];
+        revealed = false;
+    }
+
+    function createBackingCard()
+    {
+        var w:Float = (card != null) ? card.width : 520;
+        var h:Float = (card != null) ? card.height : 720;
+
+        orangeBox = new FunkinSprite(0, 440).makeGraphic(Std.int(w), 80, 0xFFFEDA00);
+        orangeBox.visible = false;
+        cardLayer.add(orangeBox);
+
+        orangeAccent = new FunkinSprite(0, orangeBox.y).makeGraphic(110, 80, 0xFFFFD400);
+        orangeAccent.visible = false;
+        cardLayer.add(orangeAccent);
+
+        makeBand(160, "HOT BLOODED IN MORE WAYS THAN ONE ", FlxG.width, true, 43, 0xFFFFF383, 6.8);
+        makeBand(220, "BOYFRIEND ", FlxG.width / 2, false, 60, 0xFFFF9963, -3.8);
+        makeBand(285, "PROTECT YO NUTS ", FlxG.width / 2, true, 43, 0xFFFFFFFF, 3.5);
+        makeBand(335, "BOYFRIEND ", FlxG.width / 2, false, 60, 0xFFFF9963, -3.8);
+        makeBand(397, "HOT BLOODED IN MORE WAYS THAN ONE ", FlxG.width, true,  43, 0xFFFFF383, 6.8);
+        makeBand(450, "BOYFRIEND ", FlxG.width / 2, false, 60, 0xFFFEA400, -3.8);
+
+        confirmGlow2 = new FunkinSprite(-30, 200, 'menus/freeplay/characters/bf/confirmGlow2');
+        confirmGlow2.visible = false;
+        cardLayer.add(confirmGlow2);
+
+        confirmGlow = new FunkinSprite(-30, 200, 'menus/freeplay/characters/bf/confirmGlow');
+        confirmGlow.visible = false;
+        confirmGlow.blend = "add";
+        cardLayer.add(confirmGlow);
+
+        yeahTextBlurred = makeConfirmText(-3, 195, "yeah", "YEAH", true);
+        bigShoesTextBlurred = makeConfirmText(-3, 140, "BIG SHOES", "BIG SHOES", true);
+        yesYesYesTextBlurred = makeConfirmText(-3, 310, "YES YES YES", "YES YES YES", true);
+        getItTextBlurred = makeConfirmText(-3, 380, "GET IT", "GET IT", true);
+
+        yeahText = makeConfirmText(-3, 195, "yeah", "YEAH", false);
+        bigShoesText = makeConfirmText(-3, 140, "BIG SHOES", "BIG SHOES", false);
+        yesYesYesText = makeConfirmText(-3, 310, "YES YES YES", "YES YES YES", false);
+        getItText = makeConfirmText(-3, 380, "GET IT", "GET IT", false);
+
+        cardGlow = new FunkinSprite(-20, 0, 'menus/freeplay/cardGlow');
+        cardGlow.alpha = 1;
+        cardGlow.visible = false;
+        cardGlow.blend = 0;
+        cardLayer.add(cardGlow);
+    }
+
+    function makeConfirmText(x:Float, y:Float, name:String, prefix:String, glow:Bool):FunkinSprite
+    {
+        var spr = new FunkinSprite(x, y, 'menus/freeplay/characters/bf/backingText');
+        spr.addAnim(name, {prefix: prefix});
+        spr.playAnim(name, {force: true});
+        spr.visible = false;
+
+        if (glow)
+        {
+            spr.blend = "add";
+            spr.shader = new GaussianBlurShader(2);
+
+            if (spr.atlasSpr != null)
+                spr.atlasSpr.useRenderTexture = true;
+        }
+
+        cardLayer.add(spr);
+        return spr;
+    }
+
+    function setConfirmText(spr:FunkinSprite, x:Float, y:Float, sx:Float, sy:Float):Void
+    {
+        if (spr == null) return;
+
+        spr.x = x;
+        spr.y = y;
+        spr.scale.set(sx, sy);
+    }
+
+    function playConfirmTextAnim():Void
+    {
+        var data =
+        [
+            {sharp: bigShoesText, blur: bigShoesTextBlurred, rx: -3.0, ry: 140.0, dx: -238.5, dy: 16.0, sx: 1.210, sy: 0.457, o8: 4.8},
+            {sharp: yeahText, blur: yeahTextBlurred, rx: -3.0, ry: 195.0, dx:  240.0, dy: 44.8, sx: 1.268, sy: 0.280, o8: -8.0},
+            {sharp: yesYesYesText, blur: yesYesYesTextBlurred, rx: -3.0, ry: 310.0, dx: -313.6, dy: 25.6, sx: 1.194, sy: 0.377, o8:  6.4},
+            {sharp: getItText, blur: getItTextBlurred, rx: -3.0, ry: 380.0, dx: 14.8, dy: 49.6, sx: 1.361, sy: 0.180, o8: -6.4}
+        ];
+
+        for (t in data)
+        {
+            if (t.sharp != null)
+            {
+                t.sharp.visible = true;
+                setConfirmText(t.sharp, t.rx + t.dx, t.ry + t.dy, t.sx, t.sy);
+            }
+
+            if (t.blur != null)
+            {
+                t.blur.visible = true; t.blur.alpha = 0.6;
+                setConfirmText(t.blur, t.rx + t.dx, t.ry + t.dy, t.sx, t.sy);
+            }
+        }
+
+        FlxTimer.wait(1 / 24, () ->
+        {
+            for (t in data)
+            {
+                setConfirmText(t.sharp, t.rx + t.o8, t.ry, 1, 1);
+                setConfirmText(t.blur,  t.rx - t.o8, t.ry, 1, 1);
+            }
+        });
+
+        FlxTimer.wait(3 / 24, () ->
+        {
+            for (t in data)
+            {
+                setConfirmText(t.sharp, t.rx, t.ry, 1, 1);
+                setConfirmText(t.blur,  t.rx, t.ry, 1, 1);
+            }
+        });
+    }
+
+    function makeBand(y:Float, text:String, width:Float, bold:Bool, size:Int, color:Int, speed:Float)
+    {
+        var band = new BGScrollingText(0, y, text, width, bold, size);
+        band.color = color;
+        band.speed = speed;
+        band.visible = false;
+
+        cardLayer.add(band);
+        bands.push(band);
+    }
+
+    function revealBackingCard()
+    {
+        revealed = true;
+
+        if (orangeBox != null) orangeBox.visible = true;
+        if (orangeAccent != null) orangeAccent.visible = true;
+
+        for (i in 0...bands.length)
+        {
+            if (bands[i] != null)
+            {
+                bands[i].visible = true;
+                bands[i].alpha = 0;
+                FlxTween.tween(bands[i], {alpha: 1}, 0.5, {ease: FlxEase.quartOut});
+            }
+        }
+
+        if (cardGlow != null)
+        {
+            cardGlow.visible = true;
+            FlxTween.tween(cardGlow, {alpha: 0}, 0.5, {ease: FlxEase.quartOut});
+        }
+    }
+
+    function selectBackingCard(?song:Dynamic)
+    {
+        for (band in bands)
+            band.visible = false;
+
+        if (orangeBox != null) orangeBox.visible = false;
+        if (orangeAccent != null) orangeAccent.visible = false;
+
+        card.color = 0xFFFFD0D5;
+        FlxTween.color(card, 0.33, 0xFFFFD0D5, 0xFF171831, {ease: FlxEase.quadOut});
+
+        if (confirmGlow != null)
+        {
+            confirmGlow.visible = true;
+            confirmGlow.alpha = 0;
+        }
+
+        if (confirmGlow2 != null)
+        {
+            confirmGlow2.visible = true;
+            confirmGlow2.alpha = 0;
+        }
+
+        if (backingImage != null)
+        {
+            FlxTween.color(backingImage, 0.5, backingImage.color, 0xFF646464,
+            {
+                onUpdate: (_) -> { angleMaskShader.extraColor = backingImage.color; }
+            });
+        }
+
+        if (confirmGlow2 != null)
+        {
+            FlxTween.tween(confirmGlow2, {alpha: 0.5}, 0.33,
+            {
+                ease: FlxEase.quadOut,
+                onComplete: (_) ->
+                {
+                    confirmGlow2.alpha = 0.6;
+
+                    if (confirmGlow != null)
+                    {
+                        confirmGlow.alpha = 1;
+                        FlxTween.tween(confirmGlow, {alpha: 0}, 0.5);
+                    }
+
+                    playConfirmTextAnim();
+
+                    if (backingImage != null)
+                    {
+                        FlxTween.color(backingImage, 2, backingImage.color, 0xFF555555,
+                        {
+                            ease: FlxEase.expoOut,
+                            onUpdate: (_) -> { angleMaskShader.extraColor = backingImage.color; }
+                        });
+                    }
+                }
+            });
+        }
+    }
+
+    function exitBackingCard()
+    {
+        for (band in bands)
+            band.visible = false;
+
+        if (orangeBox != null) orangeBox.visible = false;
+        if (orangeAccent != null) orangeAccent.visible = false;
+
+        if (cardGlow != null)
+        {
+            cardGlow.alpha = 1;
+            FlxTween.tween(cardGlow, {alpha: 0}, 0.5, {ease: FlxEase.quartOut});
+        }
+
+        card.color = 0xFFFFD4E9;
+    }
+
+    function destroyBackingCard()
+    {
+        for (i in 0...bands.length)
+        {
+            if (bands[i] != null)
+                FlxTween.cancelTweensOf(bands[i]);
+        }
+
+        if (cardGlow != null) FlxTween.cancelTweensOf(cardGlow);
+        if (confirmGlow != null) FlxTween.cancelTweensOf(confirmGlow);
+        if (confirmGlow2 != null) FlxTween.cancelTweensOf(confirmGlow2);
+
+        for (txt in [yeahText, bigShoesText, yesYesYesText, getItText, yeahTextBlurred, bigShoesTextBlurred, yesYesYesTextBlurred, getItTextBlurred])
+        {
+            if (txt != null)
+                FlxTween.cancelTweensOf(txt);
+        }
+
+        if (backingImage != null)
+            FlxTween.cancelTweensOf(backingImage);
+
+        bands = [];
+        cardGlow = null;
+        orangeBox = null;
+        orangeAccent = null;
+        confirmGlow = null;
+        confirmGlow2 = null;
+
+        yeahText = null;
+        bigShoesText = null;
+        yesYesYesText = null;
+        getItText = null;
+        yeahTextBlurred = null;
+        bigShoesTextBlurred = null;
+        yesYesYesTextBlurred = null;
+        getItTextBlurred = null;
     }
 
     override function update(elapsed)
@@ -263,14 +582,13 @@ class FreeplaySubStateScript extends MusicBeatSubState
         if (parent != null)
             parent.persistentDraw = false;
 
-        backingImage.color = 0xFF000000;
-        angleMaskShader.extraColor = 0xFF000000;
         backingImage.visible = true;
 
-        FlxTween.color(backingImage, 0.6, 0xFF000000, 0xFFFFFFFF, {
+        FlxTween.color(backingImage, 0.6, 0xFF000000, 0xFFFFFFFF,
+        {
             ease: FlxEase.expoOut,
-            onUpdate: (_) -> { angleMaskShader.extraColor = backingImage.color; },
-            onComplete: (_) -> { blackOverlay.visible = false; }
+            onUpdate: (_) -> angleMaskShader.extraColor = backingImage.color,
+            onComplete: (_) -> blackOverlay.visible = false
         });
 
         menuName.visible = true;
@@ -284,6 +602,8 @@ class FreeplaySubStateScript extends MusicBeatSubState
         bopper.playAnim("idle", {force: true});
 
         introFinished = true;
+
+        revealBackingCard();
 
         if (currentCard != null)
             currentCard.onIntroDone(this);
@@ -323,6 +643,11 @@ class FreeplaySubStateScript extends MusicBeatSubState
             capsule.doJumpOut = true;
         }
 
+        exitBackingCard();
+
+        if (currentCard != null)
+            currentCard.onExit(this);
+
         FlxTimer.wait(0.5, () ->
         {
             FunkinSound.stopAllAudio(true);
@@ -346,17 +671,21 @@ class FreeplaySubStateScript extends MusicBeatSubState
                 continue;
 
             allSongs.push({id: folder, name: meta.name, bpm: Std.int(meta.bpm), difficultyRating: meta.album.ratings, icon: meta.icon, difficulties: [], variation: "", newlyAdded: meta.freeplay.newlyAdded});
-            registerCharacter(meta.player);
 
-            for (v in DifficultyRegistry.characterVariations())
-            {
-                if (Paths.exists('data/songs/' + folder + '/' + folder + '-meta-' + v + '.json'))
-                    registerCharacter(MetaRegistry.get(folder, '-' + v).player);
-            }
+            registerSongPlayers(folder);
         }
 
         if (availableCharacters.indexOf(CURRENT_CHARACTER) == -1 && availableCharacters.length > 0)
             CURRENT_CHARACTER = availableCharacters[0];
+    }
+
+    function registerSongPlayers(songId)
+    {
+        for (variation in songVariations())
+        {
+            for (difficulty in ChartRegistry.listDifficulties(songId, variation))
+                registerCharacter(PlayerRegistry.playerForCharacter(songPlayerCharacter(songId, difficulty, variation)));
+        }
     }
 
     function registerCharacter(c)
@@ -365,23 +694,47 @@ class FreeplaySubStateScript extends MusicBeatSubState
             availableCharacters.push(c);
     }
 
-    function resolveVariation(songId, character)
+    function songVariations()
     {
-        if (MetaRegistry.get(songId).player == character)
-            return "";
+        var variations = [""];
 
         for (v in DifficultyRegistry.characterVariations())
-        {
-            var suffix = "-" + v;
+            variations.push("-" + v);
 
-            if (Paths.exists('data/songs/' + songId + '/' + songId + '-meta' + suffix + '.json')
-                && MetaRegistry.get(songId, suffix).player == character)
-                return suffix;
+        return variations;
+    }
+
+    function songPlayerCharacter(songId, difficulty, variation)
+    {
+        var chart = ChartRegistry.get(songId, difficulty, variation);
+
+        if (chart == null || chart.strumlines == null)
+            return null;
+
+        for (strum in chart.strumlines)
+        {
+            if (strum != null && strum.id == 1)
+                return strum.character;
         }
 
         return null;
     }
 
+    function resolveVariation(songId, player, difficulty)
+    {
+        for (variation in songVariations())
+        {
+            if (ChartRegistry.listDifficulties(songId, variation).indexOf(difficulty) == -1)
+                continue;
+
+            if (PlayerRegistry.owns(player, songPlayerCharacter(songId, difficulty, variation)))
+                return variation;
+        }
+
+        return null;
+    }
+
+    //debug lol
     function changeCharacter(change)
     {
         if (availableCharacters.length <= 1) return;
@@ -413,7 +766,7 @@ class FreeplaySubStateScript extends MusicBeatSubState
         {
             var s = allSongs[i];
 
-            var variation = resolveVariation(s.id, CURRENT_CHARACTER);
+            var variation = resolveVariation(s.id, CURRENT_CHARACTER, curDifficulty);
             if (variation == null)
                 continue;
 
@@ -458,7 +811,14 @@ class FreeplaySubStateScript extends MusicBeatSubState
     function rebuildSongList()
     {
         for (i in 0...capsules.length)
-            remove(capsules[i]);
+        {
+            if (capsules[i] != null)
+            {
+                FlxTween.cancelTweensOf(capsules[i]);
+                remove(capsules[i], true);
+                capsules[i].destroy();
+            }
+        }
 
         capsules = [];
         songs = filterSongs();
@@ -558,6 +918,9 @@ class FreeplaySubStateScript extends MusicBeatSubState
         if (!found)
             curSelected = Std.int(Math.min(prevSelected, capsules.length - 1));
 
+        if (currentCard != null)
+            currentCard.onDifficultyChange(this, curDifficulty);
+
         changeSelection(0);
     }
 
@@ -596,12 +959,10 @@ class FreeplaySubStateScript extends MusicBeatSubState
         item.doLerp = false;
 
         FlxTween.tween(item, {y: item.y - 5}, 0.1, {ease: FlxEase.expoOut});
-        FlxTween.tween(item, {y: item.y + 5}, 0.1,
-        {
-            ease: FlxEase.expoIn,
-            startDelay: 0.1,
-            onComplete: (_) -> item.doLerp = true
-        });
+        FlxTween.tween(item, {y: item.y + 5}, 0.1, {ease: FlxEase.expoIn, startDelay: 0.1, onComplete: (_) -> item.doLerp = true});
+
+        if (currentCard != null)
+            currentCard.onSongFavorite(this, song);
     }
 
     function changeSelection(change:Int)
@@ -645,6 +1006,9 @@ class FreeplaySubStateScript extends MusicBeatSubState
                 capsule.targetPos.y -= 100;
         }
 
+        if (currentCard != null)
+            currentCard.onSelectionChange(this, curSelected);
+
         updateDots();
     }
 
@@ -684,6 +1048,8 @@ class FreeplaySubStateScript extends MusicBeatSubState
 
         FunkinSound.playOnce(Paths.sound('engine/confirm'));
         item.confirm();
+
+        selectBackingCard(song);
 
         if (currentCard != null)
             currentCard.onSelect(this, song);

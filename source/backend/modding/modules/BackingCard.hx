@@ -20,6 +20,11 @@ class BackingCard
     public function onPostCreate(freeplay:Dynamic):Void {}
 
     public function onIntroDone(freeplay:Dynamic):Void {}
+    public function onExit(freeplay:Dynamic):Void {}
+
+    public function onDifficultyChange(freeplay:Dynamic, difficulty:String):Void {}
+    public function onSelectionChange(freeplay:Dynamic, curSelected:Int):Void {}
+    public function onSongFavorite(freeplay:Dynamic, ?song:Dynamic):Void {}
 
     public function onBeatHit(freeplay:Dynamic, beat:Int):Void {}
 

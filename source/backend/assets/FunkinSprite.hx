@@ -265,6 +265,8 @@ class FunkinSprite extends FlxSprite implements ITaggable
             atlasSpr.scale.copyFrom(scale);
             atlasSpr.offset.copyFrom(offset);
             atlasSpr.cameras = cameras;
+            atlasSpr.shader = shader;
+            atlasSpr.blend = blend;
 
             atlasSpr.draw();
         }

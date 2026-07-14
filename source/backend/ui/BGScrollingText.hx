@@ -90,6 +90,21 @@ class BGScrollingText extends FlxText
         setPosition(_positionCache.x, _positionCache.y);
     }
 
+    override public function destroy():Void
+    {
+        for (position in _textPositions)
+        {
+            if (position != null)
+                position.put();
+        }
+        
+        _textPositions.splice(0, _textPositions.length);
+
+        _positionCache.put();
+
+        super.destroy();
+    }
+
     function sortTextShit():Void
     {
         _textPositions.sort(function(Obj1:FlxPoint, Obj2:FlxPoint)

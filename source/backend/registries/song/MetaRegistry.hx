@@ -14,8 +14,6 @@ typedef MetaData =
     @:optional var stage:String;
     @:optional var bpm:Null<Float>;
 
-    @:optional var player:String;
-
     @:optional var album:MetaAlbumData;
     @:optional var freeplay:MetaFreeplayData;
 
@@ -108,7 +106,6 @@ class MetaRegistry
         if (data.icon == null) data.icon = "bf-test";
         if (data.stage == null) data.stage = "stage";
         if (data.bpm == null || data.bpm <= 0) data.bpm = 100.0;
-        if (data.player == null) data.player = Constants.DEFAULT_CHARACTER;
         
         if (data.album == null) data.album = {};
         if (data.album.name == null) data.album.name = "unknown";

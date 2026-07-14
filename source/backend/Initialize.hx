@@ -95,6 +95,7 @@ class Initialize extends FlxState
         ChartRegistry.init();
         MetaRegistry.init();
         DifficultyRegistry.init();
+        PlayerRegistry.init();
         EventRegistry.init();
         HealthIconRegistry.init();
         CountdownRegistry.init();

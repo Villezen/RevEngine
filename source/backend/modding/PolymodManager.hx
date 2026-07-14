@@ -26,7 +26,7 @@ class PolymodManager
     /**
      * Internal variable containing every handler to call function from.
      */
-    private static var handlers:Array<StaticModuleHandler> = [CharacterHandler, ModuleHandler, SongModuleHandler, SongEventModuleHandler, StageHandler];
+    private static var handlers:Array<StaticModuleHandler> = [CharacterHandler, ModuleHandler, SongModuleHandler, SongEventModuleHandler, StageHandler, BackingCardHandler];
 
     /**
      * All the currently loaded mods.
@@ -115,6 +115,7 @@ class PolymodManager
         Polymod.addDefaultImport(backend.registries.song.EventRegistry);
 
         Polymod.addDefaultImport(backend.registries.misc.ConfigRegistry);
+        Polymod.addDefaultImport(backend.registries.misc.PlayerRegistry);
 
         Polymod.addDefaultImport(backend.registries.ui.DialogueRegistry);
 
