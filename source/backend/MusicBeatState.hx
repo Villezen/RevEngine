@@ -121,11 +121,14 @@ class MusicBeatState extends FlxState implements IEventHandler
 
         dispatchEvent(_updateEvent);
 
-        if ((FlxG.keys.justPressed.F5 || FlxG.keys.justPressed.F6) && elapsedTime > 1.0 && !isResetting)
+        if (FlxG.keys.justPressed.F5 && !isResetting)
             hotReload();
         
         if (FlxG.keys.justPressed.F11 && (subState == null || (subState != null && !(subState is MusicBeatSubState))))
             FlxG.fullscreen = !FlxG.fullscreen;
+
+        if (FlxG.keys.justPressed.F12 && !isResetting)
+            emergencyExit();
     }
 
     /**
@@ -157,6 +160,15 @@ class MusicBeatState extends FlxState implements IEventHandler
         Manager.resetState();
 
         trace('STATE [${DebugUtil.getStateName()}] RELOADED.\n', 'INFO', true);
+    }
+
+    /**
+     * Force the game to go back to the main menu state.
+     */
+    public function emergencyExit():Void
+    {
+        TransitionLoader.skipTransitions = true;
+        Manager.switchState(new menus.MainMenuState());
     }
 
     /**
