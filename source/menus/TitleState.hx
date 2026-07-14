@@ -6,11 +6,15 @@ import flixel.util.FlxAxes;
 import backend.MusicBeatState;
 import backend.registries.menus.TitleMenuRegistry;
 import backend.utils.MathUtil;
+import backend.transition.TransitionLoader;
 
 class TitleState extends MusicBeatState
 {
     static var skippedIntro:Bool = false;
     var confirmed:Bool = false;
+
+    var canSkip:Bool = false;
+    var hasSkipped:Bool = false;
 
     var introGroup:FlxSpriteGroup;
     var mainGroup:FlxSpriteGroup;
@@ -103,7 +107,17 @@ class TitleState extends MusicBeatState
         if (controls.ACCEPT.justPressed)
         {
             if (skippedIntro)
-                confirm();
+            {
+                if (!canSkip)
+                    confirm();
+                else if (canSkip && !hasSkipped)
+                {
+                    TransitionLoader.skipTransOut = true;
+                    
+                    hasSkipped = true;
+                    Manager.switchState(new MainMenuState());
+                }
+            }
             else
                 skipIntro();
         }
@@ -227,13 +241,18 @@ class TitleState extends MusicBeatState
             return;
 
         confirmed = true;
+        canSkip = true;
 
         flash();
 
         FunkinSound.playOnce(Paths.sound('engine/confirm'));
         button.playAnim("confirm", {force: true});
 
-        FlxTimer.wait(0.7, () -> Manager.switchState(new MainMenuState()));
+        FlxTimer.wait(0.7, () ->
+        {
+            if (!hasSkipped)
+                Manager.switchState(new MainMenuState());
+        });
     }
 
     function flash():Void

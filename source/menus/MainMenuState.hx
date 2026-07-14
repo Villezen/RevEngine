@@ -8,12 +8,15 @@ import backend.registries.menus.FreeplayRegistry;
 
 import backend.registries.menus.MainMenuRegistry.MainMenuObjectData;
 
+import backend.transition.TransitionLoader;
+
 import flixel.FlxCamera;
 import flixel.FlxSubState;
 import flixel.group.FlxSpriteGroup.FlxTypedSpriteGroup;
-import flixel.text.FlxBitmapText;
 import flixel.util.FlxAxes;
 import flixel.effects.FlxFlicker;
+
+import flixel.text.FlxText;
 
 import backend.utils.GitHubUtil;
 
@@ -23,6 +26,11 @@ class MainMenuState extends MusicBeatState
 {
     var hasSelected:Bool = false;
     var transitioning:Bool = false;
+
+    var canSkip:Bool = false;
+    var hasSkipped:Bool = false;
+
+    var selectedOption:String = "";
 
     var curSelected:Int = 0;
     var camIndex:Int = 0;
@@ -36,8 +44,7 @@ class MainMenuState extends MusicBeatState
 
     var menuItems:FlxTypedSpriteGroup<FunkinSprite>;
 
-    var versionText:FlxBitmapText;
-    var commitText:FlxBitmapText;
+    var versionText:FlxText;
 
     override public function create():Void
     {
@@ -94,24 +101,10 @@ class MainMenuState extends MusicBeatState
 
         scroll(0, false);
 
-        versionText = new FlxBitmapText(10, 0, 'v' + Constants.VERSION_STRING + " (API: v" + Constants.API_VERSION + ")", Paths.getAngelFont('vcr/outlined'));
+        versionText = new FlxText(0, FlxG.height - 18, FlxG.width, 'v' + Constants.VERSION_STRING + " (API: v" + Constants.API_VERSION + ")", 12);
+        versionText.setFormat("VCR OSD Mono", 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
         versionText.camera = camUI;
-        versionText.scale.set(0.2, 0.2);
-        versionText.updateHitbox();
-        versionText.y = FlxG.height - versionText.height - 10;
         add(versionText);
-
-        commitText = new FlxBitmapText(10, 0, "Commit: 0", Paths.getAngelFont('vcr/outlined'));
-        commitText.camera = camUI;
-        commitText.scale.set(0.15, 0.15);
-        commitText.updateHitbox();
-        commitText.y = FlxG.height - commitText.height - 30;
-        commitText.alpha = 0.5;
-        add(commitText);
-
-        GitHubUtil.fetchCommit(Constants.REPOSITORY_OWNER, Constants.REPOSITORY_NAME, Constants.REPOSITORY_BRANCH, '', function(result:String) {
-			commitText.text = "Commit: " + result;
-        });
 
         super.create();
     }
@@ -127,10 +120,21 @@ class MainMenuState extends MusicBeatState
             else if (FlxG.mouse.wheel != 0)
                 scroll(FlxG.mouse.wheel > 0 ? -1 : 1);
 
-            if (controls.ACCEPT.justPressed)
-                select(curSelected);
-            else if (controls.BACK.justPressed)
+            if (controls.BACK.justPressed)
                 exit();
+        }
+
+        if (controls.ACCEPT.justPressed)
+        {
+            if (!canSkip && !hasSelected)
+                select(curSelected);
+            else if (canSkip && !hasSkipped && hasSelected)
+            {
+                TransitionLoader.skipTransOut = true;
+                
+                hasSkipped = true;
+                switchToOption(selectedOption);
+            }
         }
 
         camBG.scroll.y = MathUtil.smoothLerpPrecision(camBG.scroll.y, -50 + (150 * camIndex), elapsed, 0.6);
@@ -210,18 +214,17 @@ class MainMenuState extends MusicBeatState
     function select(option:Int):Void
     {
         hasSelected = true;
+        canSkip = true;
 
         if (MainMenuRegistry.data.background.flicker.visible)
             FlxFlicker.flicker(bgFlicker, 1, 0.15, false, true);
-
-        var optionName:String = "";
 
         for (item in menuItems.members)
         {
             if (item.ID == curSelected)
             {
                 FlxFlicker.flicker(item, 1, 0.1, false, true);
-                optionName = item.tag;
+                selectedOption = item.tag;
             }
             else
             {
@@ -230,7 +233,11 @@ class MainMenuState extends MusicBeatState
             }
         }
 
-        FlxTimer.wait(1, () -> switchToOption(optionName));
+        FlxTimer.wait(1, () ->
+        {
+            if (!hasSkipped)
+                switchToOption(selectedOption);
+        });
 
         FunkinSound.playOnce(Paths.sound('engine/confirm'));
     }
@@ -284,6 +291,9 @@ class MainMenuState extends MusicBeatState
     function regenerate():Void
     {
         hasSelected = false;
+
+        canSkip = false;
+        hasSkipped = false;
 
         FlxFlicker.stopFlickering(bgFlicker);
         bgFlicker.visible = false;
