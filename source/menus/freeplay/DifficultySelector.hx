@@ -32,7 +32,7 @@ class DifficultySelector extends FlxSpriteGroup
 
     static final SLIDE_DISTANCE:Float = 410;
 
-    public function new(x:Float, y:Float, difficulties:Array<String>, ?startDifficulty:String)
+    public function new(x:Float, y:Float, difficulties:Array<String>, curCharacter:String, ?startDifficulty:String)
     {
         super(x, y);
 
@@ -41,12 +41,12 @@ class DifficultySelector extends FlxSpriteGroup
         curIndex = difficulties.indexOf(startDifficulty ?? Constants.DEFAULT_DIFFICULTY);
         if (curIndex < 0) curIndex = 0;
 
-        leftArrow = new FunkinSprite(LEFT_ARROW_X, ARROW_Y, 'menus/freeplay/selector');
+        leftArrow = new FunkinSprite(LEFT_ARROW_X, ARROW_Y, 'menus/freeplay/characters/$curCharacter/selector');
         leftArrow.addAnim('shine', {prefix: 'arrow pointer loop', fps: 24, looped: true});
         leftArrow.playAnim('shine');
         add(leftArrow);
 
-        rightArrow = new FunkinSprite(RIGHT_ARROW_X, ARROW_Y, 'menus/freeplay/selector');
+        rightArrow = new FunkinSprite(RIGHT_ARROW_X, ARROW_Y, 'menus/freeplay/characters/$curCharacter/selector');
         rightArrow.addAnim('shine', {prefix: 'arrow pointer loop', fps: 24, looped: true});
         rightArrow.flipX = true;
         rightArrow.playAnim('shine');
@@ -218,7 +218,7 @@ class DifficultySelector extends FlxSpriteGroup
         arrow.scale.set(0.8, 0.8);
         arrow.setColorTransform(1, 1, 1, 1, 160, 160, 160, 0);
 
-        new FlxTimer().start(2 / 24, (_) ->
+        new FlxTimer().start(2 / 12, (_) ->
         {
             arrow.scale.set(1, 1);
             arrow.setColorTransform();

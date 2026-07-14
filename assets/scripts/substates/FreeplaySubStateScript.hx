@@ -466,7 +466,7 @@ class FreeplaySubStateScript extends MusicBeatSubState
 
     function buildDifficultySelector()
     {
-        difficultySelector = new DifficultySelector(20, 70, FreeplayRegistry.data.difficulties, curDifficulty);
+        difficultySelector = new DifficultySelector(20, 70, FreeplayRegistry.data.difficulties, CURRENT_CHARACTER, curDifficulty);
         difficultySelector.camera = camUI;
         add(difficultySelector);
     }
