@@ -1,0 +1,29 @@
+{
+    "type": "SEPARATE",
+
+    "size": [1, 1],
+    "position": [-10, 48],
+    "antialiasing": true,
+
+    "animations":
+    {
+        "normal":
+        [
+            {"name": "startLEFT", "prefix": "holdCoverStartPurple", "offsets": [0, 0]},
+            {"name": "loopLEFT", "prefix": "holdCoverPurple", "offsets": [0, 0]},
+            {"name": "endLEFT", "prefix": "holdCoverEndPurple", "offsets": [0, 0]},
+
+            {"name": "startDOWN", "prefix": "holdCoverStartBlue", "offsets": [-5, 0]},
+            {"name": "loopDOWN", "prefix": "holdCoverBlue", "offsets": [-5, 0]},
+            {"name": "endDOWN", "prefix": "holdCoverEndBlue", "offsets": [-5, 0]},
+
+            {"name": "startUP", "prefix": "holdCoverStartGreen", "offsets": [0, 0]},
+            {"name": "loopUP", "prefix": "holdCoverGreen", "offsets": [0, 0]},
+            {"name": "endUP", "prefix": "holdCoverEndGreen", "offsets": [0, 0]},
+
+            {"name": "startRIGHT", "prefix": "holdCoverStartRed", "offsets": [0, 0]},
+            {"name": "loopRIGHT", "prefix": "holdCoverRed", "offsets": [0, 0]},
+            {"name": "endRIGHT", "prefix": "holdCoverEndRed", "offsets": [0, 0]}
+        ]
+    }
+}

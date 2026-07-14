@@ -1,0 +1,10 @@
+{
+    "name": "Volume 1",
+    "artists": ["Kawai Sprite"],
+
+    "sprites":
+    {
+        "art": {"path": "menus/freeplay/albums/volume1/art"},
+        "text": {"path": "menus/freeplay/albums/volume1/text", "animations": [{"name": "idle", "prefix": "idle"}, {"name": "switch", "prefix": "switch"}]}
+    }
+}

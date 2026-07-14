@@ -1,0 +1,12 @@
+{
+    "name": "Boyfriend",
+    "color": "#50A5EB",
+    "folder": "game/ui/dialogue/characters/bf",
+
+    "expressions":
+    [
+        {"name": "default", "position": [0, 0], "scale": [0.8, 0.8], "alpha": 1, "antialiasing": true},
+        {"name": "cheer", "position": [0, 0], "scale": [0.8, 0.8], "alpha": 1, "antialiasing": true},
+        {"name": "scared", "position": [0, 0], "scale": [0.8, 0.8], "alpha": 1, "antialiasing": true}
+    ]
+}

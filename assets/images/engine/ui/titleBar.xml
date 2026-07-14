@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="titleBar.png">
+    <SubTexture name="box-topleft" x="0" y="0" width="10" height="10"/>
+    <SubTexture name="box-top" x="10" y="0" width="60" height="10"/>
+    <SubTexture name="box-topright" x="70" y="0" width="10" height="10"/>
+
+    <SubTexture name="box-middleleft" x="0" y="10" width="10" height="10"/>
+    <SubTexture name="box-middle" x="10" y="10" width="60" height="10"/>
+    <SubTexture name="box-middleright" x="70" y="10" width="10" height="10"/>
+
+    <SubTexture name="box-bottomleft" x="0" y="20" width="10" height="10"/>
+    <SubTexture name="box-bottom" x="10" y="20" width="60" height="10"/>
+    <SubTexture name="box-bottomright" x="70" y="20" width="10" height="10"/>
+</TextureAtlas>

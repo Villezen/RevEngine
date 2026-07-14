@@ -1,0 +1,41 @@
+{
+    "type": "SEPARATE",
+
+    "antialiasing": true,
+
+    "noteSize": 0.7,
+    "strumSize": 0.7,
+    "strumWidth": 160,
+    "sustainAlpha": 1,
+
+    "animations":
+    {
+        "normal":
+        [
+            {"name": "staticLEFT", "prefix": "staticLeft", "offsets": [0, 0]},
+            {"name": "staticDOWN", "prefix": "staticDown", "offsets": [0, 0]},
+            {"name": "staticUP", "prefix": "staticUp", "offsets": [0, 0]},
+            {"name": "staticRIGHT", "prefix": "staticRight", "offsets": [0, 0]},
+
+            {"name": "pressedLEFT", "prefix": "pressLeft", "offsets": [0, 0]},
+            {"name": "pressedDOWN", "prefix": "pressDown", "offsets": [-1, 0]},
+            {"name": "pressedUP", "prefix": "pressUp", "offsets": [0, 0]},
+            {"name": "pressedRIGHT", "prefix": "pressRight", "offsets": [0, 0]},
+
+            {"name": "confirmLEFT", "prefix": "confirmLeft", "offsets": [0, 0]},
+            {"name": "confirmDOWN", "prefix": "confirmDown", "offsets": [0, 0]},
+            {"name": "confirmUP", "prefix": "confirmUp", "offsets": [0, 0]},
+            {"name": "confirmRIGHT", "prefix": "confirmRight", "offsets": [0, 0]},
+
+            {"name": "arrowLEFT", "prefix": "noteLeft", "offsets": [-2, 0]},
+            {"name": "arrowDOWN", "prefix": "noteDown", "offsets": [-2, 0]},
+            {"name": "arrowUP", "prefix": "noteUp", "offsets": [-3, 0]},
+            {"name": "arrowRIGHT", "prefix": "noteRight", "offsets": [-2, 0]},
+
+            {"name": "holdLEFT", "offsets": [0, 0]},
+            {"name": "holdDOWN", "offsets": [-1, 0]},
+            {"name": "holdUP", "offsets": [0, 0]},
+            {"name": "holdRIGHT", "offsets": [0, 0]}
+        ]
+    }
+}

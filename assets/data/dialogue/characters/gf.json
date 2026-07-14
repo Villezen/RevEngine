@@ -1,0 +1,12 @@
+{
+    "name": "Girlfriend",
+    "color": "#EE1536",
+    "folder": "game/ui/dialogue/characters/gf",
+
+    "expressions":
+    [
+        {"name": "default", "position": [-80, 10], "scale": [0.8, 0.8], "alpha": 1, "antialiasing": true},
+        {"name": "cheer", "position": [-80, 10], "scale": [0.8, 0.8], "alpha": 1, "antialiasing": true},
+        {"name": "sad", "position": [-80, 10], "scale": [0.8, 0.8], "alpha": 1, "antialiasing": true}
+    ]
+}

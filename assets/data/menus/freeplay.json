@@ -1,0 +1,9 @@
+{
+    "theme":
+    {
+        "path": "menus/freeplay",
+        "bpm": 145
+    },
+
+    "difficulties": ["easy", "normal", "hard", "erect", "nightmare"]
+}

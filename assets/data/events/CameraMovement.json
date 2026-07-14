@@ -1,0 +1,13 @@
+{
+    "name": "Camera Movement",
+    "alias": [],
+    "description": "Points the camera at a strumline's character.",
+    "variables":
+    [
+        {
+            "name": "Target",
+            "type": "Int",
+            "defaultValue": "0"
+        }
+    ]
+}

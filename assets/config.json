@@ -1,0 +1,36 @@
+{
+    "song":
+    {
+        "path": "music/freakyMenu",
+        "bpm": 102,
+        "skipTimestamp": 18830
+    },
+
+    "window":
+    {
+        "title": "Friday Night Funkin'",
+        "targetRatio": [16, 9],
+        "icon": "engine/icons/default",
+        "resizable": true
+    },
+
+    "flags":
+    {
+        "gitarooPause": false,
+        "useLegacyFreeplay": true
+    },
+
+    "overrides":
+    {
+        "states":
+        [
+            {"state": "DialogueSubState", "target": "DialogueSubStateScript"},
+            {"state": "FreeplaySubState", "target": "FreeplaySubStateScript"}
+        ],
+
+        "transitions":
+        [
+            {"state": "CreditsState", "phase": {"in": "wipe", "out": "wipe"}}
+        ]
+    }
+}

@@ -1,0 +1,117 @@
+{
+    "bopper":
+    {
+        "path": "menus/title/gfDance",
+        "visible": true,
+        "position": [250, 0],
+
+        "animations":
+        [
+            {"name": "danceLeft", "prefix": "gfDance", "indices": [30, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]},
+            {"name": "danceRight", "prefix": "gfDance", "indices": [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]}
+        ]
+    },
+
+    "logo":
+    {
+        "path": "menus/title/logo",
+        "position": [-300, -120],
+        "scale": [0.9, 0.9],
+
+        "animations": [{"name": "bump", "prefix": "logo bumpin"}]
+    },
+
+    "button":
+    {
+        "path": "menus/title/button",
+        "position": [820, 300],
+
+        "animations": [{"name": "idle", "prefix": "Idle", "looped": true}, {"name": "confirm", "prefix": "Confirm"}]
+    },
+
+    "intro":
+    {
+        "skip": false,
+
+        "events":
+        [
+            {"beat": 1, "text": "The\nFunkin Crew Inc", "action": []},
+            {"beat": 3, "text": "presents", "action": ["addText"]},
+            {"beat": 4, "text": "", "action": ["deleteText"]},
+            {"beat": 5, "text": "In association\nwith", "action": []},
+            {"beat": 7, "text": "newgrounds", "action": ["addText", "showNGLogo"]},
+            {"beat": 8, "text": "", "action": ["deleteText"]},
+            {"beat": 9, "text": "introText[0]", "action": []},
+            {"beat": 11, "text": "introText[1]", "action": ["addText"]},
+            {"beat": 12, "text": "", "action": ["deleteText"]},
+            {"beat": 13, "text": "Friday", "action": []},
+            {"beat": 14, "text": "Night", "action": ["addText"]},
+            {"beat": 15, "text": "Funkin'", "action": ["addText"]},
+            {"beat": 16, "text": "", "action": ["skipIntro"]}
+        ],
+
+        "introText":
+        [
+            ["shoutouts to tom fulp", "lmao"],
+            ["Ludum dare", "extraordinaire"],
+            ["cyberzone", "coming soon"],
+            ["love to thriftman", "swag"],
+            ["ultimate rhythm gaming", "probably"],
+            ["dope ass game", "playstation magazine"],
+            ["in loving memory of", "henryeyes"],
+            ["dancin", "forever"],
+            ["funkin", "forever"],
+            ["ritz dx", "rest in peace lol"],
+            ["rate five", "pls no blam"],
+            ["rhythm gaming", "ultimate"],
+            ["game of the year", "forever"],
+            ["you already know", "we really out here"],
+            ["rise and grind", "love to luis"],
+            ["like parappa", "but cooler"],
+            ["album of the year", "chuckie finster"],
+            ["better than geometry dash", "fight me robtop"],
+            ["kiddbrute for president", "vote now"],
+            ["play dead estate", "on newgrounds"],
+            ["this is a god damn prototype", "we workin on it okay"],
+            ["women are real", "this is official"],
+            ["too over exposed", "newgrounds cant handle us"],
+            ["Hatsune Miku", "biggest inspiration"],
+            ["too many people", "my head hurts"],
+            ["newgrounds", "forever"],
+            ["refined taste in music", "if i say so myself"],
+            ["his name isnt keith", "dumb eggy lol"],
+            ["his name isnt evan", "silly tiktok"],
+            ["stream chuckie finster", "on spotify"],
+            ["never forget to", "pray to god"],
+            ["dont play rust", "we only funkin"],
+            ["good bye", "my penis"],
+            ["dababy", "biggest inspiration"],
+            ["fashionably late", "but here it is"],
+            ["yooooooooooo", "yooooooooo"],
+            ["pico funny", "pico funny"],
+            ["updates each friday", "on time every time"],
+            ["shoutouts to mason", "for da homies"],
+            ["bonk", "get in the discord call"],
+            ["carpal tunnel", "game design"],
+            ["downscroll", "i dont know what that is"],
+            ["warning", "choking hazard"],
+            ["devin chat", "what an honorable man"],
+            ["kickstarter exclusive", "intro text"],
+            ["cussing", "we have it"],
+            ["parental advisory", "explicit content"],
+            ["pico says", "trans rights"],
+            ["album of the year", "damage control"],
+            ["proudly made", "via newgrounds pms"],
+            ["nicotine induced", "game development"],
+            ["free crackheads", "with love to figburn"],
+            ["press square", "to open your popit menu"],
+            ["jojo sez", "shoooooooom"],
+            ["updates each pico day", "on time every time"],
+            ["macromedia software", "legally obtained"],
+            ["under judgement", "proud resident"],
+            ["make tom proud", "weekly second"],
+            ["to enable pen pressure", "disable windows ink"],
+            ["trending", "only on x"]
+        ]
+    }
+}

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="separator.png">
+    <SubTexture name="bar-topleft" x="0" y="0" width="4" height="4"/>
+    <SubTexture name="bar-top" x="4" y="0" width="22" height="4"/>
+    <SubTexture name="bar-topright" x="26" y="0" width="4" height="4"/>
+
+    <SubTexture name="bar-middleleft" x="0" y="4" width="4" height="2"/>
+    <SubTexture name="bar-middle" x="4" y="4" width="22" height="2"/>
+    <SubTexture name="bar-middleright" x="26" y="4" width="4" height="2"/>
+
+    <SubTexture name="bar-bottomleft" x="0" y="6" width="4" height="4"/>
+    <SubTexture name="bar-bottom" x="4" y="6" width="22" height="4"/>
+    <SubTexture name="bar-bottomright" x="26" y="6" width="4" height="4"/>
+</TextureAtlas>

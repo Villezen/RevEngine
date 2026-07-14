@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="titleBar.png">
+    <SubTexture name="left-topleft" x="0" y="0" width="15" height="15"/>
+    <SubTexture name="left-top" x="15" y="0" width="7" height="15"/>
+    <SubTexture name="left-topright" x="22" y="0" width="15" height="15"/>
+
+    <SubTexture name="left-middleleft" x="0" y="15" width="15" height="70"/>
+    <SubTexture name="left-middle" x="15" y="15" width="7" height="70"/>
+    <SubTexture name="left-middleright" x="22" y="15" width="15" height="70"/>
+
+    <SubTexture name="left-bottomleft" x="0" y="85" width="15" height="15"/>
+    <SubTexture name="left-bottom" x="15" y="85" width="7" height="15"/>
+    <SubTexture name="left-bottomright" x="22" y="85" width="15" height="15"/>
+
+    <SubTexture name="right-topleft" x="225" y="0" width="15" height="15"/>
+    <SubTexture name="right-top" x="240" y="0" width="7" height="15"/>
+    <SubTexture name="right-topright" x="247" y="0" width="15" height="15"/>
+
+    <SubTexture name="right-middleleft" x="225" y="15" width="15" height="70"/>
+    <SubTexture name="right-middle" x="240" y="15" width="7" height="70"/>
+    <SubTexture name="right-middleright" x="247" y="15" width="15" height="70"/>
+
+    <SubTexture name="right-bottomleft" x="225" y="85" width="15" height="15"/>
+    <SubTexture name="right-bottom" x="240" y="85" width="7" height="15"/>
+    <SubTexture name="right-bottomright" x="247" y="85" width="15" height="15"/>
+
+    <SubTexture name="box-topleft" x="37" y="0" width="25" height="25"/>
+    <SubTexture name="box-top" x="62" y="0" width="138" height="25"/>
+    <SubTexture name="box-topright" x="200" y="0" width="25" height="25"/>
+
+    <SubTexture name="box-middleleft" x="37" y="25" width="25" height="50"/>
+    <SubTexture name="box-middle" x="62" y="25" width="138" height="50"/>
+    <SubTexture name="box-middleright" x="200" y="25" width="25" height="50"/>
+
+    <SubTexture name="box-bottomleft" x="37" y="75" width="25" height="25"/>
+    <SubTexture name="box-bottom" x="62" y="75" width="138" height="25"/>
+    <SubTexture name="box-bottomright" x="200" y="75" width="25" height="25"/>
+</TextureAtlas>

@@ -1,0 +1,13 @@
+{
+    "name": "BPM Change",
+    "alias": [],
+    "description": "Changes the song's BPM.",
+    "variables":
+    [
+        {
+            "name": "Value",
+            "type": "Float",
+            "defaultValue": "100"
+        }
+    ]
+}

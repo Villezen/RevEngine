@@ -1,0 +1,153 @@
+{
+    "box":
+    {
+        "path": "game/ui/dialogue/skins/default/skin",
+        "alpha": 1,
+        "position": [0, 170],
+        "antialiasing": true,
+        "scale": [0.8, 0.8],
+
+        "animations":
+        [
+            {
+                "name": "open-left",
+                "prefix": "Speech Bubble Normal Open0",
+                "fps": 12,
+                "flip": [true, false]
+            },
+            {
+                "name": "open-right",
+                "prefix": "Speech Bubble Normal Open0",
+                "fps": 12,
+                "flip": [false, false]
+            },
+            {
+                "name": "open-center",
+                "prefix": "Speech Bubble Middle Open0",
+                "fps": 12,
+                "flip": [false, false]
+            },
+
+            {
+                "name": "open-left-loud",
+                "prefix": "speech bubble loud open000",
+                "offsets": [30, 43],
+                "fps": 12,
+                "flip": [true, false]
+            },
+            {
+                "name": "open-right-loud",
+                "prefix": "speech bubble loud open000",
+                "offsets": [30, 43],
+                "fps": 12,
+                "flip": [false, false]
+            },
+            {
+                "name": "open-center-loud",
+                "prefix": "speech bubble Middle loud open0",
+                "offsets": [30, 43],
+                "fps": 12,
+                "flip": [false, false]
+            },
+
+            {
+                "name": "left",
+                "prefix": "speech bubble normal0",
+                "offsets": [0, 0],
+                "looped": true,
+                "fps": 24,
+                "flip": [true, false]
+            },
+            {
+                "name": "right",
+                "prefix": "speech bubble normal0",
+                "offsets": [0, 0],
+                "looped": true,
+                "fps": 24,
+                "flip": [false, false]
+            },
+            {
+                "name": "center",
+                "prefix": "speech bubble middle0",
+                "offsets": [0, 0],
+                "looped": true,
+                "fps": 24,
+                "flip": [false, false]
+            },
+
+            {
+                "name": "left-loud",
+                "prefix": "AHH speech bubble0",
+                "offsets": [30, 43],
+                "looped": true,
+                "fps": 24,
+                "flip": [false, false]
+            },
+            {
+                "name": "right-loud",
+                "prefix": "AHH speech bubble0",
+                "offsets": [30, 43],
+                "looped": true,
+                "fps": 24,
+                "flip": [true, false]
+            },
+            {
+                "name": "center-loud",
+                "prefix": "AHH Speech Bubble middle0",
+                "offsets": [30, 43],
+                "looped": true,
+                "fps": 24,
+                "flip": [false, false]
+            }
+        ]
+    },
+
+    "portraits":
+    {
+        "left":
+        {
+            "position": [0, 0],
+
+            "xTween": {"enabled": true, "ease": "cubeOut", "duration": 0.3, "values": {"from": -50}},
+            "alphaTween": {"enabled": true, "ease": "cubeOut", "duration": 0.3, "values": {"from": 0}},
+            "yTween": {"enabled": false},
+            "scaleTween": {"enabled": false},
+            "angleTween": {"enabled": false}
+        },
+
+        "center":
+        {
+            "position": [0, 0],
+
+            "xTween": {"enabled": true, "ease": "cubeOut", "duration": 0.5, "values": {"from": 0}},
+            "alphaTween": {"enabled": true, "ease": "cubeOut", "duration": 0.5, "values": {"from": 0}},
+            "yTween": {"enabled": false},
+            "scaleTween": {"enabled": false},
+            "angleTween": {"enabled": false}
+        },
+
+        "right":
+        {
+            "position": [0, 0],
+
+            "xTween": {"enabled": true, "ease": "cubeOut", "duration": 0.5, "values": {"from": 50}},
+            "alphaTween": {"enabled": true, "ease": "cubeOut", "duration": 0.5, "values": {"from": 0}},
+            "yTween": {"enabled": false},
+            "scaleTween": {"enabled": false},
+            "angleTween": {"enabled": false}
+        }
+    },
+
+    "text":
+    {
+        "fonts":
+        [
+            {"name": "vcr", "file": "vcr.ttf", "borderSize": 1, "shadow": {"x": 2, "y": 2}, "color": "#000000", "fieldWidth": 700, "offsets": [0, 0], "size": 30, "antialiasing": true}
+        ],
+
+        "effects":
+        {
+            "dropShadow": {"enabled": true, "alpha": 1.0, "offset": [0, 0], "color": "#FF0000"}
+        }
+    }
+}

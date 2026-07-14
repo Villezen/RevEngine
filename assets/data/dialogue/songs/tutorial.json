@@ -1,0 +1,34 @@
+{
+    "skin": "default",
+
+    "song":
+    {
+        "path": "dialogue/tutorial",
+        "looped": true,
+        "volume": 1.0,
+
+        "fadeIn": true,
+        "fadeOut": true,
+
+        "fadeInTime": 0.5,
+        "fadeOutTime": 0.5
+    },
+
+    "dialogue":
+    [
+        {
+            "direction": "left",
+            "character": "gf",
+            "expression": "cheer",
+
+            "field": {"speed": 0.05, "text": "Hey you're pretty cute."}
+        },
+        {
+            "direction": "left",
+            "character": "gf",
+            "expression": "default",
+
+            "field": {"speed": 0.05, "text": "Use the <color=#C24B99>ar</color><color=#00FFFF>row</color> <color=#12FA05>ke</color><color=#F9393F>ys</color> to keep up with me singing."}
+        }
+    ]
+}

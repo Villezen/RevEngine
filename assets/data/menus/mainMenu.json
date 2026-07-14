@@ -1,0 +1,62 @@
+{
+    "background":
+    {
+        "normal": {"path": "menus/backgrounds/menuBG", "scale": [1.05, 1.05]},
+        "flicker": {"path": "menus/backgrounds/menuBGMagenta", "scale": [1.05, 1.05]}
+    },
+
+    "options":
+    [
+        {
+            "name": "story mode",
+            "targetState": "StoryMenuState",
+
+            "sprite":
+            {
+                "path": "menus/mainMenu/storymode",
+                "animations": [{"name": "idle", "prefix": "storymode idle", "looped": true}, {"name": "selected", "prefix": "storymode selected", "looped": true, "offsets": [-80, -20]}]
+            }
+        },
+        {
+            "name": "freeplay",
+            "targetState": "FreeplaySubState",
+
+            "sprite":
+            {
+                "path": "menus/mainMenu/freeplay",
+                "animations": [{"name": "idle", "prefix": "freeplay idle", "looped": true}, {"name": "selected", "prefix": "freeplay selected", "looped": true, "offsets": [-60, -20]}]
+            }
+        },
+        {
+            "name": "options",
+            "targetState": "SettingsState",
+
+            "sprite":
+            {
+                "path": "menus/mainMenu/options",
+                "animations": [{"name": "idle", "prefix": "options idle", "looped": true}, {"name": "selected", "prefix": "options selected", "looped": true, "offsets": [-60, -20]}]
+            }
+        },
+        {
+            "name": "credits",
+            "targetState": "CreditsState",
+
+            "sprite":
+            {
+                "path": "menus/mainMenu/credits",
+                "position": [35, 0],
+                "animations": [{"name": "idle", "prefix": "credits idle", "looped": true}, {"name": "selected", "prefix": "credits selected", "looped": true, "offsets": [-40, -30]}]
+            }
+        },
+        {
+            "name": "mods",
+            "targetState": "ModLoaderState",
+
+            "sprite":
+            {
+                "path": "menus/mainMenu/mods",
+                "animations": [{"name": "idle", "prefix": "mods idle", "looped": true}, {"name": "selected", "prefix": "mods selected", "looped": true, "offsets": [-25, -20]}]
+            }
+        }
+    ]
+}

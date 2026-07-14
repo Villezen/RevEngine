@@ -1,0 +1,40 @@
+{
+    "name": "Testificate Boyfriend",
+    "color": "#BEBEBE",
+
+    "renderType": "SPARROW",
+
+    "antialiasing": false,
+
+    "placement": "OPPONENT",
+    "position": [300, 420],
+    "camera": [120, -10],
+
+    "flip": [true, false],
+
+    "scale": [7, 7],
+
+    "animations":
+    [
+        {
+            "name": "idle",
+            "prefix": "BF IDLE instance 10"
+        },
+        {
+            "name": "singLEFT",
+            "prefix": "BF LEFT NOTE instance 10"
+        },
+        {
+            "name": "singDOWN",
+            "prefix": "BF DOWN NOTE instance 10"
+        },
+        {
+            "name": "singUP",
+            "prefix": "BF UP NOTE instance 10"
+        },
+        {
+            "name": "singRIGHT",
+            "prefix": "BF RIGHT NOTE instance 10"
+        }
+    ]
+}

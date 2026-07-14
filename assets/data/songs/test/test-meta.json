@@ -1,0 +1,29 @@
+{
+	"name": "Test",
+	"icon": "gf",
+	"bpm": 150,
+
+	"stage": "stage",
+
+	"composers": ["Kawai Sprite"],
+	"artists": ["PhantomArcade"],
+	"charters": ["MtH"],
+
+	"album":
+	{
+		"name": "volume1",
+		"ratings": 1,
+		"previewTimestamp": 12840
+	},
+
+	"freeplay":
+	{
+		"newlyAdded": true
+	},
+
+	"countdown":
+	{
+		"skin": "default",
+		"audio": "default"
+	}
+}

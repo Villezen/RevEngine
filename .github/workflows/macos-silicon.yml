@@ -1,0 +1,152 @@
+name: macOS (Silicon) Builds
+
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: macOS (Silicon) Build
+    runs-on: macos-latest
+    env:
+      HXCPP_COMPILE_CACHE: ${{ github.workspace }}/.hxcpp
+      HXCPP_CACHE_MB: "4096"
+    steps:
+      - name: Pulling the new commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setting up Haxe
+        uses: krdlab/setup-haxe@v2
+        with:
+          haxe-version: 4.3.7
+
+      - name: Restore library cache
+        uses: actions/cache@v4
+        with:
+          key: haxelib-macos-arm64-${{ hashFiles('hmm.json') }}
+          path: .haxelib/
+
+      - name: Restore build cache
+        uses: actions/cache@v4
+        with:
+          key: build-macos-arm64-release-${{ github.sha }}
+          restore-keys: |
+            build-macos-arm64-release-
+          path: |
+            .hxcpp/
+            !.hxcpp/**/*.pch
+            !.hxcpp/**/*.gch
+            export/release/macos/haxe/
+
+      - name: Clearing stale precompiled headers
+        run: |
+          if [ -d .hxcpp ]; then find .hxcpp \( -name '*.pch' -o -name '*.gch' \) -delete; fi
+
+      - name: Installing/Updating libraries
+        run: |
+          if [ ! -d .haxelib ]; then haxelib newrepo; fi
+          haxelib install hmm --quiet
+          haxelib run hmm install
+
+      - name: Building hxcpp build tool
+        run: |
+          cd .haxelib/hxcpp/git/tools/hxcpp
+          haxe compile.hxml
+
+      - name: Fetching lime submodules
+        run: git -C .haxelib/lime/git submodule update --init --recursive
+
+      - name: Rebuilding lime binaries
+        run: |
+          haxelib run lime rebuild tools
+          haxelib run lime rebuild mac -64
+          haxelib run lime rebuild mac -arm64
+
+      - name: Building the game
+        run: haxelib run lime build mac -arm64 -DCOMPILE_EXPERIMENTAL
+
+      - name: Packaging the build
+        run: tar -czf RevEngine-macOS-Silicon.tar.gz -C export/release/macos/bin .
+
+      - name: Uploading artifact (entire build)
+        uses: actions/upload-artifact@v4
+        with:
+          name: RevEngine-macOS-Silicon
+          path: RevEngine-macOS-Silicon.tar.gz
+
+  debug_build:
+    name: macOS (Silicon) Debug Build
+    runs-on: macos-latest
+    env:
+      HXCPP_COMPILE_CACHE: ${{ github.workspace }}/.hxcpp
+      HXCPP_CACHE_MB: "4096"
+    steps:
+      - name: Pulling the new commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setting up Haxe
+        uses: krdlab/setup-haxe@v2
+        with:
+          haxe-version: 4.3.7
+
+      - name: Restore library cache
+        uses: actions/cache@v4
+        with:
+          key: haxelib-macos-arm64-${{ hashFiles('hmm.json') }}
+          path: .haxelib/
+
+      - name: Restore build cache
+        uses: actions/cache@v4
+        with:
+          key: build-macos-arm64-debug-${{ github.sha }}
+          restore-keys: |
+            build-macos-arm64-debug-
+          path: |
+            .hxcpp/
+            !.hxcpp/**/*.pch
+            !.hxcpp/**/*.gch
+            export/debug/macos/haxe/
+
+      - name: Clearing stale precompiled headers
+        run: |
+          if [ -d .hxcpp ]; then find .hxcpp \( -name '*.pch' -o -name '*.gch' \) -delete; fi
+
+      - name: Installing/Updating libraries
+        run: |
+          if [ ! -d .haxelib ]; then haxelib newrepo; fi
+          haxelib install hmm --quiet
+          haxelib run hmm install
+
+      - name: Building hxcpp build tool
+        run: |
+          cd .haxelib/hxcpp/git/tools/hxcpp
+          haxe compile.hxml
+
+      - name: Fetching lime submodules
+        run: git -C .haxelib/lime/git submodule update --init --recursive
+
+      - name: Rebuilding lime binaries
+        run: |
+          haxelib run lime rebuild tools
+          haxelib run lime rebuild mac -64
+          haxelib run lime rebuild mac -arm64 -debug
+
+      - name: Building the game
+        run: haxelib run lime build mac -arm64 -debug
+
+      - name: Packaging the build
+        run: tar -czf RevEngine-macOS-Silicon-Debug.tar.gz -C export/debug/macos/bin .
+
+      - name: Uploading artifact (entire build)
+        uses: actions/upload-artifact@v4
+        with:
+          name: RevEngine-macOS-Silicon-Debug
+          path: RevEngine-macOS-Silicon-Debug.tar.gz

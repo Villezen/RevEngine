@@ -1,0 +1,65 @@
+{
+    "name": "Boyfriend",
+    "color": "#31B0D1",
+
+    "renderType": "ATLAS",
+    "applyStageMatrix": true,
+
+    "placement": "PLAYER",
+    "position": [400, 150],
+    "camera": [-95, -105],
+
+    "scale": [1.08, 1.08],
+
+    "animations":
+    [
+        {
+            "name": "idle",
+            "prefix": "Idle"
+        },
+        {
+            "name": "singLEFT",
+            "prefix": "Left"
+        },
+        {
+            "name": "singDOWN",
+            "prefix": "Down"
+        },
+        {
+            "name": "singUP",
+            "prefix": "Up"
+        },
+        {
+            "name": "singRIGHT",
+            "prefix": "Right"
+        },
+        {
+            "name": "singLEFT-miss",
+            "prefix": "Left Miss"
+        },
+        {
+            "name": "singDOWN-miss",
+            "prefix": "Down Miss"
+        },
+        {
+            "name": "singUP-miss",
+            "prefix": "Up Miss"
+        },
+        {
+            "name": "singRIGHT-miss",
+            "prefix": "Right Miss"
+        },
+        {
+            "name": "hey",
+            "prefix": "Hey"
+        },
+        {
+            "name": "cheer",
+            "prefix": "Cheer"
+        },
+        {
+            "name": "scared",
+            "prefix": "Scared"
+        }
+    ]
+}

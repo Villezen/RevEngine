@@ -1,0 +1,11 @@
+{
+    "increments":
+    {
+        "READY":
+        {
+            "antialiasing": true,
+            "scale": [1, 1],
+            "offsets": [0, 0]
+        }
+    }
+}

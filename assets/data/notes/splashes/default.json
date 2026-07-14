@@ -1,0 +1,25 @@
+{
+    "type": "COMBINED",
+
+    "size": [0.8, 0.8],
+    "alpha": 1.0,
+    "antialiasing": true,
+
+    "animations":
+    {
+        "normal":
+        [
+            {"name": "1LEFT", "prefix": "note impact 1 purple", "offsets": [0, 0]},
+            {"name": "2LEFT", "prefix": "note impact 2 purple", "offsets": [0, 0]},
+
+            {"name": "1DOWN", "prefix": "note impact 1  blue", "offsets": [0, 0]},
+            {"name": "2DOWN", "prefix": "note impact 2 blue", "offsets": [0, 0]},
+
+            {"name": "1UP", "prefix": "note impact 1 green", "offsets": [0, 0]},
+            {"name": "2UP", "prefix": "note impact 2 green", "offsets": [0, 0]},
+
+            {"name": "1RIGHT", "prefix": "note impact 1 red", "offsets": [0, 0]},
+            {"name": "2RIGHT", "prefix": "note impact 2 red", "offsets": [0, 0]}
+        ]
+    }
+}

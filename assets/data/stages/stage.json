@@ -1,0 +1,47 @@
+{
+    "camera":
+    {
+        "zoom": 0.8,
+        "speed": 1.0,
+
+        "baseline": [600, 300],
+
+        "boyfriend": [0, 0],
+        "dad": [0, 0],
+        "girlfriend": [0, 0]
+    },
+
+    "characters":
+    {
+        "boyfriend": [0, 0],
+        "dad": [0, 0],
+        "girlfriend": [0, 0],
+
+        "visibility": [true, true, true]
+    },
+
+    "sprites":
+    [
+        {
+            "name": "back",
+            "path": "stages/stage/back",
+
+            "position": [-600, -200]
+        },
+        {
+            "name": "front",
+            "path": "stages/stage/front",
+
+            "position": [-650, 600],
+            "scale": [1.1, 1.1]
+        },
+        {
+            "name": "curtains",
+            "path": "stages/stage/curtains",
+
+            "position": [-700, -500],
+            "scale": [1.2, 1.2],
+            "scroll": [1.3, 1.3]
+        }
+    ]
+}

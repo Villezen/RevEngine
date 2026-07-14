@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="slider.png">
+    <SubTexture name="slider-topleft" x="0" y="0" width="8" height="8"/>
+    <SubTexture name="slider-top" x="8" y="0" width="84" height="8"/>
+    <SubTexture name="slider-topright" x="92" y="0" width="8" height="8"/>
+
+    <SubTexture name="slider-middleleft" x="0" y="8" width="8" height="4"/>
+    <SubTexture name="slider-middle" x="8" y="8" width="84" height="4"/>
+    <SubTexture name="slider-middleright" x="92" y="8" width="8" height="4"/>
+
+    <SubTexture name="slider-bottomleft" x="0" y="12" width="8" height="8"/>
+    <SubTexture name="slider-bottom" x="8" y="12" width="84" height="8"/>
+    <SubTexture name="slider-bottomright" x="92" y="12" width="8" height="8"/>
+</TextureAtlas>

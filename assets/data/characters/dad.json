@@ -1,0 +1,39 @@
+{
+    "name": "Dad",
+    "color": "#AF66CE",
+
+    "renderType": "ATLAS",
+
+    "applyStageMatrix": true,
+
+    "placement": "OPPONENT",
+    "position": [380, 450],
+    "camera": [50, -265],
+
+    "scale": [1.08, 1.08],
+
+    "animations":
+    [
+        {
+            "name": "idle",
+            "prefix": "Idle",
+            "looped": true
+        },
+        {
+            "name": "singLEFT",
+            "prefix": "Left"
+        },
+        {
+            "name": "singDOWN",
+            "prefix": "Down"
+        },
+        {
+            "name": "singUP",
+            "prefix": "Up"
+        },
+        {
+            "name": "singRIGHT",
+            "prefix": "Right"
+        }
+    ]
+}

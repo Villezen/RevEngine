@@ -1,0 +1,10 @@
+{
+    "name": "Daddy Dearest",
+    "color": "#D396FC",
+    "folder": "game/ui/dialogue/characters/dad",
+
+    "expressions":
+    [
+        {"name": "default", "position": [0, 0], "scale": [1, 1], "alpha": 1, "antialiasing": true}
+    ]
+}
