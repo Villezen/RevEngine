@@ -383,7 +383,7 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
         if (event.cancelled)
             return;
 
-        if (Conductor.instance.position < sustain.time + Conductor.instance.stepLengthMs) return;
+        if (Conductor.instance.songPosition < sustain.time + Conductor.instance.stepLengthMs) return;
 
         var dir = Constants.SING_DIRECTIONS[parent.keyCount][sustain.direction];
         var animName = 'sing${dir}';
@@ -511,7 +511,7 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
         {
             if (sustain == null || !sustain.exists || !sustain.alive) continue;
 
-            if (Conductor.instance.position >= sustain.time && sustain.hit && !sustain.missed)
+            if (Conductor.instance.songPosition >= sustain.time && sustain.hit && !sustain.missed)
             {
                 resetTimer -= elapsed;
                 

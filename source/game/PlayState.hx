@@ -846,11 +846,12 @@ class PlayState extends MusicBeatState
     {
         super.update(elapsed);
 
-        lastConductorPos = conductor.position;
+        lastConductorPos = conductor.songPosition;
 
+        // Handle instrumental resync
         if (updateConductor)
         {
-            var newPosition:Float = conductor.position + elapsed * 1000;
+            var newPosition:Float = conductor.songPosition + elapsed * 1000;
 
             if (song != null && song.inst != null && song.inst.playing)
             {
@@ -867,56 +868,88 @@ class PlayState extends MusicBeatState
             conductor.update(newPosition);
         }
 
-        if (FlxG.keys.justPressed.ESCAPE && songStarted)
-        {
-            updateConductor = false;
-            
-            if (song != null)
-                song.stop();
+        // Process the player's inputs.
+        processInputs(elapsed);
 
-            FunkinSound.stopAllAudio(true);
-            Manager.switchState(new menus.MainMenuState(), "stickers");
+        // Lerps the cameras zoom back to their original values.
+        lerpCamerasZoom(elapsed);
+
+        // Update the score and the health to a smooth lerp.
+        scoreLerp = MathUtil.framerateLerp(scoreLerp, metrics.score ?? 0, FlxMath.bound(elapsed * (30 * 1.0), 0, 1));
+        healthLerp = MathUtil.framerateLerp(healthLerp, metrics.health ?? 1.0, FlxMath.bound(elapsed * (30 * 1.5), 0, 1));
+        updateScoreText();
+
+        manageDebugKeybinds(true);
+    }
+
+    /**
+     * Updates the default score text. 
+     * Is "dynamic" with the intent of it being overriden by scripts if wished to.
+     */
+    dynamic function updateScoreText():Void
+    {
+        if (scoreText == null) 
+        {
+            return;
+        }
+        
+        var roundedScore:Int = Math.round(scoreLerp);
+
+        if (roundedScore != _lastDisplayedScore)
+        {
+            _lastDisplayedScore = roundedScore;
+            scoreText.text = "Score: " + Std.string(FlxStringUtil.formatMoney(roundedScore, false, true));
+        }
+    }
+
+    /**
+     * Lerps the zoom of the cameras back to their original values.
+     */
+    dynamic function lerpCamerasZoom(elapsed:Float):Void
+    {
+        if (!camerasCanLerp)
+        {
+            return;
         }
 
+        var decay:Float = 0.85;
+        var speed:Float = (elapsed * 60) * camerasZoomLerpSpeed;
+        var lerpFactor:Float = Math.pow(decay, speed);
+
+        cameraBopMultiplier = FlxMath.lerp(1.0, cameraBopMultiplier, lerpFactor);
+        FlxG.camera.zoom = (currentCameraZoom * cameraBopMultiplier);
+
+        for (hudCameras in _hudZoomCameras)
+            hudCameras.zoom = FlxMath.lerp(currentHudZoom, hudCameras.zoom, lerpFactor);
+    }
+
+    /**
+     * Handles certain debugging functions.
+     * @param devMode Allows for more sensitive debug keybinds like timeskip, downscroll switch and quick exit.
+     */
+    function manageDebugKeybinds(devMode:Bool):Void
+    {
+        // Access the chart editor.
         if (FlxG.keys.justPressed.SEVEN)
         {
             Manager.switchState("Charter");
         }
 
-        processInputs(elapsed);
+        // Only add the more sensitive keybinds after this.
+        if (!devMode) return;
 
-        if (canSkip)
-            updateTimeSkipping(FlxG.keys.pressed.TWO || FlxG.keys.pressed.ONE, (FlxG.keys.pressed.TWO ? 3.0 : 0.5));
-        else if (!canSkip && FlxG.timeScale != 1.0)
-            setTimeScale(1.0);
-
-        if (camerasCanLerp)
+        // Quickly go back to the main menu.
+        if (FlxG.keys.justPressed.ESCAPE && songStarted)
         {
-            var decay:Float = 0.85;
-            var speed:Float = (elapsed * 60) * camerasZoomLerpSpeed;
-            var lerpFactor:Float = Math.pow(decay, speed);
+            updateConductor = false;
+            
+            song?.stop();
 
-            cameraBopMultiplier = FlxMath.lerp(1.0, cameraBopMultiplier, lerpFactor);
-            FlxG.camera.zoom = (currentCameraZoom * cameraBopMultiplier);
-
-            for (hudCameras in _hudZoomCameras)
-                hudCameras.zoom = FlxMath.lerp(currentHudZoom, hudCameras.zoom, lerpFactor);
+            FunkinSound.stopAllAudio(true);
+            Manager.switchState(new menus.MainMenuState(), "stickers");
         }
 
-        scoreLerp = MathUtil.framerateLerp(scoreLerp, metrics.score ?? 0, FlxMath.bound(elapsed * (30 * 1.0), 0, 1));
-        healthLerp = MathUtil.framerateLerp(healthLerp, metrics.health ?? 1.0, FlxMath.bound(elapsed * (30 * 1.5), 0, 1));
-
-        if (scoreText != null)
-        {
-            var roundedScore:Int = Math.round(scoreLerp);
-
-            if (roundedScore != _lastDisplayedScore)
-            {
-                _lastDisplayedScore = roundedScore;
-                scoreText.text = "Score: " + Std.string(FlxStringUtil.formatMoney(roundedScore, false, true));
-            }
-        }
-
+        // Quickly switches the scroll direction of the notes.
         if (FlxG.keys.justPressed.TAB)
         {
             Configs.DOWNSCROLL = !Configs.DOWNSCROLL;
@@ -930,12 +963,22 @@ class PlayState extends MusicBeatState
                     strumline.downScroll = camStrums.flipY;
             }
         }
+
+        // Makes the game fast forward.
+        if (canSkip)
+        {
+            updateTimeSkipping(FlxG.keys.pressed.TWO || FlxG.keys.pressed.ONE, (FlxG.keys.pressed.TWO ? 3.0 : 0.5));
+        }
+        else if (!canSkip && FlxG.timeScale != 1.0)
+        {
+            setTimeScale(1.0);
+        }
     }
 
     /**
      * Procces inputs to determine if a note should be hit or not.
      */
-    function processInputs(elapsed:Float)
+    function processInputs(elapsed:Float):Void
     {
         if (playerStrums == null) return;
 
@@ -943,7 +986,7 @@ class PlayState extends MusicBeatState
         {
             if (sustain == null || !sustain.exists || !sustain.alive) continue;
 
-            if (conductor.position >= sustain.time && sustain.hit && !sustain.missed && sustain.mustHit)
+            if (conductor.songPosition >= sustain.time && sustain.hit && !sustain.missed && sustain.mustHit)
                 metrics.hold(elapsed);
         }
 
@@ -1022,73 +1065,38 @@ class PlayState extends MusicBeatState
             onTransitionFinish = null;
         }
 
-        if (conductor.onStepHit.has(stepHit))
-            conductor.onStepHit.remove(stepHit);
-
-        if (conductor.onBeatHit.has(beatHit))
-            conductor.onBeatHit.remove(beatHit);
-
-        if (conductor.onMeasureHit.has(measureHit))
-            conductor.onMeasureHit.remove(measureHit);
-
-        if (missSounds != null)
+        for (snd in missSounds)
         {
-            for (snd in missSounds)
-            {
-                if (snd != null)
-                {
-                    FlxG.sound.list.remove(snd, true);
-                    snd.destroy();
-                }
-            }
-            missSounds = [];
+            if (snd == null) continue;
+            
+            FlxG.sound.list.remove(snd, true);
+            snd.destroy();  
         }
 
-        var allCameras = [camGame, camBetween, camHUD, camStrums, camMisc, camOverlay];
-        for (cam in allCameras)
+        missSounds = [];
+
+        for (cam in [camGame, camBetween, camHUD, camStrums, camMisc, camOverlay])
         {
-            if (cam != null && FlxG.cameras.list.contains(cam))
-            {
-                FlxG.cameras.remove(cam, true);
-            }
+            if (cam == null || !FlxG.cameras.list.contains(cam)) continue;
+            FlxG.cameras.remove(cam, true);
         }
-
-        if (song != null)
-        {
-            song.stop();
-        }
-
-        if (inputs != null)
-        {
-            inputs.destroy();
-            inputs = null;
-        }
-
-        instance = null;
-
-        song = null;
-        chart = null;
-        meta = null;
-        
-        metrics = null;
-        eventsHandler = null;
-
-        playerStrums = null;
-        enemyStrums = null;
-
-        strumlines.clear();
-        characters.clear();
-
-        stage = null;
-        pointer = null;
-
-        dad = null;
-        boyfriend = null;
-        gf = null;
 
         inputs?.destroy();
+        inputs = null;
+
+        strumlines?.clear();
+        characters?.clear();
+        song?.stop();
+
+        var objects:Array<Dynamic> = [song, chart, meta, metrics, eventsHandler, playerStrums, enemyStrums, stage, pointer];
+        for (obj in objects)
+        {
+            obj = null;
+        }
 
         CharacterHandler.clear();
+
+        instance = null;
 
         super.destroy();
     }
@@ -1342,7 +1350,7 @@ class PlayState extends MusicBeatState
 
         if (note.mustHit)
         {
-            var rating:NoteJudgement = metrics.calculateRating(note.time - conductor.position);
+            var rating:NoteJudgement = metrics.calculateRating(note.time - conductor.songPosition);
             
             if (event.showRating)
                 metrics.judgeRating(rating);

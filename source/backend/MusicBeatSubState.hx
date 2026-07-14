@@ -55,26 +55,26 @@ class MusicBeatSubState extends FlxSubState
 	 * The current step of the substate.
 	 * Defaults to the Conductor's current step.
 	 */
-	public var currentStep(get, never):Float;
+	public var currentStep(get, never):Int;
 	
-	function get_currentStep():Float 
+	function get_currentStep():Int
 		return conductor.currentStep;
 	
 	/**
 	 * The current beat of the substate.
 	 * Defaults to the Conductor's current beat.
 	 */
-	public var currentBeat(get, never):Float;
-	function get_currentBeat():Float 
+	public var currentBeat(get, never):Int;
+	function get_currentBeat():Int 
 		return conductor.currentBeat;
 
 	/**
 	 * The current measure of the substate.
 	 * Defaults to the Conductor's current measure.
 	 */
-	public var currentMeasure(get, never):Float;
+	public var currentMeasure(get, never):Int;
 
-	function get_currentMeasure():Float 
+	function get_currentMeasure():Int 
 		return conductor.currentMeasure;
 
     /**

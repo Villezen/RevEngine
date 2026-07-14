@@ -160,9 +160,13 @@ class MusicBeatState extends FlxState implements IEventHandler
      */
     override public function destroy():Void
     {
-        conductor.destroy();
-
         FlxG.timeScale = 1.0;
+
+        // Clear up the main conductor instance to destroy it properly
+        conductor?.onStepHit.remove(stepHit);
+        conductor?.onBeatHit.remove(beatHit);
+        conductor?.onMeasureHit.remove(measureHit);
+        conductor?.destroy();
 
         ModuleHandler.clear();
 

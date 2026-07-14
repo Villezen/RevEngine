@@ -186,7 +186,7 @@ class Song extends FlxBasic
         if (!_started || _completed || inst == null || inst.length <= 0)
             return;
 
-        if (Conductor.instance.position < inst.length)
+        if (Conductor.instance.songPosition < inst.length)
             return;
 
         _completed = true;
@@ -280,7 +280,7 @@ class Song extends FlxBasic
         if (inst == null || !inst.playing)
             return;
 
-        if (inst.length > 0 && Conductor.instance.position >= inst.length)
+        if (inst.length > 0 && Conductor.instance.songPosition >= inst.length)
             return;
 
         for (voice in voices)

@@ -1,6 +1,7 @@
 package game.handlers;
 
 import flixel.util.FlxSignal;
+import flixel.math.FlxMath;
 
 /**
  * A manager for handling BPM-based music events.
@@ -10,18 +11,18 @@ class Conductor
     public static var instance:Conductor = null;
 
     /**
-     * The current position.
+     * The current position of the song.
      * Used for calculating the current step, beat, and measure.
      */
-    public var position:Float = 0.0;
+    public var songPosition:Float = 0.0;
 
     /**
-     * The start BPM of the Conductor.
+     * The initial BPM of the Conductor.
      */
     public var startingBpm(default, null):Float;
 
     /**
-     * The current bpm of the Conductor.
+     * The current bpm of the song.
      */
     public var bpm:Float = 100;
 
@@ -48,35 +49,50 @@ class Conductor
      */
     private var isTweeningBPM:Bool = false;
 
+	/**
+	 * Current position in the song, in steps and fractions of itself.
+	 */
+    public var currentStepTime(default, null):Float = 0;
+
+    /**
+	 * Current position in the song, in beats and fractions of itself.
+	 */
+    public var currentBeatTime(default, null):Float = 0;
+    
+	/**
+	 * Current position in the song, in measures and fractions of itself.
+	 */
+    public var currentMeasureTime(default, null):Float = 0;
+
     /**
      * The current step the Conductor is on.
      */
-    public var currentStep(default, null):Float = 0;
+    public var currentStep(default, null):Int = 0;
 
     /**
      * The current beat the Conductor is on.
      */
-    public var currentBeat(default, null):Float = 0;
+    public var currentBeat(default, null):Int = 0;
     
     /**
      * The current measure the Conductor is on.
      */
-    public var currentMeasure(default, null):Float = 0;
+    public var currentMeasure(default, null):Int = 0;
 
     /**
      * Signal that fires when the Conductor has reached a new step.
      */
-    public var onStepHit(default, null):FlxTypedSignal<Float->Void> = new FlxTypedSignal<Float->Void>();
+    public var onStepHit(default, null):FlxTypedSignal<Int->Void> = new FlxTypedSignal<Int->Void>();
 
     /**
      * Signal that fires when the Conductor has reached a new beat.
      */
-    public var onBeatHit(default, null):FlxTypedSignal<Float->Void> = new FlxTypedSignal<Float->Void>();
+    public var onBeatHit(default, null):FlxTypedSignal<Int->Void> = new FlxTypedSignal<Int->Void>();
 
     /**
      * Signal that fires when the Conductor has reached a new measure.
      */
-    public var onMeasureHit(default, null):FlxTypedSignal<Float->Void> = new FlxTypedSignal<Float->Void>();
+    public var onMeasureHit(default, null):FlxTypedSignal<Int->Void> = new FlxTypedSignal<Int->Void>();
 
     /**
      * Signal that fires when the Conductor has reached a new BPM change event.
@@ -92,20 +108,23 @@ class Conductor
 	}
 
 	/**
-	 * Clears the main conductor instance.
+	 * Resets and clears the main conductor instance..
 	 */
-	public function destroy(r:Bool = true)
+	public function destroy()
 	{
+        // Make sure we cancel all the tweens in this instance before we destroy it.
         reset();
-        if (r) instance = null;
+
+        // Destroy this instance.
+        instance = null;
 	}
 
     /**
-     * Resets the Conductor completely.
+     * Completely resets the conductor.
      */
     public function reset():Void
     {
-        for (i in [currentStep, currentBeat, currentMeasure, position, lastChangeTime, lastChangeStep])
+        for (i in [currentStep, currentBeat, currentMeasure, songPosition, lastChangeTime, lastChangeStep])
             i = 0.0;
 
         cancelBPMTween();
@@ -153,9 +172,9 @@ class Conductor
             cancelBPMTween();
 
         if (stepLengthMs > 0)
-            lastChangeStep += (position - lastChangeTime) / stepLengthMs;
+            lastChangeStep += (songPosition - lastChangeTime) / stepLengthMs;
         
-        lastChangeTime = position;
+        lastChangeTime = songPosition;
         bpm = newBpm;
 
         updateCachedTimings();
@@ -200,11 +219,11 @@ class Conductor
     }
 
     /**
-     * Updates the cached crotchet timings to save processing power.
+     * Updates the cached length timings to save processing power.
      */
     private inline function updateCachedTimings():Void
     {
-        beatLengthMs = (60 / bpm) * 1000;
+        beatLengthMs = getBeatLengthMsOf(bpm);
         stepLengthMs = beatLengthMs / 4;
         measureLengthMs = beatLengthMs * 4;
     }
@@ -215,7 +234,7 @@ class Conductor
      */
     public function update(newPosition:Float):Void
     {
-        position = newPosition;
+        songPosition = newPosition;
 
         if (stepLengthMs > 0)
             handleStepInfo(newPosition);
@@ -227,17 +246,29 @@ class Conductor
      */
     private function handleStepInfo(newPosition:Float):Void
     {
-        var oldStep:Float = currentStep;
-        var oldBeat:Float = currentBeat;
-        var oldMeasure:Float = currentMeasure;
+        final oldStep:Int = currentStep;
+        final oldBeat:Int = currentBeat;
+        final oldMeasure:Int = currentMeasure;
 
-        currentStep = Math.floor(lastChangeStep + ((newPosition - lastChangeTime) / stepLengthMs));
-        currentBeat = Math.floor(currentStep / 4);
-        currentMeasure = Math.floor(currentBeat / 4);
-    
-        if (oldStep != currentStep) onStepHit.dispatch(currentStep);
-        if (oldBeat != currentBeat) onBeatHit.dispatch(currentBeat);
-        if (oldMeasure != currentMeasure) onMeasureHit.dispatch(currentMeasure);
+        currentStepTime = FlxMath.roundDecimal(lastChangeStep + ((newPosition - lastChangeTime) / stepLengthMs), 4);
+        currentBeatTime = FlxMath.roundDecimal((currentStep / 4), 4);
+        currentMeasureTime = FlxMath.roundDecimal((currentBeat / 4), 4);
+
+        currentStep = Math.floor(currentStepTime);
+        currentBeat = Math.floor(currentBeatTime);
+        currentMeasure = Math.floor(currentMeasureTime);
+        
+        // Update the song's meter values while checking that it's not trying to repeat a beat.
+        // This gets done in a loop between the old and current step to dispatch to make sure
+        // we never skip a value, thus preventing breaking stuff like events.
+        if (currentStep > oldStep) 
+            for (s in oldStep...currentStep) onStepHit.dispatch(s+1);
+
+        if (currentBeat > oldBeat) 
+            for (b in oldBeat...currentBeat) onBeatHit.dispatch(b+1);
+        
+        if (currentMeasure > oldMeasure) 
+            for (m in oldMeasure...currentMeasure) onMeasureHit.dispatch(m+1);
     }
 
     public inline function getBeatLengthMsOf(targetBpm:Float):Float 
@@ -250,7 +281,7 @@ class Conductor
         return getBeatLengthMsOf(targetBpm) / 4;
     }
 
-    public inline function getmeasureLengthMsOf(targetBpm:Float):Float 
+    public inline function getMeasureLengthMsOf(targetBpm:Float):Float 
     {
         return getBeatLengthMsOf(targetBpm) * 4;
     }
