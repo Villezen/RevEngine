@@ -65,6 +65,7 @@ class TitleState extends MusicBeatState
         mainGroup.add(gfTitle);
 
         logo = createMenuSprite(TitleMenuRegistry.data.logo);
+        logo.playAnim("bump", {force: true});
         mainGroup.add(logo);
 
         button = createMenuSprite(TitleMenuRegistry.data.button);
@@ -227,7 +228,7 @@ class TitleState extends MusicBeatState
         introGroup.visible = false;
 
         if (shouldFlash)
-            flash();
+            flash(1.75);
 
         clearGroup();
 
@@ -243,24 +244,24 @@ class TitleState extends MusicBeatState
         confirmed = true;
         canSkip = true;
 
-        flash();
+        flash(0.7);
 
         FunkinSound.playOnce(Paths.sound('engine/confirm'));
         button.playAnim("confirm", {force: true});
 
-        FlxTimer.wait(0.7, () ->
+        FlxTimer.wait(0.75, () ->
         {
             if (!hasSkipped)
                 Manager.switchState(new MainMenuState());
         });
     }
 
-    function flash():Void
+    function flash(time:Float = 1.0):Void
     {
         FlxTween.cancelTweensOf(flashSprite);
 
         flashSprite.alpha = 1;
-        FlxTween.tween(flashSprite, {alpha: 0}, 0.7, {ease: FlxEase.sineOut});
+        FlxTween.tween(flashSprite, {alpha: 0.0}, time, {ease: FlxEase.sineOut});
     }
 
     function createMenuSprite(data:TitleMenuObjectData):FunkinSprite
