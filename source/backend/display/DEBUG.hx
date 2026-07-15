@@ -38,9 +38,9 @@ enum DisplayType
 
 typedef CachedSpriteData =
 {
-	var total:Int;
-	var visible:Int;
-	var drawn:Int;
+    var total:Int;
+    var visible:Int;
+    var drawn:Int;
 }
 
 /**
@@ -182,9 +182,9 @@ class DEBUG extends Sprite
                 cpuProcess.close();
 
                 for (line in cpuOutput.split("\n"))
-				{
+                {
                     if (line.indexOf("REG_SZ") != -1)
-					{
+                    {
                         fetchedCPU = StringTools.trim(line.split("REG_SZ")[1]);
                         break;
                     }
@@ -195,19 +195,19 @@ class DEBUG extends Sprite
                 osProcess.close();
 
                 for (line in osOutput.split("\n"))
-				{
+                {
                     var trimmed = StringTools.trim(line);
                     if (trimmed.length > 0 && trimmed.indexOf("Caption") == -1)
-					{
+                    {
                         fetchedOS = trimmed;
                         break;
                     }
                 }
             }
-			catch (e:Dynamic) {}
+            catch (e:Dynamic) {}
             #elseif mac
             try
-			{
+            {
                 var cpuProcess = new sys.io.Process("sysctl", ["-n", "machdep.cpu.brand_string"]);
                 fetchedCPU = StringTools.trim(cpuProcess.stdout.readAll().toString());
                 cpuProcess.close();
@@ -221,21 +221,21 @@ class DEBUG extends Sprite
                 osVerProcess.close();
 
                 if (osNameStr.length > 0)
-					fetchedOS = osNameStr + " " + osVerStr;
+                    fetchedOS = osNameStr + " " + osVerStr;
             }
-			catch (e:Dynamic) {}
+            catch (e:Dynamic) {}
             #elseif linux
             try
-			{
+            {
                 var cpuInput = sys.io.File.read('/proc/cpuinfo', false);
                 var cpuRegex = ~/^model name\s+:\s+(.+)$/m;
                 var line:String;
 
                 while (!cpuInput.eof())
-				{
+                {
                     line = cpuInput.readLine();
                     if (cpuRegex.match(line))
-					{
+                    {
                         fetchedCPU = StringTools.trim(cpuRegex.matched(1));
                         break;
                     }
@@ -246,17 +246,17 @@ class DEBUG extends Sprite
                 var osRegex = ~/^PRETTY_NAME="([^"]+)"/m;
 
                 while (!osInput.eof())
-				{
+                {
                     line = osInput.readLine();
                     if (osRegex.match(line))
-					{
+                    {
                         fetchedOS = StringTools.trim(osRegex.matched(1));
                         break;
                     }
                 }
                 osInput.close();
             }
-			catch (e:Dynamic) {}
+            catch (e:Dynamic) {}
             #end
 
             cpuName = fetchedCPU;
@@ -267,7 +267,7 @@ class DEBUG extends Sprite
         #end
 
         GitHubUtil.fetchCommit(Constants.REPOSITORY_OWNER, Constants.REPOSITORY_NAME, Constants.REPOSITORY_BRANCH, '', function(result:String)
-		{
+        {
             githubCommit = result;
             updateStaticInfo();
         });
@@ -301,7 +301,7 @@ class DEBUG extends Sprite
         if (statsTimer >= 500) 
         {
             if (currentDisplayType != HIDDEN)
-				updateMemory();
+                updateMemory();
 
             if (infoTextToggle) 
             {
@@ -316,26 +316,26 @@ class DEBUG extends Sprite
             statsTimer = 0;
         }
 
-		framerateGraph.x = framerateText.x;
+        framerateGraph.x = framerateText.x;
         framerateGraph.y = framerateText.y + targetFrameHeight + 5;
 
-		memoryGraph.x = memoryText.x;
+        memoryGraph.x = memoryText.x;
         memoryGraph.y = memoryText.y + targetMemHeight + 5;
     }
 
     public function getSpriteCounts(basic:FlxBasic, ?counts:CachedSpriteData):CachedSpriteData
     {
         if (counts == null)
-			counts = {total: 0, visible: 0, drawn: 0};
+            counts = {total: 0, visible: 0, drawn: 0};
 
         if (basic == null || !basic.exists)
-			return counts;
+            return counts;
 
         if (Std.isOfType(basic, FlxTypedGroup))
         {
             var group:FlxTypedGroup<Dynamic> = cast basic;
             for (member in group.members)
-				getSpriteCounts(member, counts);
+                getSpriteCounts(member, counts);
         }
         else if (Std.isOfType(basic, FlxTypedSpriteGroup))
         {
@@ -351,7 +351,7 @@ class DEBUG extends Sprite
             {
                 counts.visible++;
                 if (sprite.isOnScreen(FlxG.camera))
-					counts.drawn++;
+                    counts.drawn++;
             }
         }
 
@@ -422,12 +422,23 @@ class DEBUG extends Sprite
             var currentBeat:Int = 0;
             var currentMeasure:Int = 0;
 
-            var conductor:Dynamic = Reflect.field(FlxG.state, "conductor");
+            var conductor:Dynamic = null;
+
+            if (FlxG.state.subState != null)
+                conductor = Reflect.getProperty(FlxG.state.subState, "conductor");
+            
+            if (conductor == null)
+                conductor = Reflect.getProperty(FlxG.state, "conductor");
+
             if (conductor != null)
             {
-                currentStep = conductor.currentStepTime != null ? conductor.currentStepTime : 0;
-                currentBeat = conductor.currentBeatTime != null ? conductor.currentBeatTime : 0;
-                currentMeasure = conductor.currentMeasureTime != null ? conductor.currentMeasureTime : 0;
+                var step:Dynamic = Reflect.getProperty(conductor, "currentStepTime");
+                var beat:Dynamic = Reflect.getProperty(conductor, "currentBeatTime");
+                var measure:Dynamic = Reflect.getProperty(conductor, "currentMeasureTime");
+
+                currentStep = step != null ? Std.int(step) : 0;
+                currentBeat = beat != null ? Std.int(beat) : 0;
+                currentMeasure = measure != null ? Std.int(measure) : 0;
             }
 
             if (FlxG.state != cachedState)
@@ -476,7 +487,7 @@ class DEBUG extends Sprite
         infoText.alpha = MathUtil.smoothLerpPrecision(infoText.alpha, infoTextToggle ? 0.8 : 0, elapsed, 0.1);
 
         if (!infoTextToggle && infoBox.alpha <= 0.01)
-			return;
+            return;
 
         infoText.y = textBox.y + textBox.height + 5;
         infoBox.x = infoText.x;
@@ -506,8 +517,8 @@ class DEBUG extends Sprite
         switch(currentDisplayType)
         {
             case HIDDEN:
-			{
-				textBox.width = MathUtil.smoothLerpPrecision(textBox.width, 0, elapsed, 0.1);
+            {
+                textBox.width = MathUtil.smoothLerpPrecision(textBox.width, 0, elapsed, 0.1);
                 textBox.height = MathUtil.smoothLerpPrecision(textBox.height, 0, elapsed, 0.1);
 
                 framerateText.x = MathUtil.smoothLerpPrecision(framerateText.x, -(targetFrameWidth), elapsed, 0.1);
@@ -516,11 +527,11 @@ class DEBUG extends Sprite
 
                 framerateGraph.alpha = MathUtil.smoothLerpPrecision(framerateGraph.alpha, 0, elapsed, 0.1);
                 memoryGraph.alpha = MathUtil.smoothLerpPrecision(memoryGraph.alpha, 0, elapsed, 0.1);
-			}
+            }
             
             case SIMPLE:
-			{
-				textBox.width = MathUtil.smoothLerpPrecision(textBox.width, targetFrameWidth - 2, elapsed, 0.1);
+            {
+                textBox.width = MathUtil.smoothLerpPrecision(textBox.width, targetFrameWidth - 2, elapsed, 0.1);
                 textBox.height = MathUtil.smoothLerpPrecision(textBox.height, targetFrameHeight + 5, elapsed, 0.1);
 
                 framerateText.x = MathUtil.smoothLerpPrecision(framerateText.x, 10, elapsed, 0.1);
@@ -529,11 +540,11 @@ class DEBUG extends Sprite
 
                 framerateGraph.alpha = MathUtil.smoothLerpPrecision(framerateGraph.alpha, 0, elapsed, 0.1);
                 memoryGraph.alpha = MathUtil.smoothLerpPrecision(memoryGraph.alpha, 0, elapsed, 0.1);
-			}
+            }
             
             case MEMORY:
-			{
-				textBox.width = MathUtil.smoothLerpPrecision(textBox.width, targetMemWidth - 2, elapsed, 0.1);
+            {
+                textBox.width = MathUtil.smoothLerpPrecision(textBox.width, targetMemWidth - 2, elapsed, 0.1);
                 textBox.height = MathUtil.smoothLerpPrecision(textBox.height, targetFrameHeight + targetMemHeight, elapsed, 0.1);
 
                 framerateText.x = MathUtil.smoothLerpPrecision(framerateText.x, 10, elapsed, 0.1);
@@ -543,11 +554,11 @@ class DEBUG extends Sprite
 
                 framerateGraph.alpha = MathUtil.smoothLerpPrecision(framerateGraph.alpha, 0, elapsed, 0.1);
                 memoryGraph.alpha = MathUtil.smoothLerpPrecision(memoryGraph.alpha, 0, elapsed, 0.1);
-			}
+            }
             
             case ADVANCED:
-			{
-				textBox.width = MathUtil.smoothLerpPrecision(textBox.width, 208, elapsed, 0.1);
+            {
+                textBox.width = MathUtil.smoothLerpPrecision(textBox.width, 208, elapsed, 0.1);
                 textBox.height = MathUtil.smoothLerpPrecision(textBox.height, memoryText.y + targetMemHeight + 33, elapsed, 0.1);
 
                 framerateText.x = MathUtil.smoothLerpPrecision(framerateText.x, 10, elapsed, 0.1);
@@ -556,7 +567,7 @@ class DEBUG extends Sprite
 
                 framerateGraph.alpha = MathUtil.smoothLerpPrecision(framerateGraph.alpha, 1, elapsed, 0.1);
                 memoryGraph.alpha = MathUtil.smoothLerpPrecision(memoryGraph.alpha, 1, elapsed, 0.1);
-			}
+            }
         }
     }
 }

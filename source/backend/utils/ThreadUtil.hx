@@ -38,8 +38,6 @@ final class ThreadUtil
         while ((callback = pendingExecs.pop(true)) != null)
         {
             updateMutex(threadMutex, threadUsed, true);
-            
-            trace(threadUsed);
 
             try
             {
