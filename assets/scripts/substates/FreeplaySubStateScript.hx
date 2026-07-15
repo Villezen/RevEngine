@@ -2,6 +2,10 @@ import backend.registries.menus.FreeplayRegistry;
 import menus.freeplay.SongMenuItem;
 import menus.freeplay.LetterSort;
 import menus.freeplay.DifficultySelector;
+import menus.freeplay.FreeplayScore;
+import menus.freeplay.ClearPercentCounter;
+import menus.freeplay.AlbumRoll;
+import backend.Highscore;
 import backend.transition.TransitionLoader;
 import flixel.text.FlxTextAlign;
 
@@ -72,6 +76,20 @@ class FreeplaySubStateScript extends MusicBeatSubState
     var getItTextBlurred:FunkinSprite;
 
     var revealed:Bool = false;
+
+    var highscoreSpr:FunkinSprite;
+    var scoreDisplay:FreeplayScore;
+    var clearBox:FunkinSprite;
+    var clearPercentCounter:ClearPercentCounter;
+
+    var albumRoll:AlbumRoll;
+
+    var intendedScore:Int = 0;
+    var lerpScore:Float = 0;
+    var intendedCompletion:Float = 0;
+    var lerpCompletion:Float = 0;
+
+    var highscoreFlickerActive:Bool = true;
 
     override function create()
     {
@@ -147,6 +165,9 @@ class FreeplaySubStateScript extends MusicBeatSubState
         ostName.visible = false;
         ostName.shader = new StrokeShader(0xFFFFFFFF, 4, 2);
         add(ostName);
+
+        buildHighscorePanel();
+        buildAlbumRoll();
 
         charSelectHint = new FlxText(-40, 18, FlxG.width - 8 - 8, 'Press [ TAB ] to change characters', 32);
         charSelectHint.camera = camUI;
@@ -558,6 +579,8 @@ class FreeplaySubStateScript extends MusicBeatSubState
         var targetAmt:Float = (Math.sin(hintTimer) + 1) / 2;
         charSelectHint.alpha = FlxMath.lerp(0.3, 0.9, targetAmt);
 
+        lerpScoreDisplay(elapsed);
+
         if (currentCard != null && currentCard.active)
             currentCard.onUpdate(this, elapsed);
 
@@ -605,11 +628,43 @@ class FreeplaySubStateScript extends MusicBeatSubState
 
         revealBackingCard();
 
+        revealHighscorePanel();
+        revealAlbumRoll();
+
         if (currentCard != null)
             currentCard.onIntroDone(this);
 
         if (menuSong != null)
             menuSong.play();
+    }
+
+    function revealHighscorePanel()
+    {
+        if (highscoreSpr != null) highscoreSpr.visible = true;
+
+        if (scoreDisplay != null)
+        {
+            scoreDisplay.visible = true;
+            scoreDisplay.updateScore(0);
+        }
+
+        if (clearBox != null) clearBox.visible = true;
+        if (clearPercentCounter != null) clearPercentCounter.visible = true;
+
+        lerpScore = 0;
+        lerpCompletion = 0;
+
+        updateScoreDisplay();
+    }
+
+    function revealAlbumRoll()
+    {
+        if (albumRoll == null) return;
+
+        var item = capsules[curSelected];
+        albumRoll.albumId = (item != null && item.freeplayData != null) ? item.freeplayData.albumId : null;
+
+        albumRoll.playIntro();
     }
 
     function exitMenu()
@@ -634,6 +689,13 @@ class FreeplaySubStateScript extends MusicBeatSubState
 
         FlxTween.tween(letterSort, {y: -topBar.height}, 0.3, {ease: FlxEase.quartIn});
         FlxTween.tween(difficultySelector, {x: difficultySelector.x - 400}, 0.4, {ease: FlxEase.expoIn});
+
+        if (highscoreSpr != null) FlxTween.tween(highscoreSpr, {x: FlxG.width}, 0.4, {ease: FlxEase.expoIn});
+        if (scoreDisplay != null) FlxTween.tween(scoreDisplay, {x: FlxG.width}, 0.4, {ease: FlxEase.expoIn});
+        if (clearBox != null) FlxTween.tween(clearBox, {x: FlxG.width}, 0.4, {ease: FlxEase.expoIn});
+        if (clearPercentCounter != null) FlxTween.tween(clearPercentCounter, {x: FlxG.width * 1.05}, 0.42, {ease: FlxEase.expoIn});
+
+        if (albumRoll != null) FlxTween.tween(albumRoll, {x: FlxG.width}, 0.4, {ease: FlxEase.expoIn});
 
         for (i in 0...capsules.length)
         {
@@ -670,7 +732,7 @@ class FreeplaySubStateScript extends MusicBeatSubState
             if (meta.freeplay.hide)
                 continue;
 
-            allSongs.push({id: folder, name: meta.name, bpm: Std.int(meta.bpm), difficultyRating: meta.album.ratings, icon: meta.icon, difficulties: [], variation: "", newlyAdded: meta.freeplay.newlyAdded});
+            allSongs.push({id: folder, name: meta.name, bpm: Std.int(meta.bpm), difficultyRating: meta.album.ratings, icon: meta.icon, difficulties: [], variation: "", newlyAdded: meta.freeplay.newlyAdded, albumId: meta.album.name});
 
             registerSongPlayers(folder);
         }
@@ -883,6 +945,109 @@ class FreeplaySubStateScript extends MusicBeatSubState
         add(difficultySelector);
     }
 
+    function buildHighscorePanel()
+    {
+        highscoreSpr = new FunkinSprite(FlxG.width - 420, 70, 'menus/freeplay/highscore');
+        highscoreSpr.addAnim('highscore', {prefix: 'highscore small instance 1', fps: 24});
+        highscoreSpr.camera = camUI;
+        highscoreSpr.visible = false;
+        add(highscoreSpr);
+
+        scheduleHighscoreFlicker(FlxG.random.float(12, 50));
+
+        scoreDisplay = new FreeplayScore(FlxG.width - 353, 60, 7, 100);
+        scoreDisplay.camera = camUI;
+        scoreDisplay.visible = false;
+        add(scoreDisplay);
+
+        clearBox = new FunkinSprite(FlxG.width - 115, 65, 'menus/freeplay/clearBox');
+        clearBox.camera = camUI;
+        clearBox.visible = false;
+        add(clearBox);
+
+        clearPercentCounter = new ClearPercentCounter(FlxG.width - 95, 87, 0);
+        clearPercentCounter.camera = camUI;
+        clearPercentCounter.visible = false;
+        add(clearPercentCounter);
+    }
+
+    function buildAlbumRoll()
+    {
+        albumRoll = new AlbumRoll();
+        albumRoll.camera = camUI;
+        add(albumRoll);
+    }
+
+    function updateAlbumRoll()
+    {
+        if (!introFinished || albumRoll == null) return;
+
+        var item = capsules[curSelected];
+        var newAlbumId = (item != null && item.freeplayData != null) ? item.freeplayData.albumId : null;
+
+        if (albumRoll.albumId != newAlbumId)
+        {
+            albumRoll.albumId = newAlbumId;
+            albumRoll.skipIntro();
+        }
+    }
+
+    function scheduleHighscoreFlicker(delay:Float)
+    {
+        FlxTimer.wait(delay, function()
+        {
+            if (highscoreFlickerActive)
+            {
+                if (highscoreSpr != null)
+                    highscoreSpr.playAnim('highscore', {force: true});
+
+                scheduleHighscoreFlicker(FlxG.random.float(20, 60));
+            }
+        });
+    }
+
+    function updateScoreDisplay()
+    {
+        var item = capsules[curSelected];
+
+        if (item != null && item.freeplayData != null)
+        {
+            var song = item.freeplayData;
+            var variation = (song.variation != null) ? song.variation : "";
+
+            intendedScore = Highscore.getScoreValue(song.id, curDifficulty, variation);
+            intendedCompletion = Highscore.getClearPercent(song.id, curDifficulty, variation);
+        }
+        else
+        {
+            intendedScore = 0;
+            intendedCompletion = 0;
+        }
+    }
+
+    function lerpScoreDisplay(elapsed:Float)
+    {
+        if (scoreDisplay == null) return;
+
+        lerpScore = MathUtil.smoothLerpPrecision(lerpScore, intendedScore, elapsed, 0.2, 1 / 100);
+        if (Math.isNaN(lerpScore) || Math.abs(lerpScore - intendedScore) < 1) lerpScore = intendedScore;
+
+        lerpCompletion = MathUtil.smoothLerpPrecision(lerpCompletion, intendedCompletion, elapsed, 0.5, 1 / 100);
+        if (Math.isNaN(lerpCompletion) || Math.abs(lerpCompletion - intendedCompletion) < 0.01) lerpCompletion = intendedCompletion;
+
+        scoreDisplay.updateScore(Std.int(lerpScore));
+
+        if (clearPercentCounter != null)
+        {
+            var pct = Math.floor(lerpCompletion * 100);
+
+            if (pct < 0) pct = 0;
+            if (pct > 100) pct = 100;
+
+            clearPercentCounter.curNumber = pct;
+        }
+    }
+
     function changeDifficulty(change:Int)
     {
         difficultySelector.change(change);
@@ -895,6 +1060,8 @@ class FreeplaySubStateScript extends MusicBeatSubState
         if (songListIds(filterSongs()) == songListIds(songs))
         {
             updateDots();
+            updateScoreDisplay();
+            updateAlbumRoll();
             return;
         }
 
@@ -1010,6 +1177,8 @@ class FreeplaySubStateScript extends MusicBeatSubState
             currentCard.onSelectionChange(this, curSelected);
 
         updateDots();
+        updateScoreDisplay();
+        updateAlbumRoll();
     }
 
     function confirmSelection()
@@ -1081,6 +1250,8 @@ class FreeplaySubStateScript extends MusicBeatSubState
 
     override function destroy()
     {
+        highscoreFlickerActive = false;
+
         deactivateCard();
         BackingCardHandler.clear();
 

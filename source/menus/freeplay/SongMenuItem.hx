@@ -19,6 +19,7 @@ typedef FreeplaySongData =
     @:optional var difficulties:Array<String>;
     @:optional var newlyAdded:Bool;
     @:optional var variation:String;
+    @:optional var albumId:String;
 }
 
 class SongMenuItem extends FlxSpriteGroup

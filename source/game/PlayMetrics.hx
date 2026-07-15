@@ -43,6 +43,24 @@ class PlayMetrics
     public var misses:Int = 0;
 
     /**
+     * Per-judgement hit counts.
+     */
+    public var sick:Int = 0;
+    public var good:Int = 0;
+    public var bad:Int = 0;
+    public var shit:Int = 0;
+
+    /**
+     * The highest combo reached during the song.
+     */
+    public var maxCombo:Int = 0;
+
+    /**
+     * The total number of player notes in the chart, set once at song start.
+     */
+    public var totalNotes:Int = 0;
+
+    /**
      * Overall accuracy, judged by hit timings.
      */
     public var accuracy(default, set):Float = 0.00;
@@ -137,6 +155,18 @@ class PlayMetrics
         lastRating = rating;
 
         combo++;
+
+        if (combo > maxCombo)
+            maxCombo = combo;
+
+        switch (rating)
+        {
+            case SICK: sick++;
+            case GOOD: good++;
+            case BAD: bad++;
+            case SHIT: shit++;
+            default:
+        }
 
 		score += Std.int(map[1]);
 		health += map[0] / 100.0 * 2;

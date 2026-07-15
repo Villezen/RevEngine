@@ -3,6 +3,8 @@ package backend;
 import flixel.input.keyboard.FlxKey;
 import flixel.util.FlxSave;
 
+import backend.Highscore.ScoreRecord;
+
 /**
  * A class containing every customizable setting you can configure in-game.
  */
@@ -130,6 +132,7 @@ class Configs
      * [GAMEPLAY]
      */
 
+    public static var HIGHSCORES:Map<String, ScoreRecord> = [];
     public static var DOWNSCROLL:Bool = false;
 
     /**
@@ -162,6 +165,8 @@ class Configs
         if (configSave.data.NOTE_BINDS_8K != null) NOTE_BINDS_8K = configSave.data.NOTE_BINDS_8K;
         if (configSave.data.NOTE_BINDS_9K != null) NOTE_BINDS_9K = configSave.data.NOTE_BINDS_9K;
 
+        if (highscoreSave.data.HIGHSCORES != null) HIGHSCORES = highscoreSave.data.HIGHSCORES;
+        
         if (configSave.data.DOWNSCROLL != null) DOWNSCROLL = configSave.data.DOWNSCROLL;
 
         if (configSave.data.FAVORITE_SONGS != null) FAVORITE_SONGS = configSave.data.FAVORITE_SONGS;
@@ -187,6 +192,8 @@ class Configs
         configSave.data.NOTE_BINDS_7K = NOTE_BINDS_7K;
         configSave.data.NOTE_BINDS_8K = NOTE_BINDS_8K;
         configSave.data.NOTE_BINDS_9K = NOTE_BINDS_9K;
+
+        highscoreSave.data.HIGHSCORES = HIGHSCORES;
 
         configSave.data.DOWNSCROLL = DOWNSCROLL;
 

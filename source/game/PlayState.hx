@@ -48,6 +48,9 @@ import backend.modding.events.ScriptEventDispatcher;
 import backend.transition.TransitionLoader;
 import backend.transition.TransitionState;
 
+import backend.Highscore;
+import backend.Highscore.ScoreTallies;
+
 import backend.utils.MathUtil;
 import backend.utils.MemoryUtil;
 
@@ -570,6 +573,15 @@ class PlayState extends MusicBeatState
         playerStrums = strumlines.get(1);
 
         metrics = new PlayMetrics(name);
+        
+        var noteTotal:Int = 0;
+        for (entry in chart.strumlines)
+        {
+            if (entry.id == 1 && entry.notes != null)
+                noteTotal += entry.notes.length;
+        }
+
+        metrics.totalNotes = noteTotal;
 
         for (i in 0...3)
         {
@@ -835,8 +847,34 @@ class PlayState extends MusicBeatState
         if (song != null)
             song.stop();
 
+        saveHighscore();
+
         FunkinSound.stopAllAudio(true);
         Manager.switchState(new menus.MainMenuState(), "stickers");
+    }
+
+    /**
+     * Records the score and tallies for the song that just finished and saves it.
+     */
+    function saveHighscore()
+    {
+        if (metrics == null)
+            return;
+
+        var tallies:ScoreTallies =
+        {
+            sick: metrics.sick,
+            good: metrics.good,
+            bad: metrics.bad,
+            shit: metrics.shit,
+            missed: metrics.misses,
+            combo: metrics.combo,
+            maxCombo: metrics.maxCombo,
+            totalNotesHit: metrics.sick + metrics.good + metrics.bad + metrics.shit,
+            totalNotes: metrics.totalNotes
+        };
+
+        Highscore.saveScore(name, difficulty, variation, {score: Std.int(metrics.score), tallies: tallies});
     }
 
     /**

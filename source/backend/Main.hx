@@ -2,9 +2,7 @@ package backend;
 
 import flixel.FlxGame;
 
-import backend.display.FPS;
-import backend.display.MEM;
-import backend.display.BOX;
+import backend.display.DEBUG;
 
 import haxe.io.Path;
 
@@ -23,19 +21,9 @@ import backend.utils.WindowUtil;
 class Main extends Sprite
 {
     /**
-	 * A frames per second counter which is displayed at the top left corner.
+	 * The debug display sprite, showing you info about the current framerate, memory usage and more. 
 	 */
-	public static var framerateCounter:FPS;
-
-	/**
-	 * A set of memory counters, displayed at the top left positioned next to the framerate counter.
-	 */
-	public static var memoryCounter:MEM;
-
-	/**
-	 * A black rectangular background sprite, which sits behind these previous debug display texts.
-	 */
-	public static var displayBox:BOX;
+	public static var debugDisplay:DEBUG;
 
     /**
      * Creates the game child, alongside a bunch of display sprites.
@@ -53,13 +41,8 @@ class Main extends Sprite
         game._customSoundTray = backend.display.SOUNDTRAY;
         addChild(game);
 
-        displayBox = new BOX(10, 5);
-
-		framerateCounter = new FPS(10, 6, 0xFFFFFF, 'exo2.otf');
-		memoryCounter = new MEM(10, 8, 0xFFFFFF, 'exo2.otf');
-
-		for (debugDisplay in [displayBox, framerateCounter, memoryCounter])
-			addChild(debugDisplay);
+		debugDisplay = new DEBUG();
+		addChild(debugDisplay);
     }
 
 	// Temporary (?)

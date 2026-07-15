@@ -49,7 +49,7 @@ class Constants
     /**
      * The version of the highscore's saving system. Change this when the way saving highscores works to prevent crashes so they get reset fully.
      */
-    public static final HIGHSCORE_VERSION:Version = '1.0.0';
+    public static final HIGHSCORE_VERSION:Version = '2.0.0';
 
     /**
      * The folder that stores each mod.

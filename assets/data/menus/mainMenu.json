@@ -38,24 +38,13 @@
             }
         },
         {
-            "name": "credits",
-            "targetState": "CreditsState",
-
-            "sprite":
-            {
-                "path": "menus/mainMenu/credits",
-                "position": [35, 0],
-                "animations": [{"name": "idle", "prefix": "credits idle", "looped": true}, {"name": "selected", "prefix": "credits selected", "looped": true, "offsets": [-40, -30]}]
-            }
-        },
-        {
             "name": "mods",
             "targetState": "ModLoaderState",
 
             "sprite":
             {
                 "path": "menus/mainMenu/mods",
-                "animations": [{"name": "idle", "prefix": "mods idle", "looped": true}, {"name": "selected", "prefix": "mods selected", "looped": true, "offsets": [-25, -20]}]
+                "animations": [{"name": "idle", "prefix": "mods idle", "looped": true, "offsets": [10, 0]}, {"name": "selected", "prefix": "mods selected", "looped": true, "offsets": [-15, -20]}]
             }
         }
     ]

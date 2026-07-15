@@ -4,7 +4,7 @@
 
     "sprites":
     {
-        "art": {"path": "menus/freeplay/albums/volume1/art"},
-        "text": {"path": "menus/freeplay/albums/volume1/text", "animations": [{"name": "idle", "prefix": "idle"}, {"name": "switch", "prefix": "switch"}]}
+        "art": {"path": "menus/freeplay/albums/volume1/album", "animations": [{"name": "intro", "prefix": "intro"}, {"name": "idle", "prefix": "idle", "looped": true}, {"name": "switch", "prefix": "switch"}]},
+        "text": {"path": "menus/freeplay/albums/volume1/text", "animations": [{"name": "idle", "prefix": "idle", "looped": true}, {"name": "switch", "prefix": "switch"}]}
     }
 }

@@ -15,6 +15,7 @@ import flixel.FlxSubState;
 import flixel.group.FlxSpriteGroup.FlxTypedSpriteGroup;
 import flixel.util.FlxAxes;
 import flixel.effects.FlxFlicker;
+import flixel.math.FlxMath;
 
 import flixel.text.FlxText;
 
@@ -38,6 +39,10 @@ class MainMenuState extends MusicBeatState
     var camBG:FlxCamera;
     var camItems:FlxCamera;
     var camUI:FlxCamera;
+    
+    var camTargetY:Float = 0;
+    var minCamY:Float = 0;
+    var maxCamY:Float = 0;
 
     var bg:FunkinSprite;
     var bgFlicker:FunkinSprite;
@@ -58,35 +63,41 @@ class MainMenuState extends MusicBeatState
 
         bg = createBackground(MainMenuRegistry.data.background.normal, camBG);
         bg.visible = MainMenuRegistry.data.background.normal.visible;
+        bg.scrollFactor.set(0, 0.17);
         add(bg);
 
         bgFlicker = createBackground(MainMenuRegistry.data.background.flicker, camBG);
         bgFlicker.visible = false;
+        bgFlicker.scrollFactor.set(0, 0.17);
         add(bgFlicker);
 
         menuItems = new FlxTypedSpriteGroup<FunkinSprite>();
         menuItems.camera = camItems;
         add(menuItems);
 
+        var spacing:Float = 160; 
+
         var i:Int = 0;
         for (optionEntry in MainMenuRegistry.data.options)
         {
             var spriteData = optionEntry.sprite;
 
-            var item = new FunkinSprite(0, i * 150, spriteData.path);
+            var item = new FunkinSprite(0, 0, spriteData.path);
             item.tag = optionEntry.name;
             item.visible = spriteData.visible;
             item.alpha = spriteData.alpha;
             item.angle = spriteData.angle;
             item.scale.set(spriteData.scale[0], spriteData.scale[1]);
             item.updateHitbox();
-            item.scrollFactor.set();
+            item.scrollFactor.set(1, 1);
 
             for (anim in spriteData.animations)
                 item.addAnim(anim.name, {prefix: anim.prefix, indices: anim.indices, fps: anim.fps, looped: anim.looped, offsets: [Std.int(anim.offsets[0]), Std.int(anim.offsets[1])]});
 
             item.playAnim('idle');
             item.screenCenter(FlxAxes.X);
+
+            item.y = i * spacing;
 
             item.x += spriteData.position[0];
             item.y += spriteData.position[1];
@@ -97,11 +108,30 @@ class MainMenuState extends MusicBeatState
             i++;
         }
 
-        menuItems.screenCenter(FlxAxes.Y);
+        if (menuItems.members.length > 0)
+        {
+            var firstItem = menuItems.members[0];
+            var lastItem = menuItems.members[menuItems.members.length - 1];
+
+            minCamY = firstItem.y - 150;
+            maxCamY = lastItem.y + lastItem.height + 150 - FlxG.height;
+
+            if (minCamY >= maxCamY)
+            {
+                minCamY = firstItem.y + ((lastItem.y + lastItem.height - firstItem.y) / 2) - (FlxG.height / 2);
+                maxCamY = minCamY;
+            }
+        }
 
         scroll(0, false);
+        
+        camBG.scroll.y = camTargetY;
+        camItems.scroll.y = camTargetY;
+        
+        camBG.scroll.x = 0;
+        camItems.scroll.x = 0;
 
-        versionText = new FlxText(0, FlxG.height - 18, FlxG.width, 'v' + Constants.VERSION_STRING + " (API: v" + Constants.API_VERSION + ")", 12);
+        versionText = new FlxText(5, FlxG.height - 24, FlxG.width, 'v' + Constants.VERSION_STRING + " (API: v" + Constants.API_VERSION + ")", 12);
         versionText.setFormat("VCR OSD Mono", 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
         versionText.camera = camUI;
         add(versionText);
@@ -136,9 +166,9 @@ class MainMenuState extends MusicBeatState
                 switchToOption(selectedOption);
             }
         }
-
-        camBG.scroll.y = MathUtil.smoothLerpPrecision(camBG.scroll.y, -50 + (150 * camIndex), elapsed, 0.6);
-        camItems.scroll.y = MathUtil.smoothLerpPrecision(camItems.scroll.y, -50 + (150 * camIndex), elapsed, 0.6);
+        
+        camBG.scroll.y = MathUtil.smoothLerpPrecision(camBG.scroll.y, camTargetY, elapsed, 0.7);
+        camItems.scroll.y = MathUtil.smoothLerpPrecision(camItems.scroll.y, camTargetY, elapsed, 0.7);
     }
 
     override public function hotReload():Void
@@ -178,7 +208,6 @@ class MainMenuState extends MusicBeatState
         sprite.screenCenter();
         sprite.x += data.position[0];
         sprite.y += data.position[1];
-        sprite.scrollFactor.set(0, 0.1);
         sprite.camera = cam;
         return sprite;
     }
@@ -209,6 +238,21 @@ class MainMenuState extends MusicBeatState
 
         if (playSound)
             FunkinSound.playOnce(Paths.sound('engine/scroll'));
+            
+        updateCameraTarget();
+    }
+
+    function updateCameraTarget():Void
+    {
+        var totalItems = menuItems.members.length;
+        
+        if (totalItems <= 1)
+        {
+            camTargetY = minCamY;
+            return;
+        }
+
+        camTargetY = FlxMath.remapToRange(curSelected, 0, totalItems - 1, minCamY, maxCamY);
     }
 
     function select(option:Int):Void
@@ -277,7 +321,9 @@ class MainMenuState extends MusicBeatState
     }
 
     function isScriptedSubState(name:String):Bool
+    {
         return PolymodScriptClass.listScriptClassesExtending(Type.getClassName(FlxSubState)).indexOf(name) != -1;
+    }
 
     function exit():Void
     {
