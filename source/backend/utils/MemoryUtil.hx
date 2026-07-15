@@ -212,10 +212,10 @@ final class MemoryUtil
      */
     public static function roundMemory(memValue:Float, roundToGB:Bool = true, roundToInt:Bool = false):Float
     {
-        var megabytesMemory:Float = (Math.abs(FlxMath.roundDecimal(memValue / (1024 * 1024), 1)));
+        var megabytesMemory:Float = (Math.abs(FlxMath.roundDecimal(memValue / (1024 * 1024), 2)));
 
         if (roundToInt && megabytesMemory < 1024)
-            return Std.int(megabytesMemory);
+            return FlxMath.roundDecimal(megabytesMemory, 2);
 
         if (roundToGB && megabytesMemory >= 1024)
             return FlxMath.roundDecimal((megabytesMemory / 1024), 2);
