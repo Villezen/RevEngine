@@ -121,11 +121,14 @@ class MusicBeatState extends FlxState implements IEventHandler
 
         dispatchEvent(_updateEvent);
 
-        if ((FlxG.keys.justPressed.F5 || FlxG.keys.justPressed.F6) && elapsedTime > 1.0 && !isResetting)
+        if (FlxG.keys.justPressed.F5 && !isResetting)
             hotReload();
         
         if (FlxG.keys.justPressed.F11 && (subState == null || (subState != null && !(subState is MusicBeatSubState))))
             FlxG.fullscreen = !FlxG.fullscreen;
+
+        if (FlxG.keys.justPressed.F12 && !isResetting)
+            emergencyExit();
     }
 
     /**
@@ -137,6 +140,9 @@ class MusicBeatState extends FlxState implements IEventHandler
         ModuleHandler.call(event);
     }
 
+    /**
+     * Gets called for scripts when an event gets dispatched.
+     */
     public function onDispatchEvent(event:ScriptEvent)
     {
         dispatchEvent(event);
@@ -149,6 +155,7 @@ class MusicBeatState extends FlxState implements IEventHandler
     {
         isResetting = true;
 
+        TransitionLoader.skipTransitions = true;
         PolymodManager.reloadMods();
         Manager.resetState();
 
@@ -156,13 +163,26 @@ class MusicBeatState extends FlxState implements IEventHandler
     }
 
     /**
+     * Force the game to go back to the main menu state.
+     */
+    public function emergencyExit():Void
+    {
+        TransitionLoader.skipTransitions = true;
+        Manager.switchState(new menus.MainMenuState());
+    }
+
+    /**
      * Cleans up all signal listeneres in the Conductor to prevent any crashes/memory leaks.
      */
     override public function destroy():Void
     {
-        conductor.destroy();
-
         FlxG.timeScale = 1.0;
+
+        // Clear up the main conductor instance to destroy it properly
+        conductor?.onStepHit.remove(stepHit);
+        conductor?.onBeatHit.remove(beatHit);
+        conductor?.onMeasureHit.remove(measureHit);
+        conductor?.destroy();
 
         ModuleHandler.clear();
 

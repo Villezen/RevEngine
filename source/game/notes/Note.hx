@@ -109,7 +109,7 @@ class Note extends FunkinSprite
         if (!mustHit)
             return false;
 
-        var timeDiff:Float = time - Conductor.instance.position;
+        var timeDiff:Float = time - Conductor.instance.songPosition;
         if (timeDiff <= Constants.SAFE_ZONE_OFFSET * Constants.EARLY_HIT_MULT && timeDiff >= -Constants.SAFE_ZONE_OFFSET * Constants.LATE_HIT_MULT)
         {
             return true;
@@ -125,7 +125,7 @@ class Note extends FunkinSprite
 
     private inline function get_tooLate():Bool
     {
-        return time < Conductor.instance.position - (Constants.SAFE_ZONE_OFFSET * Constants.LATE_HIT_MULT) && !hit;
+        return time < Conductor.instance.songPosition - (Constants.SAFE_ZONE_OFFSET * Constants.LATE_HIT_MULT) && !hit;
     }
 
     /**

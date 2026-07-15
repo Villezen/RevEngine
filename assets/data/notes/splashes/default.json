@@ -1,8 +1,8 @@
 {
     "type": "COMBINED",
 
-    "size": [0.8, 0.8],
-    "alpha": 1.0,
+    "size": [1.0, 1.0],
+    "alpha": 0.8,
     "antialiasing": true,
 
     "animations":

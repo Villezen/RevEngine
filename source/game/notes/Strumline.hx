@@ -794,7 +794,7 @@ class Strumline extends FlxSpriteGroup
         {
             var data = noteList[currentNoteIndex];
             
-            if (data.time - Conductor.instance.position >= Constants.NOTE_SPAWN_TIME) 
+            if (data.time - Conductor.instance.songPosition >= Constants.NOTE_SPAWN_TIME) 
             {
                 break; 
             }
@@ -825,7 +825,7 @@ class Strumline extends FlxSpriteGroup
                 note.visible = false;
                 note.mustHit = false;
                 
-                if (note.time <= Conductor.instance.position - 400)
+                if (note.time <= Conductor.instance.songPosition - 400)
                 {
                     note.kill();
                 }
@@ -840,7 +840,7 @@ class Strumline extends FlxSpriteGroup
             if (note.sustain != null)
                 note.sustain.mustHit = note.mustHit;
 
-            note.distance = (-0.45 * (Conductor.instance.position - note.time) * speed);
+            note.distance = (-0.45 * (Conductor.instance.songPosition - note.time) * speed);
             
             if (note.parent != null)
             {
@@ -856,7 +856,7 @@ class Strumline extends FlxSpriteGroup
 
             if (!note.mustHit)
             {
-                if (note.time <= Conductor.instance.position)
+                if (note.time <= Conductor.instance.songPosition)
                 {
                     note.hit = true;
 
@@ -869,7 +869,7 @@ class Strumline extends FlxSpriteGroup
                         if (note.parent != null && speed > 0)
                             note.sustain.fullLength += (note.parent.height / 4) / (0.45 * speed);
 
-                        note.sustain.length = Math.min(note.sustain.fullLength, (note.sustain.time + note.sustain.fullLength) - Conductor.instance.position);
+                        note.sustain.length = Math.min(note.sustain.fullLength, (note.sustain.time + note.sustain.fullLength) - Conductor.instance.songPosition);
                     }
                 }
             }
@@ -890,7 +890,7 @@ class Strumline extends FlxSpriteGroup
                 note.enemyHit = true;
             }
 
-            if (note.time <= Conductor.instance.position - 400)
+            if (note.time <= Conductor.instance.songPosition - 400)
             {
                 if (!note.hit && note.mustHit)
                     onNoteMiss.dispatch(note);
@@ -910,7 +910,7 @@ class Strumline extends FlxSpriteGroup
                 sustain.visible = false;
                 sustain.mustHit = false;
                 
-                if (sustain.time <= Conductor.instance.position - 400)
+                if (sustain.time <= Conductor.instance.songPosition - 400)
                 {
                     sustain.kill();
                 }
@@ -945,9 +945,9 @@ class Strumline extends FlxSpriteGroup
                 }
             }
 
-            var yPosition:Float = sustain.strum.y + (sustain.strum.height / 4) + (-0.45 * (Conductor.instance.position - sustain.time) * speed);
+            var yPosition:Float = sustain.strum.y + (sustain.strum.height / 4) + (-0.45 * (Conductor.instance.songPosition - sustain.time) * speed);
             
-            if (Conductor.instance.position >= sustain.time + sustain.fullLength + 400)
+            if (Conductor.instance.songPosition >= sustain.time + sustain.fullLength + 400)
             {
                 sustain.kill();
             }
@@ -958,13 +958,13 @@ class Strumline extends FlxSpriteGroup
             }
             else if (sustain.hit && !sustain.missed)
             {
-                if (Conductor.instance.position < sustain.time)
+                if (Conductor.instance.songPosition < sustain.time)
                 {
-                    sustain.fullLength = (sustain.time + sustain.fullLength) - Conductor.instance.position;
-                    sustain.time = Conductor.instance.position;
+                    sustain.fullLength = (sustain.time + sustain.fullLength) - Conductor.instance.songPosition;
+                    sustain.time = Conductor.instance.songPosition;
                 }
 
-                sustain.length = (sustain.time + sustain.fullLength) - Conductor.instance.position;
+                sustain.length = (sustain.time + sustain.fullLength) - Conductor.instance.songPosition;
 
                 onSustainHit.dispatch(sustain);
 

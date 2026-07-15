@@ -44,7 +44,4 @@ class Main extends Sprite
 		debugDisplay = new DEBUG();
 		addChild(debugDisplay);
     }
-
-	// Temporary (?)
-	public static function execAsync(func:Void->Void) ThreadUtil.execAsync(func);
 }

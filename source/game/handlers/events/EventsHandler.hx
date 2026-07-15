@@ -61,7 +61,7 @@ class EventsHandler extends FlxBasic
         if (Conductor.instance == null) 
             return;
 
-        while (events.length > 0 && events[0] != null && events[0].time <= Conductor.instance.position)
+        while (events.length > 0 && events[0] != null && events[0].time <= Conductor.instance.songPosition)
             onExecution.dispatch(events.shift());
     }
 
