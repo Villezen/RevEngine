@@ -8,6 +8,8 @@ import backend.registries.song.ChartRegistry.ChartNote;
 import backend.registries.song.EventRegistry.EventData;
 import backend.registries.song.EventRegistry.EventEntry;
 
+import haxe.ds.ArraySort;
+
 import backend.converters.IConverterEntry;
 
 typedef LegacyChartData =
@@ -24,6 +26,8 @@ typedef LegacySongData =
 
     @:optional var speed:Dynamic;
     @:optional var notes:Dynamic;
+    
+    @:optional var events:Array<Dynamic>;
 }
 
 typedef LegacySectionData =
@@ -38,7 +42,7 @@ typedef LegacySectionData =
 
 private typedef ResolvedSections =
 {
-    var sections:Array<LegacySectionData>;
+    var sections:Array<Dynamic>;
     var difficultyKeyed:Bool;
 }
 
@@ -61,22 +65,33 @@ class LegacyConverter implements IConverterEntry
 
     public function new() {}
 
+    private function getSongData(data:Dynamic):LegacySongData
+    {
+        if (data == null) return {};
+
+        if (Reflect.hasField(data, "song") && (Reflect.field(data, "song") is String))
+            return cast data;
+
+        if (Reflect.hasField(data, "song") && Reflect.isObject(Reflect.field(data, "song")))
+            return cast Reflect.field(data, "song");
+
+        return cast data;
+    }
+
     public function detect(data:Dynamic):Bool
     {
-        if (data == null || !Reflect.hasField(data, "song"))
-            return false;
+        if (data == null) return false;
 
-        var songData:Dynamic = Reflect.field(data, "song");
-
-        return songData != null && (Reflect.hasField(songData, "player1") || Reflect.hasField(songData, "player2"));
+        var songObj:Dynamic = getSongData(data);
+        return songObj != null && (Reflect.hasField(songObj, "player1") || Reflect.hasField(songObj, "player2"));
     }
 
     public function listDifficulties(data:Dynamic):Array<String>
     {
         var difficulties:Array<String> = [];
 
-        var songData:Dynamic = (data != null) ? Reflect.field(data, "song") : null;
-        var notes:Dynamic = (songData != null) ? Reflect.field(songData, "notes") : null;
+        var songData:LegacySongData = getSongData(data);
+        var notes:Dynamic = (songData != null) ? songData.notes : null;
 
         if (notes == null || notes is Array || notes is String)
             return difficulties;
@@ -102,26 +117,26 @@ class LegacyConverter implements IConverterEntry
         if (notes is Array)
             return {sections: cast notes, difficultyKeyed: false};
 
-        if (difficulty != null)
+        if (difficulty != null && Reflect.hasField(notes, difficulty))
         {
             var entry:Dynamic = Reflect.field(notes, difficulty);
-
             if (entry != null && entry is Array)
                 return {sections: cast entry, difficultyKeyed: true};
         }
 
         for (key in DIFFICULTY_KEYS)
         {
-            var entry:Dynamic = Reflect.field(notes, key);
-
-            if (entry != null && entry is Array)
-                return {sections: cast entry, difficultyKeyed: true};
+            if (Reflect.hasField(notes, key))
+            {
+                var entry:Dynamic = Reflect.field(notes, key);
+                if (entry != null && entry is Array)
+                    return {sections: cast entry, difficultyKeyed: true};
+            }
         }
 
         for (key in Reflect.fields(notes))
         {
             var entry:Dynamic = Reflect.field(notes, key);
-
             if (entry != null && entry is Array)
                 return {sections: cast entry, difficultyKeyed: true};
         }
@@ -157,41 +172,48 @@ class LegacyConverter implements IConverterEntry
 
     public function convertChart(data:Dynamic):ChartData
     {
-        var chart:LegacyChartData = cast data;
-        var songData:LegacySongData = chart.song ?? {};
-
+        var songData:LegacySongData = getSongData(data);
         var chartSpeed:Float = resolveSpeed(songData.speed);
 
-        var strum0:ChartStrumline = {id: 0, character: songData.player2 ?? "dad", skin: "default", position: [-364, 53], scale: 1, visible: true, keys: 4, speed: chartSpeed, notes: []};
-        var strum1:ChartStrumline = {id: 1, character: songData.player1 ?? "bf", skin: "default", position: [265, 53], scale: 1, visible: true, keys: 4, speed: chartSpeed, notes: []};
+        var p1:String = (songData.player1 != null && songData.player1 != "") ? songData.player1 : "bf";
+        var p2:String = (songData.player2 != null && songData.player2 != "") ? songData.player2 : "dad";
+
+        var strum0:ChartStrumline = {id: 0, character: p2, skin: "default", position: [-364, 53], scale: 1, visible: true, keys: 4, speed: chartSpeed, notes: []};
+        var strum1:ChartStrumline = {id: 1, character: p1, skin: "default", position: [265, 53], scale: 1, visible: true, keys: 4, speed: chartSpeed, notes: []};
         var strum2:ChartStrumline = {id: 2, character: "gf", skin: "default", position: [0, 0], scale: 1, visible: false, keys: 4, speed: chartSpeed, notes: []};
 
         for (section in resolveSections(songData.notes).sections)
         {
-            if (section == null || section.sectionNotes == null) continue;
+            if (section == null) continue;
 
-            var mustHit:Bool = section.mustHitSection ?? false;
+            var sectionNotes:Array<Dynamic> = Reflect.field(section, "sectionNotes");
+            if (sectionNotes == null) continue;
 
-            for (note in section.sectionNotes)
+            for (note in sectionNotes)
             {
                 if (note == null || !(note is Array)) continue;
 
                 var noteData:Array<Dynamic> = cast note;
 
-                if (noteData.length < 2 || !(noteData[0] is Float) || !(noteData[1] is Float)) continue;
+                if (noteData.length < 2 || !(noteData[0] is Float) || !(noteData[1] is Float || noteData[1] is Int)) continue;
 
-                var time:Float = noteData[0];
+                var time:Float = cast noteData[0];
                 var rawDir:Int = Std.int(noteData[1]);
 
                 if (rawDir < 0) continue;
 
-                var length:Float = (noteData.length > 2 && noteData[2] != null && noteData[2] is Float) ? noteData[2] : 0.0;
+                var length:Float = 0.0;
+                if (noteData.length > 2 && noteData[2] != null)
+                {
+                    if (noteData[2] is Float || noteData[2] is Int)
+                        length = cast noteData[2];
+                }
 
                 var kind:String = "default";
-                if (noteData.length > 3 && noteData[3] is String)
-                    kind = noteData[3];
+                if (noteData.length > 3 && noteData[3] is String && noteData[3] != "")
+                    kind = cast noteData[3];
 
-                var isPlayerNote:Bool = mustHit ? (rawDir < 4) : (rawDir >= 4);
+                var isPlayerNote:Bool = (rawDir < 4);
 
                 var chartNote:ChartNote = {time: time, direction: rawDir % 4, length: length, kind: kind};
 
@@ -210,9 +232,7 @@ class LegacyConverter implements IConverterEntry
 
     public function convertEvents(data:Dynamic):EventData
     {
-        var chart:LegacyChartData = cast data;
-        var songData:LegacySongData = chart.song ?? {};
-
+        var songData:LegacySongData = getSongData(data);
         var resolved:ResolvedSections = resolveSections(songData.notes);
         var events:Array<EventEntry> = [];
 
@@ -224,14 +244,29 @@ class LegacyConverter implements IConverterEntry
         {
             if (section == null) continue;
 
-            if ((section.changeBPM ?? false) && section.bpm != null && section.bpm > 0 && section.bpm != currentBpm)
+            var changeBPM:Bool = false;
+            
+            if (Reflect.hasField(section, "changeBPM"))
+                changeBPM = Reflect.field(section, "changeBPM") == true;
+
+            if (changeBPM && Reflect.hasField(section, "bpm"))
             {
-                currentBpm = section.bpm;
-                events.push({name: "BPM Change", time: currentTime, variables: [Std.string(currentBpm)]});
+                var sectBpm:Float = Reflect.field(section, "bpm");
+                if (sectBpm > 0 && sectBpm != currentBpm)
+                {
+                    currentBpm = sectBpm;
+                    events.push({name: "BPM Change", time: currentTime, variables: [Std.string(currentBpm)]});
+                }
             }
 
-            var mustHit:Bool = section.mustHitSection ?? false;
-            var cameraFocus:String = resolved.difficultyKeyed ? (mustHit ? "0" : "1") : (mustHit ? "1" : "0");
+            var mustHit:Bool = false;
+            if (Reflect.hasField(section, "mustHitSection"))
+            {
+                var val:Dynamic = Reflect.field(section, "mustHitSection");
+                mustHit = (val == true || val == "true");
+            }
+
+            var cameraFocus:String = mustHit ? "1" : "0";
 
             if (cameraFocus != lastFocus)
             {
@@ -239,12 +274,131 @@ class LegacyConverter implements IConverterEntry
                 lastFocus = cameraFocus;
             }
 
-            var steps:Int = (section.lengthInSteps != null && section.lengthInSteps > 0) ? section.lengthInSteps : 16;
+            var steps:Int = 16;
+            if (Reflect.hasField(section, "lengthInSteps"))
+            {
+                var l:Null<Int> = Reflect.field(section, "lengthInSteps");
+                if (l != null && l > 0) steps = l;
+            }
 
-            currentTime += steps * Conductor.instance.getBeatLengthMsOf(currentBpm);
+            currentTime += steps * Conductor.instance.getStepLengthMsOf(currentBpm);
         }
 
+        convertLegacyEvents(songData, resolved, events);
+        sortEvents(events);
+
         return {events: events};
+    }
+
+    private function convertLegacyEvents(songData:LegacySongData, resolved:ResolvedSections, events:Array<EventEntry>):Void
+    {
+        var raw:Array<Dynamic> = songData.events;
+
+        if (raw == null)
+        {
+            raw = [];
+
+            for (section in resolved.sections)
+            {
+                if (section == null) continue;
+
+                var sectionNotes:Array<Dynamic> = Reflect.field(section, "sectionNotes");
+                if (sectionNotes == null) continue;
+
+                for (note in sectionNotes)
+                {
+                    if (note == null || !(note is Array)) continue;
+
+                    var noteData:Array<Dynamic> = cast note;
+
+                    if (noteData.length < 5 || !(noteData[0] is Float)) continue;
+                    if (!(noteData[1] is Float || noteData[1] is Int) || Std.int(noteData[1]) >= 0) continue;
+
+                    raw.push([noteData[0], [[noteData[2], noteData[3], noteData[4]]]]);
+                }
+            }
+        }
+
+        for (entry in raw)
+        {
+            if (entry == null || !(entry is Array)) continue;
+
+            var pair:Array<Dynamic> = cast entry;
+
+            if (pair.length < 2 || !(pair[0] is Float) || !(pair[1] is Array)) continue;
+
+            var time:Float = cast pair[0];
+            var group:Array<Dynamic> = cast pair[1];
+
+            for (sub in group)
+            {
+                if (sub == null || !(sub is Array)) continue;
+
+                var values:Array<Dynamic> = cast sub;
+
+                if (values.length < 1 || !(values[0] is String)) continue;
+
+                var converted:EventEntry = convertLegacyEvent(cast values[0], time, values);
+
+                if (converted != null)
+                    events.push(converted);
+            }
+        }
+    }
+
+    private function convertLegacyEvent(name:String, time:Float, values:Array<Dynamic>):EventEntry
+    {
+        var value1:String = (values.length > 1 && values[1] != null) ? Std.string(values[1]) : "";
+        var value2:String = (values.length > 2 && values[2] != null) ? Std.string(values[2]) : "";
+
+        switch (name)
+        {
+            case "Change Character":
+                if (value2 == "") return null;
+
+                return {name: Constants.CHANGE_CHARACTER_EVENT, time: time, variables: [Std.string(resolveCharacterTarget(value1)), value2]};
+
+            case "Play Animation":
+                if (value1 == "") return null;
+
+                return {name: Constants.PLAY_ANIMATION_EVENT, time: time, variables: [Std.string(resolveAnimationTarget(value2)), value1]};
+
+            default:
+                return null;
+        }
+    }
+
+    private function resolveCharacterTarget(value:String):Int
+    {
+        var slot:Int = switch (StringTools.trim(value.toLowerCase()))
+        {
+            case "gf" | "girlfriend": 2;
+            case "dad" | "opponent": 1;
+
+            default:
+                var parsed:Null<Int> = Std.parseInt(value);
+                (parsed != null) ? parsed : 0;
+        }
+
+        return switch (slot)
+        {
+            case 1: 0;
+            case 2: 2;
+            default: 1;
+        }
+    }
+
+    private function resolveAnimationTarget(value:String):Int
+    {
+        return switch (StringTools.trim(value.toLowerCase()))
+        {
+            case "bf" | "boyfriend": 1;
+            case "gf" | "girlfriend": 2;
+
+            default:
+                var parsed:Null<Int> = Std.parseInt(value);
+                (parsed == 1 || parsed == 2) ? parsed : 0;
+        }
     }
 
     public function revertChart(data:ChartData, ?eventData:EventData):Dynamic
@@ -326,5 +480,10 @@ class LegacyConverter implements IConverterEntry
     private static function sortNotes(notes:Array<ChartNote>):Void
     {
         notes.sort(function(a, b) return a.time < b.time ? -1 : (a.time > b.time ? 1 : 0));
+    }
+
+    private static function sortEvents(events:Array<EventEntry>):Void
+    {
+        ArraySort.sort(events, function(a, b) return a.time < b.time ? -1 : (a.time > b.time ? 1 : 0));
     }
 }

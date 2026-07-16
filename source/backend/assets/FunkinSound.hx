@@ -75,6 +75,21 @@ class FunkinSound extends FlxSound
         return muted ? 0.0 : super.calcTransformVolume();
     }
 
+    var _appliedVolume:Float = -1.0;
+    var _appliedPan:Float = 2.0;
+
+    override function updateTransform():Void
+    {
+        _transform.volume = calcTransformVolume();
+
+        if (_channel != null && (_transform.volume != _appliedVolume || _transform.pan != _appliedPan))
+        {
+            _channel.soundTransform = _transform;
+            _appliedVolume = _transform.volume;
+            _appliedPan = _transform.pan;
+        }
+    }
+
     override function set_volume(value:Float):Float
     {
         _volume = FlxMath.bound(value, 0.0, MAX_VOLUME);
@@ -268,7 +283,7 @@ class FunkinSound extends FlxSound
         {
             case MUSIC: Paths.music(key);
             case SOUND: Paths.sound(key);
-            case AUDIO: Paths.audio(key);
+            case AUDIO: Paths.audio(key, "audio", "ogg", false, false, true);
         }
 
         if (asset == null)

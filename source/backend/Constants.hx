@@ -117,16 +117,6 @@ class Constants
     public static final CONDUCTOR_DRIFT_RATE:Float = 5;
 
     /**
-     * How many measures between memory cleanups during gameplay.
-     */
-    public static final GAMEPLAY_GC_MEASURES:Int = 4;
-
-    /**
-     * How many seconds between periodic memory cleanups outside of gameplay. Set to 0 to disable.
-     */
-    public static final IDLE_GC_INTERVAL:Float = 5;
-
-    /**
      * Maximum amount of health you can gain.
      */
     public static final MAX_HEALTH = 2;
@@ -296,4 +286,16 @@ class Constants
      * By how much the hud cameras shall bop by default.
      */
     public static final CAMHUD_BOP_VALUE:Float = 0.015*2;
+
+    /**
+     * The name of the event that swaps a strumline's character, as defined in `data/events`.
+     * The preloader looks a song's events up by this name so the characters a song only swaps in
+     * partway through are already in memory by the time it does.
+     */
+    public static final CHANGE_CHARACTER_EVENT:String = "Change Character";
+
+    /**
+     * The name of the event that plays a one-off animation on a character, as defined in `data/events`.
+     */
+    public static final PLAY_ANIMATION_EVENT:String = "Play Animation";
 }

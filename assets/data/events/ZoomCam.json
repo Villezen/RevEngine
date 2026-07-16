@@ -1,0 +1,23 @@
+{
+    "name": "Zoom Cam",
+    "alias": [],
+    "description": "Tweens the game camera's zoom to a new value over a duration measured in steps, and an ease of your choice.",
+    "variables":
+    [
+        {
+            "name": "Zoom",
+            "type": "Float",
+            "defaultValue": "1.0"
+        },
+        {
+            "name": "Duration",
+            "type": "Float",
+            "defaultValue": "4"
+        },
+        {
+            "name": "Ease",
+            "type": "String",
+            "defaultValue": "linear"
+        }
+    ]
+}

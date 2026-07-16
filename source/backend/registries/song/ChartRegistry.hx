@@ -244,8 +244,11 @@ class ChartRegistry
             if (converter != null)
             {
                 var single:String = base;
-                if (StringTools.startsWith(base, chartPrefix)) single = base.substr(chartPrefix.length);
-                else if (StringTools.startsWith(base, '$name-')) single = base.substr(name.length + 1);
+                
+                if (StringTools.startsWith(base, chartPrefix))
+                    single = base.substr(chartPrefix.length);
+                else if (StringTools.startsWith(base, '$name-'))
+                    single = base.substr(name.length + 1);
 
                 convertForeign(name, converter, parsedData, Path.normalize(realPath), single);
             }
@@ -254,10 +257,6 @@ class ChartRegistry
     }
 
     #if sys
-    /**
-     * Splits a foreign chart container into native `$name-chart-<difficulty>.json` files next
-     * to the source, then consumes the source file once everything is saved.
-     */
     private static function convertForeign(name:String, converter:IConverterEntry, parsedData:Dynamic, sourcePath:String, ?singleName:String):Void
     {
         EventRegistry.convertParsed(name, parsedData);
@@ -300,10 +299,6 @@ class ChartRegistry
     }
     #end
 
-    /**
-     * In-memory safety net: converts a foreign chart string into the native format
-     * without touching the disk (convertSong handles the on-disk conversion).
-     */
     public static function convert(song:String, difficulty:String, data:String):String
     {
         var parsedData:Dynamic = parseChartJson(song, data);

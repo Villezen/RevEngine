@@ -1,0 +1,28 @@
+{
+    "name": "Screen Shake",
+    "alias": [],
+    "description": "Shakes the game camera and the hud cameras.",
+    "variables":
+    [
+        {
+            "name": "Game Duration",
+            "type": "Float",
+            "defaultValue": "0"
+        },
+        {
+            "name": "Game Intensity",
+            "type": "Float",
+            "defaultValue": "0"
+        },
+        {
+            "name": "HUD Duration",
+            "type": "Float",
+            "defaultValue": "0"
+        },
+        {
+            "name": "HUD Intensity",
+            "type": "Float",
+            "defaultValue": "0"
+        }
+    ]
+}

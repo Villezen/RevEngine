@@ -1,0 +1,18 @@
+{
+    "name": "Play Animation",
+    "alias": [],
+    "description": "Plays a one-time animation on a strumline's character.",
+    "variables":
+    [
+        {
+            "name": "Target",
+            "type": "Int",
+            "defaultValue": "0"
+        },
+        {
+            "name": "Animation",
+            "type": "String",
+            "defaultValue": "idle"
+        }
+    ]
+}

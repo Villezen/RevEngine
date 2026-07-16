@@ -1,0 +1,18 @@
+{
+    "name": "Change Character",
+    "alias": [],
+    "description": "Swaps a strumline's character out for a different one.",
+    "variables":
+    [
+        {
+            "name": "Target",
+            "type": "Int",
+            "defaultValue": "0"
+        },
+        {
+            "name": "Character",
+            "type": "String",
+            "defaultValue": "bf"
+        }
+    ]
+}

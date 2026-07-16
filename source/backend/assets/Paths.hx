@@ -19,6 +19,13 @@ import openfl.text.Font;
 import openfl.utils.Assets;
 import openfl.net.URLRequest;
 
+#if lime
+import lime.media.AudioBuffer;
+#if lime_vorbis
+import lime.media.vorbis.VorbisFile;
+#end
+#end
+
 import backend.assets.Cacher.RevAssets;
 
 class Paths
@@ -89,6 +96,44 @@ class Paths
         return Assets.exists('fallback/image.png') ? 'fallback/image.png' : null;
     }
 
+    public static function bitmapData(file:String, ?folder:String = "images", ?extension:String = "png", ?absolute:Bool = false, ?permanent:Bool = false):BitmapData
+    {
+        if (file == null || file == "")
+            return null;
+
+        var ext = extension != "" ? '.$extension' : "";
+        var cacheKey = absolute ? '$file$ext' : 'assets/$folder/$file$ext';
+
+        var rev = ensureRevAssets();
+
+        if (rev.hasBitmapData(cacheKey))
+        {
+            if (permanent) Cacher.instance.markPermanent(cacheKey);
+            return rev.getBitmapData(cacheKey);
+        }
+
+        var realPath = getPath(cacheKey);
+        var bmp:BitmapData = null;
+
+        if (FileSystem.exists(realPath))
+            bmp = BitmapData.fromFile(realPath);
+        else if (!Path.isAbsolute(cacheKey) && Assets.exists(cacheKey))
+            bmp = Assets.getBitmapData(cacheKey, false);
+
+        if (bmp != null)
+        {
+            rev.setBitmapData(cacheKey, bmp);
+            Cacher.instance.stampFile(cacheKey, realPath);
+
+            if (permanent) Cacher.instance.markPermanent(cacheKey);
+
+            return bmp;
+        }
+
+        trace('BitmapData not found: $cacheKey | Deploying coconut.', "WARNING");
+        return null;
+    }
+
     public static function audio(file:String, ?folder:String = "audio", ?extension:String = "ogg", ?absolute:Bool = false, ?permanent:Bool = false, ?stream:Bool = false):Sound
     {
         if (file == null || file == "")
@@ -116,9 +161,13 @@ class Paths
         {
             if (stream)
             {
-                snd = new Sound(new URLRequest(realPath));
-                Cacher.instance.registerStream(snd, permanent);
-                return snd;
+                snd = streamedSound(realPath);
+
+                if (snd != null)
+                {
+                    Cacher.instance.registerStream(snd, permanent);
+                    return snd;
+                }
             }
 
             snd = Sound.fromFile(realPath);
@@ -142,6 +191,26 @@ class Paths
 
         trace('Audio not found: $cacheKey | Someone is calling.', "WARNING");
         return Assets.exists('fallback/sound.ogg') ? Assets.getSound('fallback/sound.ogg', true) : null;
+    }
+
+    static function streamedSound(realPath:String):Sound
+    {
+        #if (lime && lime_vorbis)
+        if (realPath != null && realPath.toLowerCase().endsWith(".ogg"))
+        {
+            var vorbis = VorbisFile.fromFile(realPath);
+
+            if (vorbis != null)
+            {
+                var buffer = AudioBuffer.fromVorbisFile(vorbis);
+
+                if (buffer != null)
+                    return Sound.fromAudioBuffer(buffer);
+            }
+        }
+        #end
+
+        return null;
     }
 
     public static function data(file:String, ?folder:String = "data", ?absolute:Bool = false):String
@@ -253,9 +322,24 @@ class Paths
     public static function getSparrowAtlas(file:String, ?folder:String = "images", ?absolute:Bool = false, ?permanent:Bool = false):FlxAtlasFrames
     {
         var graphicPath = image(file, folder, "png", absolute, permanent);
+
+        if (graphicPath == null)
+        {
+            trace('Failed to load Sparrow Atlas for: $file', "WARNING");
+            return null;
+        }
+
+        var graphic = FlxG.bitmap.get(graphicPath);
+        if (graphic != null)
+        {
+            var cached = FlxAtlasFrames.findFrame(graphic);
+            if (cached != null)
+                return cached;
+        }
+
         var xmlData = data('${file}.xml', folder, absolute);
 
-        if (graphicPath == null || xmlData == null || xmlData == "")
+        if (xmlData == null || xmlData == "")
         {
             trace('Failed to load Sparrow Atlas for: $file', "WARNING");
             return null;

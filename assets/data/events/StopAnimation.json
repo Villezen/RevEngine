@@ -1,0 +1,13 @@
+{
+    "name": "Stop Animation",
+    "alias": [],
+    "description": "Stops the animation a strumline's character is being held on and puts them back to their idle.",
+    "variables":
+    [
+        {
+            "name": "Target",
+            "type": "Int",
+            "defaultValue": "0"
+        }
+    ]
+}

@@ -65,6 +65,7 @@ class Stage extends FlxBasic implements IScriptedClass
             sprite.flipX = entry.flip[0];
             sprite.flipY = entry.flip[1];
 
+            sprite.color = FlxColor.fromString(entry.color);
             sprite.alpha = entry.alpha;
             sprite.angle = entry.angle;
             sprite.antialiasing = entry.antialiasing;

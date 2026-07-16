@@ -1,0 +1,18 @@
+{
+    "name": "Add Camera Zoom",
+    "alias": [],
+    "description": "Bumps the game and hud cameras' zoom, which then lerps back to normal.",
+    "variables":
+    [
+        {
+            "name": "Game Zoom",
+            "type": "Float",
+            "defaultValue": "0.015"
+        },
+        {
+            "name": "HUD Zoom",
+            "type": "Float",
+            "defaultValue": "0.03"
+        }
+    ]
+}

@@ -56,10 +56,10 @@ class PolymodManager
 
         Configs.load();
 
+        readAvaliableMods();
+
         if (Configs.ACTIVE_MOD != "")
             enableMod(Configs.ACTIVE_MOD);
-
-        readAvaliableMods();
     }
 
     /**

@@ -14,10 +14,11 @@ import game.notes.Strumline;
 import backend.registries.world.CharacterRegistry;
 
 import flixel.math.FlxPoint;
+import flixel.util.FlxDestroyUtil;
 
 /**
  * The type of positioning the character should have.
- * * PLAYER = The character will be flipped to its X axis and have its left and right animation flipped.
+ * PLAYER = The character will be flipped to its X axis and have its left and right animation flipped.
  * GF = The character will be positioned between the player and opponent.
  * OPPONENT = The character will be positioned against the player.
  * OTHER = Basically like the `OPPONENT` entry. Used to differentiate the main opponent from other characters added alongisde them.
@@ -32,7 +33,7 @@ enum PlacementType
 
 /**
  * The idle type of the character.
- * * DEFAULT = Usual idle movement. Plays every couple of beats.
+ * DEFAULT = Usual idle movement. Plays every couple of beats.
  * ALTERNATE = Idle movement based on a left and right bop, like GF and Skid & Pump.
  * EASED = The character will wait for its note animation to finish before going back to idle.
  * */
@@ -68,8 +69,9 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
 {
     /**
      * The identifier of the character.
+     * Only ever reassigned by `change`, which rekeys the character in `CharacterHandler` to match.
      */
-    public final id:String;
+    public var id(default, null):String;
 
     /**
      * The params of the character.
@@ -198,13 +200,28 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
      */
     public function init(x:Int, y:Int, params:CharacterParams)
     {
+        if (this.params != null)
+            unload();
+
+        this.setPosition(x, y);
+
+        CharacterRegistry.reload(params.name);
+
+        build(params);
+
+        Conductor.instance.onBeatHit.add(beatHit);
+
+        dispatchEvent(new ScriptEvent(CREATE));
+    }
+
+    /**
+     * Syncs the character to its params and loads everything.
+     */
+    function build(params:CharacterParams)
+    {
         this.params = params;
         this.name = params.name;
         this.parent = params.parent;
-        
-        this.setPosition(x, y);
-
-        CharacterRegistry.reload(name);
 
         load_data();
         load_sprites();
@@ -214,8 +231,6 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
         this.pixelPerfectRender = false;
 
         dance();
-        
-        Conductor.instance.onBeatHit.add(beatHit);
 
         if (parent != null)
         {
@@ -223,8 +238,303 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
             parent.onSustainHit.add(hold);
             parent.onNoteMiss.add(miss);
         }
-    
-        dispatchEvent(new ScriptEvent(CREATE));
+    }
+
+    /**
+     * Completely swaps this character out for a different one.
+     * @param name The character to change into.
+     * @param params Params for the new character. Defaults to keeping this one's strumline.
+     * @return The character to use from here on.
+     */
+    public function change(name:String, ?params:CharacterParams):Character
+    {
+        var ready:Character = PlayState.instance?.understudies?.get(name);
+
+        if (ready != null && ready != this)
+            return swap(ready);
+
+        var owner:Character = CharacterHandler.get(name);
+
+        if (owner != null && owner != this && owner.params != null)
+        {
+            trace('Could not change $name in: it is already loaded on another character.', "WARNING");
+            return this;
+        }
+
+        if (params == null)
+            params = {name: name, parent: this.parent};
+        else
+            params.name = name;
+
+        var anchorX:Float = x - posOffset.x;
+        var anchorY:Float = y - posOffset.y;
+
+        var camExtraX:Float = camOffset.x - (data != null ? data.camera[0] : 0);
+        var camExtraY:Float = camOffset.y - (data != null ? data.camera[1] : 0);
+
+        var camIntensityX:Float = (dynCamIntensity != null) ? dynCamIntensity.x : 0.0;
+        var camIntensityY:Float = (dynCamIntensity != null) ? dynCamIntensity.y : 0.0;
+        var tint:FlxColor = color;
+
+        var next:Character = this;
+
+        if (name != this.name && (CharacterHandler.isScripted(this) || CharacterHandler.hasScript(name)))
+            next = CharacterHandler.resolve(name);
+
+        var pointer = PlayState.instance?.pointer;
+        var followed:Bool = (pointer != null && pointer.curTarget == this);
+
+        if (followed)
+            pointer.curTarget = null;
+
+        if (next != this)
+        {
+            var host = container;
+
+            if (host != null)
+                host.replace(this, next);
+
+            destroy();
+        }
+        else
+        {
+            dispatchEvent(new ScriptEvent(DESTROY));
+            unload();
+        }
+
+        var registered:Bool = (CharacterHandler.get(id) == this);
+
+        if (registered)
+            CharacterHandler.list.remove(id);
+
+        if (next == this)
+        {
+            this.id = name;
+
+            if (registered)
+                CharacterHandler.list.set(name, this);
+        }
+
+        handOver(next);
+
+        next.init(Std.int(anchorX), Std.int(anchorY), params);
+        next.setPosition(anchorX + next.posOffset.x, anchorY + next.posOffset.y);
+
+        next.camOffset.x += camExtraX;
+        next.camOffset.y += camExtraY;
+
+        next.dynCamIntensity.set(camIntensityX, camIntensityY);
+        next.color = tint;
+
+        refreshBar(next);
+
+        if (followed)
+            pointer.curTarget = next;
+
+        return next;
+    }
+
+    /**
+     * Gives the character to an "understudy", preloaded in PlayState.
+     */
+    function swap(next:Character):Character
+    {
+        var game = PlayState.instance;
+        var line = parent;
+
+        detach();
+        next.attach(line);
+
+        if (dynCamIntensity != null && next.dynCamIntensity != null)
+            next.dynCamIntensity.set(dynCamIntensity.x, dynCamIntensity.y);
+
+        next.color = color;
+        var host = container;
+
+        if (host != null && next.container == host)
+        {
+            var mine:Int = host.members.indexOf(this);
+            var theirs:Int = host.members.indexOf(next);
+
+            if (mine != -1 && theirs != -1)
+            {
+                host.members[mine] = next;
+                host.members[theirs] = this;
+            }
+        }
+
+        var pointer = game?.pointer;
+        var followed:Bool = (pointer != null && pointer.curTarget == this);
+
+        if (followed)
+            pointer.curTarget = null;
+
+        handOver(next);
+
+        next.visible = true;
+        next.active = true;
+
+        visible = false;
+        active = false;
+
+        if (game != null)
+        {
+            game.understudies.remove(next.name);
+            game.understudies.set(name, this);
+        }
+
+        next.dance();
+
+        refreshBar(next);
+
+        if (followed)
+            pointer.curTarget = next;
+
+        return next;
+    }
+
+    /**
+     * Unparents the character from its strumline and KILLS IT.
+     */
+    function detach():Void
+    {
+        if (parent != null)
+        {
+            if (parent.onNoteHit != null) parent.onNoteHit.remove(hit);
+            if (parent.onSustainHit != null) parent.onSustainHit.remove(hold);
+            if (parent.onNoteMiss != null) parent.onNoteMiss.remove(miss);
+        }
+
+        parent = null;
+
+        if (params != null)
+            params.parent = null;
+
+        isSinging = false;
+        resetTimer = 0;
+    }
+
+    /**
+     * Parents this character up to a strumline.
+     */
+    function attach(line:Strumline):Void
+    {
+        detach();
+
+        parent = line;
+
+        if (params != null)
+            params.parent = line;
+
+        if (line == null)
+            return;
+
+        line.onNoteHit.add(hit);
+        line.onSustainHit.add(hold);
+        line.onNoteMiss.add(miss);
+    }
+
+    /**
+     * Points the song's own character references at the character replacing this one.
+     */
+    function handOver(next:Character)
+    {
+        var game = PlayState.instance;
+
+        if (game == null || next == this)
+            return;
+
+        if (game.characters != null)
+        {
+            for (slot in game.characters.keys())
+            {
+                if (game.characters.get(slot) == this)
+                    game.characters.set(slot, next);
+            }
+        }
+
+        if (game.dad == this) game.dad = next;
+        if (game.boyfriend == this) game.boyfriend = next;
+        if (game.gf == this) game.gf = next;
+
+        if (game.healthBar != null && game.healthBar.characters != null)
+        {
+            var bar = game.healthBar.characters;
+
+            for (i in 0...bar.length)
+            {
+                if (bar[i] == this)
+                    bar[i] = next;
+            }
+        }
+    }
+
+    /**
+     * Syncs the health bar colors to the new character.
+     */
+    function refreshBar(next:Character)
+    {
+        var game = PlayState.instance;
+        var bar = (game != null) ? game.healthBar : null;
+
+        if (bar == null || bar.characters == null || bar.characters.indexOf(next) == -1)
+            return;
+
+        for (icon in [bar.leftIcon, bar.rightIcon])
+        {
+            if (icon == null || (icon.character != this && icon.character != next))
+                continue;
+
+            if (icon.character != next)
+                icon.character = next;      
+            else
+                icon.changeIcon(next.name);  
+        }
+
+        bar.changeColor(bar.characters[0]?.hpColor ?? 0xFFA1A1A1, bar.characters[1]?.hpColor ?? 0xFFA1A1A1);
+    }
+
+    /**
+     * Destroys every piece of the character currently loaded. They get skinned alive...
+     */
+    function unload()
+    {
+        if (parent != null)
+        {
+            if (parent.onNoteHit != null) parent.onNoteHit.remove(hit);
+            if (parent.onSustainHit != null) parent.onSustainHit.remove(hold);
+            if (parent.onNoteMiss != null) parent.onNoteMiss.remove(miss);
+        }
+
+        data = null;
+        params = null;
+        parent = null;
+
+        idleType = DEFAULT;
+        danceBeatInterval = 2;
+        idleToggle = false;
+        loopingIdle = false;
+
+        idleSuffix = "";
+        singSuffix = "";
+
+        isSinging = false;
+        allowBopOnBeat = true;
+        resetTimer = 0.0;
+        stunned = false;
+
+        if (dynCamPoint != null)
+            dynCamPoint.set(0.0, 0.0);
+
+        if (dynCamIntensity != null)
+            dynCamIntensity.set(0.0, 0.0);
+
+        color = FlxColor.WHITE;
+        shader = null;
+        blend = null;
+        visible = true;
+        active = true;
+        tag = "";
     }
 
     /**
@@ -238,8 +548,8 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
         hpColor = FlxColor.fromString(data.color);
         singDuration = data.singDuration;
 
-        posOffset = FlxPoint.get(data.position[0], data.position[1]);
-        camOffset = FlxPoint.get(data.camera[0], data.camera[1]);
+        posOffset.set(data.position[0], data.position[1]);
+        camOffset.set(data.camera[0], data.camera[1]);
 
         x += posOffset.x;
         y += posOffset.y;
@@ -353,6 +663,9 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
                 idleToggle = !idleToggle;
                 play((idleToggle ? 'danceLeft' : 'danceRight') + suffix, true);
         }
+
+        if (idleType == LOOPED)
+            loopingIdle = true;
     }
 
     public function hit(note:Note)
@@ -368,6 +681,7 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
         isSinging = true;
         allowBopOnBeat = false;
         loopingIdle = false;
+        stunned = false;
 
         play('sing${dir}' + (singSuffix != "" ? '-$singSuffix' : ""), true);
         moveCamera(dir, dynCamIntensity.x, dynCamIntensity.y);
@@ -402,6 +716,7 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
         isSinging = true;
         allowBopOnBeat = false;
         loopingIdle = false;
+        stunned = false;
 
         play(animName, true);
         moveCamera(dir, dynCamIntensity.x, dynCamIntensity.y);
@@ -416,6 +731,7 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
         isSinging = true;
         allowBopOnBeat = false;
         loopingIdle = false;
+        stunned = false;
 
         play('sing${dir}-miss', true);
         moveCamera(dir, dynCamIntensity.x / 2, dynCamIntensity.y / 2);
@@ -526,23 +842,23 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
      */
     function beatHit(beat:Float) 
     {
-        if (beat % danceBeatInterval == 0 && !isSinging && allowBopOnBeat && !loopingIdle) 
-        {
+        if (beat % danceBeatInterval == 0 && !isSinging && allowBopOnBeat && !loopingIdle)
             dance();
-
-            if (idleType == LOOPED) 
-                loopingIdle = true;
-        }
     }
 
     override public function destroy()
     {
-        if (parent != null)
-        {
-            if (parent.onNoteHit != null) parent.onNoteHit.remove(hit);
-            if (parent.onSustainHit != null) parent.onSustainHit.remove(hold);
-            if (parent.onNoteMiss != null) parent.onNoteMiss.remove(miss);
-        }
+        dispatchEvent(new ScriptEvent(DESTROY));
+
+        if (Conductor.instance != null)
+            Conductor.instance.onBeatHit.remove(beatHit);
+
+        unload();
+
+        posOffset = FlxDestroyUtil.put(posOffset);
+        camOffset = FlxDestroyUtil.put(camOffset);
+        dynCamPoint = FlxDestroyUtil.put(dynCamPoint);
+        dynCamIntensity = FlxDestroyUtil.put(dynCamIntensity);
 
         super.destroy();
     }

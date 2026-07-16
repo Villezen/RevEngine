@@ -145,8 +145,10 @@ class Pointer extends FlxObject
         {
             if (speed > 0.0)
             {
-                dynamicPoint.x = MathUtil.framerateLerp(dynamicPoint.x, curTarget != null ? curTarget.dynCamPoint.x : 0.0, 0.04 * speed);
-                dynamicPoint.y = MathUtil.framerateLerp(dynamicPoint.y, curTarget != null ? curTarget.dynCamPoint.y : 0.0, 0.04 * speed);
+                var dynCam:FlxPoint = curTarget != null ? curTarget.dynCamPoint : null;
+
+                dynamicPoint.x = MathUtil.framerateLerp(dynamicPoint.x, dynCam != null ? dynCam.x : 0.0, 0.04 * speed);
+                dynamicPoint.y = MathUtil.framerateLerp(dynamicPoint.y, dynCam != null ? dynCam.y : 0.0, 0.04 * speed);
                 
                 if (updateDeltas && curTarget != null)
                 {

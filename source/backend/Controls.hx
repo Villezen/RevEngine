@@ -212,49 +212,52 @@ class DigitalActionDR extends FlxActionDigital
     function get_justReleased():Bool
         return filterCheck(JUST_RELEASED);
 
-    /**
-     * Stores the cache for all of the inputs, including whether this action was triggered, and the timestamp at which it happened.
-     */
-    var inputCache:Map<String, {timestamp:Int, triggered:Bool}> = [];
+    var cacheTick:Array<Float> = [-1, -1, -1, -1, -1];
+    var cacheResult:Array<Bool> = [false, false, false, false, false];
 
     public function filterCheck(?filteredState:FlxInputState)
     {
-        var filterKey = '$filteredState';
-        var entry = inputCache.get(filterKey);
-
-        if (entry != null && entry.timestamp == FlxG.game.ticks) {
-            return entry.triggered;
+        var idx:Int = filteredState == null ? 4 : switch (filteredState)
+        {
+            case JUST_RELEASED: 0;
+            case RELEASED: 1;
+            case PRESSED: 2;
+            case JUST_PRESSED: 3;
+            case _: 4;
         }
 
-        if (inputs == null || inputs.length == 0) return false;
-
-        var filteredInputs = inputs.filter(function(action:FlxActionInput) {
-            return (filteredState == null || action.trigger == filteredState);
-        });
+        if (cacheTick[idx] == FlxG.game.ticks)
+            return cacheResult[idx];
 
         var result = false;
-		for (i in 0...filteredInputs.length)
-		{
-			var j = filteredInputs.length - i - 1;
-			var input = filteredInputs[j];
 
-			if (input.destroyed)
-			{
-				inputs.splice(j, 1);
-				continue;
-			}
+        if (inputs != null && inputs.length > 0)
+        {
+            var i = inputs.length;
+            while (--i >= 0)
+            {
+                var input = inputs[i];
 
-			input.update();
+                if (input.destroyed)
+                {
+                    inputs.splice(i, 1);
+                    continue;
+                }
 
-			if (input.check(this))
-			{
-				result = true;
-			}
-		}
+                if (filteredState != null && input.trigger != filteredState)
+                    continue;
 
-        inputCache.set(filterKey, {timestamp: Std.int(FlxG.game.ticks), triggered: result});
-        
-		return result;
+                input.update();
+
+                if (input.check(this))
+                    result = true;
+            }
+        }
+
+        cacheTick[idx] = FlxG.game.ticks;
+        cacheResult[idx] = result;
+
+        return result;
     }
     
     /**

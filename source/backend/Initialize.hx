@@ -69,7 +69,7 @@ class Initialize extends FlxState
         Gc.setTargetFreeSpacePercentage(10);
         #end
 
-        MemoryUtil.startPeriodicCleaning();
+        MemoryUtil.startPressureWatch();
 
         FlxG.fixedTimestep = false;
         FlxG.game.focusLostFramerate = 10;

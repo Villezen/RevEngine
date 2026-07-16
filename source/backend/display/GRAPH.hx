@@ -6,6 +6,7 @@ import openfl.display.Shape;
 import openfl.display.Sprite;
 import openfl.text.TextField;
 import openfl.text.TextFormat;
+import haxe.ds.Vector;
 
 class GRAPH extends Sprite
 {
@@ -19,7 +20,10 @@ class GRAPH extends Sprite
 
   public var graphColor:FlxColor;
 
-  public var history:Array<Float> = [];
+  public var history:Vector<Float> = new Vector(HISTORY_MAX);
+
+  var historyHead:Int = 0;
+  var historyCount:Int = 0;
 
   public var textDisplay:TextField;
 
@@ -78,7 +82,7 @@ class GRAPH extends Sprite
 
     graphics.lineStyle(1, graphColor, 1, false, null, null, MITER, 255);
 
-    if (history.length == 0)
+    if (historyCount == 0)
     {
       return;
     }
@@ -87,9 +91,10 @@ class GRAPH extends Sprite
     var range:Float = Math.max(maxValue - minValue, maxValue * 0.1);
     var scale:Float = axisHeight / range;
 
-    for (i in 0...history.length)
+    for (i in 0...historyCount)
     {
-      final pointY:Float = axisHeight - ((history[i] - minValue) * scale) - 1;
+      final value:Float = history[(historyHead + i) % HISTORY_MAX];
+      final pointY:Float = axisHeight - ((value - minValue) * scale) - 1;
 
       if (i == 0) graphics.moveTo(axis.x, pointY);
 
@@ -99,11 +104,15 @@ class GRAPH extends Sprite
 
   public function update(value:Float):Void
   {
-    history.push(value);
+    history[(historyHead + historyCount) % HISTORY_MAX] = value;
 
-    if (history.length > HISTORY_MAX)
+    if (historyCount < HISTORY_MAX)
     {
-      history.shift();
+      historyCount++;
+    }
+    else
+    {
+      historyHead = (historyHead + 1) % HISTORY_MAX;
     }
 
     maxValue = Math.max(maxValue, value);
@@ -114,32 +123,34 @@ class GRAPH extends Sprite
 
   public function average():Float
   {
-    if (history.length == 0)
+    if (historyCount == 0)
     {
       return 0;
     }
 
     var sum:Float = 0;
 
-    for (v in history)
+    for (i in 0...historyCount)
     {
-      sum += v;
+      sum += history[(historyHead + i) % HISTORY_MAX];
     }
 
-    return sum / history.length;
+    return sum / historyCount;
   }
 
   public function lowest():Float
   {
-    if (history.length == 0)
+    if (historyCount == 0)
     {
       return 0;
     }
 
-    var val:Float = history[0];
+    var val:Float = history[historyHead];
 
-    for (v in history)
+    for (i in 0...historyCount)
     {
+      final v:Float = history[(historyHead + i) % HISTORY_MAX];
+
       if (v < val)
       {
         val = v;
@@ -157,6 +168,7 @@ class GRAPH extends Sprite
       axis = null;
     }
 
-    history = null;
+    historyHead = 0;
+    historyCount = 0;
   }
 }

@@ -74,6 +74,14 @@ class FunkinSprite extends FlxSprite implements ITaggable
 
         this.spriteParams = params;
         this.spritePath = path;
+        
+        offsetMap.clear();
+
+        if (atlasSpr != null)
+        {
+            atlasSpr.destroy();
+            atlasSpr = null;
+        }
 
         var base = '${params.folder}/$path';
 

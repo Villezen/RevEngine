@@ -28,8 +28,6 @@ import backend.modding.handlers.SongEventModuleHandler;
 import backend.modding.handlers.CharacterHandler;
 import backend.modding.handlers.StageHandler;
 
-import backend.registries.song.ChartRegistry;
-import backend.registries.song.MetaRegistry;
 import backend.registries.song.EventRegistry;
 import backend.registries.song.EventObjectRegistry;
 
@@ -52,7 +50,6 @@ import backend.Highscore;
 import backend.Highscore.ScoreTallies;
 
 import backend.utils.MathUtil;
-import backend.utils.MemoryUtil;
 
 import game.handlers.Chart;
 import game.handlers.Meta;
@@ -330,6 +327,11 @@ class PlayState extends MusicBeatState
     public var stage:Stage;
 
     /**
+     * Characters the 'Change Character' event will eventually swap to.
+     */
+    public var understudies:Map<String, Character> = [];
+
+    /**
      * Pointer, controlling the world's camera.
      */
     public var pointer:Pointer;
@@ -450,6 +452,12 @@ class PlayState extends MusicBeatState
         super.create();
 
         instance = this;
+
+        if (FlxG.sound.music != null)
+        {
+            FlxG.sound.music.stop();
+            FlxG.sound.music = null;
+        }
 
         this.subStateOpened.add(onSubStateOpen);
         this.subStateClosed.add(onSubStateClose);
@@ -621,54 +629,36 @@ class PlayState extends MusicBeatState
 
         stageCameraZoom = currentCameraZoom = camGame.zoom = stage.data.camera.zoom;
 
-        var opponentName:String = null;
+        var owners:Map<String, Int> = [];
+
         for (entry in chart.strumlines)
         {
-            if (entry.id == 0)
-            {
-                opponentName = entry.character;
-                break;
-            }
+            var id:Int = entry.id;
+            var owner:Int = owners.exists(entry.character) ? owners.get(entry.character) : id;
+
+            if (id <= owner)
+                owners.set(entry.character, id);
         }
 
         for (entry in chart.strumlines)
         {
-            if (entry.id == 2 && opponentName != null && entry.character == opponentName)
-                continue;
+            var id:Int = entry.id;
+            var owner:Int = owners.get(entry.character);
 
-            var character:Character = CharacterHandler.spawn(0, 0, {name: entry.character, parent: strumlines.get(entry.id)});
-
-            switch(character.placementType)
+            if (owner != id)
             {
-                case PLAYER:
-                {
-                    character.setPosition(770 + character.posOffset.x + stage.data.characters.boyfriend[0], 450 + character.posOffset.y + stage.data.characters.boyfriend[1]);
-                    character.camOffset.x += stage.data.camera.boyfriend[0];
-                    character.camOffset.y += stage.data.camera.boyfriend[1];
-                }
-
-                case GF:
-                {
-                    character.setPosition(400 + character.posOffset.x + stage.data.characters.girlfriend[0], 130 + character.posOffset.y + stage.data.characters.girlfriend[1]);
-                    character.camOffset.x += stage.data.camera.girlfriend[0];
-                    character.camOffset.y += stage.data.camera.girlfriend[1];
-                }
-
-                case OPPONENT:
-                {
-                    character.setPosition(100 + character.posOffset.x + stage.data.characters.dad[0], 100 + character.posOffset.y + stage.data.characters.dad[1]);
-                    character.camOffset.x += stage.data.camera.dad[0];
-                    character.camOffset.y += stage.data.camera.dad[1];
-                }
-
-                case OTHER:
-                    character.setPosition(character.posOffset.x, character.posOffset.y);
-
-                default:
-                    character.setPosition(character.posOffset.x, character.posOffset.y);
+                trace('Strumline $id wants "${entry.character}", which strumline $owner already has. Leaving strumline $id without a character.', "WARNING");
+                continue;
             }
 
-            characters.set(entry.id, character);
+            var character:Character = CharacterHandler.spawn(0, 0, {name: entry.character, parent: strumlines.get(id)});
+
+            if (character == null)
+                continue;
+
+            placeCharacter(character);
+
+            characters.set(id, character);
             song.initVocalTrack(entry.character);
         }
 
@@ -695,6 +685,8 @@ class PlayState extends MusicBeatState
             if (![0, 1, 2].contains(id))
                 add(char);
         }
+
+        buildUnderstudies();
 
         stage.dispatchEvent(new ScriptEvent(POST_CREATE));
 
@@ -1140,14 +1132,101 @@ class PlayState extends MusicBeatState
     }
 
     /**
+     * Puts a character in the correct position.
+     */
+    public function placeCharacter(character:Character):Void
+    {
+        if (character == null || stage == null)
+            return;
+
+        switch(character.placementType)
+        {
+            case PLAYER:
+            {
+                character.setPosition(770 + character.posOffset.x + stage.data.characters.boyfriend[0], 450 + character.posOffset.y + stage.data.characters.boyfriend[1]);
+                character.camOffset.x += stage.data.camera.boyfriend[0];
+                character.camOffset.y += stage.data.camera.boyfriend[1];
+            }
+
+            case GF:
+            {
+                character.setPosition(400 + character.posOffset.x + stage.data.characters.girlfriend[0], 130 + character.posOffset.y + stage.data.characters.girlfriend[1]);
+                character.camOffset.x += stage.data.camera.girlfriend[0];
+                character.camOffset.y += stage.data.camera.girlfriend[1];
+            }
+
+            case OPPONENT:
+            {
+                character.setPosition(100 + character.posOffset.x + stage.data.characters.dad[0], 100 + character.posOffset.y + stage.data.characters.dad[1]);
+                character.camOffset.x += stage.data.camera.dad[0];
+                character.camOffset.y += stage.data.camera.dad[1];
+            }
+
+            case OTHER:
+                character.setPosition(character.posOffset.x, character.posOffset.y);
+
+            default:
+                character.setPosition(character.posOffset.x, character.posOffset.y);
+        }
+    }
+
+    /**
+     * Builds every character found in the 'Change Character' event.
+     */
+    function buildUnderstudies():Void
+    {
+        var data = EventRegistry.get(name);
+
+        if (data == null || data.events == null)
+            return;
+
+        for (event in data.events)
+        {
+            if (event == null || event.variables == null || event.variables.length < 2)
+                continue;
+
+            var object = EventObjectRegistry.findByName(event.name);
+
+            if (object == null || object.name != Constants.CHANGE_CHARACTER_EVENT)
+                continue;
+
+            var target:String = Std.string(event.variables[1]);
+
+            if (target == null || target == "" || understudies.exists(target))
+                continue;
+
+            var taken:Bool = false;
+
+            for (char in characters)
+                if (char != null && char.name == target) taken = true;
+
+            if (taken)
+                continue;
+
+            var understudy:Character = CharacterHandler.spawn(0, 0, {name: target});
+
+            if (understudy == null)
+                continue;
+
+            placeCharacter(understudy);
+
+            understudy.visible = false;
+            understudy.active = false;
+
+            understudies.set(target, understudy);
+            add(understudy);
+
+            trace('Built "$target" ahead of its event.', "PRELOAD");
+        }
+    }
+
+    /**
      * Reloads every registry in this state.
      */
     override function hotReload():Void
     {
         super.hotReload();
 
-        ChartRegistry.reloadSong(name);
-        MetaRegistry.reload(name);
         EventRegistry.reload(name);
 
         DialogueRegistry.reloadAll();
@@ -1328,20 +1407,6 @@ class PlayState extends MusicBeatState
 
         if (healthBar != null)
             healthBar.bounce(beat);
-    }
-
-    /**
-     * Function that gets called every time a new step is iterated.
-     * @param measure The current measure index.
-     */
-    public override function measureHit(measure:Float):Void
-    {
-        super.measureHit(measure);
-
-        #if cpp
-        if (Constants.GAMEPLAY_GC_MEASURES > 0 && measure > 0 && measure % Constants.GAMEPLAY_GC_MEASURES == 0)
-            MemoryUtil.softClean();
-        #end
     }
 
     public function eventExecution(event:Event)

@@ -122,12 +122,6 @@ final class MemoryUtil
         #end
     }
 
-    /**
-     * Perform major garbage collection repeatedly until less than 16kb of memory is freed in one operation.
-     * Should only be called from the main thread.
-     *
-     * NOTE: This is DIFFERENT from actual compaction,
-     */
     public static function compact():Void
     {
         #if cpp
@@ -137,9 +131,6 @@ final class MemoryUtil
         #end
     }
 
-    /**
-     * Frees the unused memory from the task.
-     */
     public static function freeUnusedMemory():Void
     {
         #if cpp
@@ -149,60 +140,146 @@ final class MemoryUtil
         #if windows
         backend.platform.windows.WinAPI.emptyWorkingSet();
         #end
+
+        _pressureBaseline = getGCUsage();
+        _pressureTimer = 0.0;
         #end
     }
 
-    /**
-     * Lighter memory cleaning function that is safe to run during gameplay.
-     */
-    public static function softClean():Void
+    static function collectOnly():Void
     {
         #if cpp
-        cpp.vm.Gc.run(false);
+        cpp.vm.Gc.run(!(FlxG.state is game.PlayState));
 
-        #if windows
-        backend.platform.windows.WinAPI.emptyWorkingSet();
-        #end
+        _pressureBaseline = getGCUsage();
+        _pressureTimer = 0.0;
         #end
     }
 
     /**
-     * Internal timer for periodic cleaning, in seconds.
+     * How many bytes the GC may grow past the post-cleanup baseline.
      */
-    static var _cleanTimer:Float = 0.0;
+    public static inline final PRESSURE_HEADROOM:Float = 16 * 1024 * 1024;
 
     /**
-     * Whether periodic cleaning has already started.
+     * Seconds between pressure checks.
      */
-    static var _cleanStarted:Bool = false;
+    static inline final PRESSURE_CHECK_INTERVAL:Float = 1.0;
 
     /**
-     * Softly cleans the memory after every given interval.
+     * Seconds after a state switch before the settle trim runs.
      */
-    public static function startPeriodicCleaning():Void
+    static inline final SETTLE_TRIM_DELAY:Float = 3.0;
+
+    /**
+     * GC usage recorded right after the last full cleanup, in bytes.
+     */
+    static var _pressureBaseline:Float = 0.0;
+
+    /**
+     * Internal timer for pressure checks, in seconds.
+     */
+    static var _pressureTimer:Float = 0.0;
+
+    /**
+     * Internal timer for the pending settle trim, in seconds.
+     */
+    static var _settleTimer:Float = 0.0;
+
+    /**
+     * Whether a settle trim is waiting to run.
+     */
+    static var _settlePending:Bool = false;
+
+    /**
+     * Whether the pressure watch has already started.
+     */
+    static var _watchStarted:Bool = false;
+
+    /**
+     * Gets the number of bytes currently in use by the GC.
+     */
+    public static function getGCUsage():Float
     {
-        if (_cleanStarted)
+        #if cpp
+        return cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_USAGE);
+        #else
+        return 0.0;
+        #end
+    }
+
+    /**
+     * Starts the memory pressure watch.
+     */
+    public static function startPressureWatch():Void
+    {
+        if (_watchStarted)
             return;
-        
-        _cleanStarted = true;
 
-        FlxG.signals.preStateSwitch.add(() -> _cleanTimer = 0.0);
-        FlxG.signals.postUpdate.add(periodicClean);
+        _watchStarted = true;
+
+        #if cpp
+        _pressureBaseline = getGCUsage();
+
+        FlxG.signals.postStateSwitch.add(() ->
+        {
+            _settlePending = true;
+            _settleTimer = 0.0;
+        });
+
+        FlxG.signals.focusLost.add(() ->
+        {
+            if (canCleanNow() && !inGameplay())
+                freeUnusedMemory();
+        });
+
+        FlxG.signals.postUpdate.add(checkPressure);
+        #end
     }
 
-    static function periodicClean():Void
+    /**
+     * Whether a cleanup may run at all right now.
+     */
+    static function canCleanNow():Bool
     {
-        if (Constants.IDLE_GC_INTERVAL <= 0) return;
+        if (FlxG.state == null)
+            return false;
 
-        _cleanTimer += FlxG.elapsed;
+        if (backend.transition.TransitionState.switchingState)
+            return false;
 
-        if (_cleanTimer < Constants.IDLE_GC_INTERVAL) return;
+        if (FlxG.state.subState != null && (FlxG.state.subState is backend.transition.TransitionState))
+            return false;
 
-        _cleanTimer = 0.0;
+        return true;
+    }
 
-        if ((FlxG.state is game.PlayState) || backend.transition.TransitionState.switchingState) return;
+    static function checkPressure():Void
+    {
+        #if cpp
+        if (_settlePending)
+        {
+            _settleTimer += FlxG.elapsed;
 
-        softClean();
+            if (_settleTimer >= SETTLE_TRIM_DELAY && canCleanNow())
+            {
+                _settlePending = false;
+                freeUnusedMemory();
+            }
+        }
+
+        _pressureTimer += FlxG.elapsed;
+
+        if (_pressureTimer < PRESSURE_CHECK_INTERVAL) return;
+
+        _pressureTimer = 0.0;
+
+        if (!canCleanNow()) return;
+
+        if (getGCUsage() - _pressureBaseline < PRESSURE_HEADROOM) return;
+
+        collectOnly();
+        #end
     }
 
     // Functions down below are used for the Memory Counter.

@@ -1,5 +1,10 @@
 package backend.display;
 
+import haxe.ds.Vector;
+
+import backend.MusicBeatState;
+import backend.MusicBeatSubState;
+
 import backend.utils.MathUtil;
 import backend.utils.MemoryUtil;
 import backend.utils.GitHubUtil;
@@ -63,7 +68,17 @@ class DEBUG extends Sprite
     public var peakMEM(default, null):Float = 0;
     private var cacheCount:Int = 0;
     private var currentTime:Float = 0;
-    private var times:Array<Float> = [];
+
+    private static inline var FPS_BUFFER_SIZE:Int = 512;
+    private var frameTimes:Vector<Float> = new Vector(FPS_BUFFER_SIZE);
+    private var frameHead:Int = 0;
+    private var frameCount:Int = 0;
+
+    private var fpsTextTimer:Float = 0;
+    private var graphTimer:Float = 0;
+    private var lastDrawnFPS:Int = -1;
+    private var lastGcMEM:Float = -1;
+    private var lastTaskMEM:Float = -1;
 
     public var osName:String = "Fetching...";
     public var cpuName:String = "Fetching...";
@@ -139,6 +154,11 @@ class DEBUG extends Sprite
         memoryText.defaultTextFormat = new TextFormat('Monsterrat', 11, 0xFFFFFF);
         memoryText.text = "MEM: 0.00mb / 0.00mb";
         addChild(memoryText);
+
+        targetFrameWidth = framerateText.textWidth + 10;
+        targetFrameHeight = framerateText.textHeight;
+        targetMemWidth = memoryText.textWidth + 10;
+        targetMemHeight = memoryText.textHeight;
 
         framerateGraph = new GRAPH(0, 0, 200, 25, 0xFFFFFF);
         framerateGraph.textDisplay.y = -49;
@@ -288,17 +308,47 @@ class DEBUG extends Sprite
     #if !flash override #end function __enterFrame(deltaTime:Float):Void
     {
         currentTime += deltaTime;
-        times.push(currentTime);
 
-        while (times[0] < currentTime - 1000)
-            times.shift();
+        if (frameCount == FPS_BUFFER_SIZE)
+        {
+            frameHead = (frameHead + 1) % FPS_BUFFER_SIZE;
+            frameCount--;
+        }
+
+        frameTimes[(frameHead + frameCount) % FPS_BUFFER_SIZE] = currentTime;
+        frameCount++;
+
+        while (frameCount > 0 && frameTimes[frameHead] < currentTime - 1000)
+        {
+            frameHead = (frameHead + 1) % FPS_BUFFER_SIZE;
+            frameCount--;
+        }
 
         updateFramerate();
         updateDisplay(deltaTime);
         updateInfo(deltaTime);
 
+        fpsTextTimer += deltaTime;
+        if (fpsTextTimer >= 250)
+        {
+            fpsTextTimer = 0;
+            updateFramerateText();
+        }
+
+        graphTimer += deltaTime;
+        if (graphTimer >= 100)
+        {
+            graphTimer = 0;
+
+            if (currentDisplayType == ADVANCED)
+            {
+                framerateGraph.maxValue = peakFPS;
+                framerateGraph.update(currentFPS);
+            }
+        }
+
         statsTimer += deltaTime;
-        if (statsTimer >= 500) 
+        if (statsTimer >= 500)
         {
             if (currentDisplayType != HIDDEN)
                 updateMemory();
@@ -359,28 +409,27 @@ class DEBUG extends Sprite
     }
 
     public function updateFramerate()
-    {   
-        var currentCount = times.length;
+    {
+        var currentCount = frameCount;
         currentFPS = Math.round((currentCount + cacheCount) / 2);
         currentFPS = Std.int(Math.min(currentFPS, Std.int(Lib.current.stage.frameRate)));
 
         if (currentFPS > peakFPS) peakFPS = currentFPS;
-        
-        if (currentCount != cacheCount)
-        {
-            framerateText.text = 'FPS: ${currentFPS}';
-            targetFrameWidth = framerateText.textWidth + 10;
-            targetFrameHeight = framerateText.textHeight; 
-            framerateText.width = targetFrameWidth;
-        }
 
         cacheCount = currentCount;
+    }
 
-        if (currentDisplayType == ADVANCED)
-        {
-            framerateGraph.maxValue = peakFPS;
-            framerateGraph.update(currentCount);
-        }
+    private function updateFramerateText():Void
+    {
+        if (currentFPS == lastDrawnFPS)
+            return;
+
+        lastDrawnFPS = currentFPS;
+
+        framerateText.text = 'FPS: ${currentFPS}';
+        targetFrameWidth = framerateText.textWidth + 10;
+        targetFrameHeight = framerateText.textHeight;
+        framerateText.width = targetFrameWidth;
     }
 
     public function updateMemory()
@@ -399,11 +448,17 @@ class DEBUG extends Sprite
             memoryGraph.update(taskMEM);
         }
 
+        if (gcMEM == lastGcMEM && taskMEM == lastTaskMEM)
+            return;
+
+        lastGcMEM = gcMEM;
+        lastTaskMEM = taskMEM;
+
         var gcUnit:String = MemoryUtil.setMemoryUnitString(rawGCMem).toLowerCase();
         var taskUnit:String = MemoryUtil.setMemoryUnitString(rawTaskMem).toLowerCase();
-        
+
         memoryText.text = 'MEM: ${gcMEM}${gcUnit} / ${taskMEM}${taskUnit}';
-        
+
         targetMemWidth = memoryText.textWidth + 10;
         targetMemHeight = memoryText.textHeight;
         memoryText.width = targetMemWidth;
@@ -416,29 +471,24 @@ class DEBUG extends Sprite
 
         var elapsed:Float = dt / 1000;
 
-        if (infoTextToggle)
+        if (infoTextToggle && FlxG.state != null)
         {
             var currentStep:Int = 0;
             var currentBeat:Int = 0;
             var currentMeasure:Int = 0;
 
-            var conductor:Dynamic = null;
+            var conductor:Conductor = null;
 
-            if (FlxG.state.subState != null)
-                conductor = Reflect.getProperty(FlxG.state.subState, "conductor");
-            
-            if (conductor == null)
-                conductor = Reflect.getProperty(FlxG.state, "conductor");
+            if (FlxG.state.subState is MusicBeatSubState)
+                conductor = cast(FlxG.state.subState, MusicBeatSubState).conductor;
+            else if (FlxG.state is MusicBeatState)
+                conductor = cast(FlxG.state, MusicBeatState).conductor;
 
             if (conductor != null)
             {
-                var step:Dynamic = Reflect.getProperty(conductor, "currentStepTime");
-                var beat:Dynamic = Reflect.getProperty(conductor, "currentBeatTime");
-                var measure:Dynamic = Reflect.getProperty(conductor, "currentMeasureTime");
-
-                currentStep = step != null ? Std.int(step) : 0;
-                currentBeat = beat != null ? Std.int(beat) : 0;
-                currentMeasure = measure != null ? Std.int(measure) : 0;
+                currentStep = Std.int(conductor.currentStepTime);
+                currentBeat = Std.int(conductor.currentBeatTime);
+                currentMeasure = Std.int(conductor.currentMeasureTime);
             }
 
             if (FlxG.state != cachedState)

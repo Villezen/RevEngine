@@ -3,6 +3,8 @@ package menus;
 import backend.MusicBeatState;
 import backend.utils.MathUtil;
 
+import game.PlayState;
+
 import backend.registries.menus.MainMenuRegistry;
 import backend.registries.menus.FreeplayRegistry;
 
@@ -358,6 +360,8 @@ class MainMenuState extends MusicBeatState
 
     function checkSong()
     {
+        if (PlayState.comingFromFreeplay) return;
+
         if (FlxG.sound.music == null || !FlxG.sound.music.playing)
         {
             if (FunkinSound.playMusic(ConfigRegistry.data.song.path, {startingVolume: 0, persist: true}))

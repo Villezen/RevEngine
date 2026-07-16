@@ -40,6 +40,7 @@ typedef SpriteData =
     @:optional var flip:Array<Bool>;
     @:optional var alpha:Null<Float>;
     @:optional var angle:Null<Int>;
+    @:optional var color:String;
     @:optional var antialiasing:Null<Bool>;
     @:optional var animations:AnimationData;
 }
@@ -133,6 +134,7 @@ class StageRegistry
             if (sprite.flip == null || sprite.flip.length < 2) sprite.flip = [false, false];
             if (sprite.alpha == null) sprite.alpha = 1.0;
             if (sprite.angle == null) sprite.angle = 0;
+            if (sprite.color == null) sprite.color = "#FFFFFF";
             if (sprite.antialiasing == null) sprite.antialiasing = true;
 
             if (sprite.animations == null) sprite.animations = {};

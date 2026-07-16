@@ -14,6 +14,8 @@ import backend.registries.misc.PreloaderRegistry;
 
 import backend.registries.song.ChartRegistry;
 import backend.registries.song.MetaRegistry;
+import backend.registries.song.EventRegistry;
+import backend.registries.song.EventObjectRegistry;
 
 import backend.registries.world.CharacterRegistry;
 import backend.registries.world.StageRegistry;
@@ -76,39 +78,53 @@ class Preloader
         var _chart = ChartRegistry.get(name, difficulty, variation);
         var _meta = MetaRegistry.get(name, variation);
 
+        var queueCharacter = function(_name:String)
+        {
+            if (_name == null || _name == "") return;
+
+            var _path:String = 'images/characters/$_name';
+
+            for (_file in Paths.readDirectoryRecursive(_path))
+            {
+                var _fullPath:String = '$_path/$_file';
+
+                if (_file.endsWith('.png'))
+                {
+                    addToQueue(_fullPath, function()
+                    {
+                        AsyncPaths.image('assets/' + _fullPath, "", "", true, false, true, function(g)
+                        {
+                            checkDone('(Character Asset) Preloaded: $_name/${_file.replace(".png", "")}');
+                        });
+                    });
+                }
+                else if (_file.endsWith('.xml') || _file.endsWith('.json'))
+                {
+                    addToQueue(_fullPath, function()
+                    {
+                        AsyncPaths.data('assets/' + _fullPath, "", true, function(d)
+                        {
+                            checkDone('(Character Data) Preloaded: $_name/$_file');
+                        });
+                    });
+                }
+            }
+        };
+
         if (data.general.characters)
         {
             for (_strumline in _chart.strumlines)
+                queueCharacter(_strumline.character);
+
+            for (_event in EventRegistry.get(name).events)
             {
-                var _name = _strumline.character;
+                if (_event == null || _event.variables == null || _event.variables.length < 2) continue;
 
-                var _path:String = 'images/characters/$_name';
+                var _object = EventObjectRegistry.findByName(_event.name);
 
-                for (_file in Paths.readDirectoryRecursive(_path))
-                {
-                    var _fullPath:String = '$_path/$_file';
+                if (_object == null || _object.name != Constants.CHANGE_CHARACTER_EVENT) continue;
 
-                    if (_file.endsWith('.png'))
-                    {
-                        addToQueue(_fullPath, function()
-                        {
-                            AsyncPaths.image('assets/' + _fullPath, "", "", true, false, true, function(g)
-                            {
-                                checkDone('(Character Asset) Preloaded: $_name/${_file.replace(".png", "")}');
-                            });
-                        });
-                    }
-                    else if (_file.endsWith('.xml') || _file.endsWith('.json'))
-                    {
-                        addToQueue(_fullPath, function()
-                        {
-                            AsyncPaths.data('assets/' + _fullPath, "", true, function(d)
-                            {
-                                checkDone('(Character Data) Preloaded: $_name/$_file');
-                            });
-                        });
-                    }
-                }
+                queueCharacter(_event.variables[1]);
             }
         }
 

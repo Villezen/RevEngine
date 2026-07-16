@@ -18,7 +18,8 @@
 
 	"freeplay":
 	{
-		"newlyAdded": true
+		"newlyAdded": false,
+		"hide": false
 	},
 
 	"countdown":

@@ -7,6 +7,10 @@ import backend.modding.ModState;
 import backend.modding.classes.ScriptedState;
 import backend.modding.PolymodManager;
 
+import backend.registries.song.ChartRegistry;
+import backend.registries.song.MetaRegistry;
+import backend.registries.misc.PlayerRegistry;
+
 import backend.transition.TransitionLoader;
 import backend.transition.TransitionState;
 
@@ -157,6 +161,11 @@ class MusicBeatState extends FlxState implements IEventHandler
 
         TransitionLoader.skipTransitions = true;
         PolymodManager.reloadMods();
+
+        ChartRegistry.reloadAll();
+        MetaRegistry.reloadAll();
+        PlayerRegistry.reloadAll();
+
         Manager.resetState();
 
         trace('STATE [${DebugUtil.getStateName()}] RELOADED.\n', 'INFO', true);

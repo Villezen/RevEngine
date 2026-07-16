@@ -4,7 +4,6 @@ import flixel.system.ui.FlxSoundTray;
 
 import openfl.display.Bitmap;
 import openfl.media.Sound;
-import openfl.utils.Assets;
 
 import backend.utils.MathUtil;
 
@@ -21,7 +20,7 @@ class SOUNDTRAY extends FlxSoundTray
     super();
     removeChildren();
 
-    var bg:Bitmap = new Bitmap(Assets.getBitmapData(Paths.image("engine/soundtray/volumebox", "images", "png", false, true)));
+    var bg:Bitmap = new Bitmap(Paths.bitmapData("engine/soundtray/volumebox", "images", "png", false, true));
     bg.scaleX = graphicScale;
     bg.scaleY = graphicScale;
     bg.smoothing = true;
@@ -30,7 +29,7 @@ class SOUNDTRAY extends FlxSoundTray
     y = -height;
     visible = false;
 
-    var backingBar:Bitmap = new Bitmap(Assets.getBitmapData(Paths.image("engine/soundtray/bars_10", "images", "png", false, true)));
+    var backingBar:Bitmap = new Bitmap(Paths.bitmapData("engine/soundtray/bars_10", "images", "png", false, true));
     backingBar.x = 9;
     backingBar.y = 5;
     backingBar.scaleX = graphicScale;
@@ -43,7 +42,7 @@ class SOUNDTRAY extends FlxSoundTray
 
     for (i in 1...11)
     {
-      var bar:Bitmap = new Bitmap(Assets.getBitmapData(Paths.image("engine/soundtray/bars_" + i, "images", "png", false, true)));
+      var bar:Bitmap = new Bitmap(Paths.bitmapData("engine/soundtray/bars_" + i, "images", "png", false, true));
       bar.x = 9;
       bar.y = 5;
       bar.scaleX = graphicScale;
