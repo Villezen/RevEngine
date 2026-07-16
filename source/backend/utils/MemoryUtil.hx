@@ -229,7 +229,7 @@ final class MemoryUtil
 
         FlxG.signals.focusLost.add(() ->
         {
-            if (canCleanNow() && !inGameplay())
+            if (canCleanNow() && !(FlxG.state is game.PlayState))
                 freeUnusedMemory();
         });
 
