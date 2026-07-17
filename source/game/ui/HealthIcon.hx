@@ -284,7 +284,7 @@ class HealthIcon extends FunkinSprite
         this.updateHitbox();
     }
 
-    public function bounce():Void
+    public function bounce(?intensity:Float = 0.2, ?updateHitbox:Bool = true):Void
     {
         if (!canBounce || iconType == CENTER) return;
 
@@ -294,11 +294,14 @@ class HealthIcon extends FunkinSprite
         var targetWidth:Float = this.frameWidth * originalScale.x;
         var targetHeight:Float = this.frameHeight * originalScale.y;
 
-        var bounceWidth:Float = targetWidth + (targetWidth * 0.2);
-        var bounceHeight:Float = targetHeight + (targetHeight * 0.2);
+        var bounceWidth:Float = targetWidth + (targetWidth * intensity);
+        var bounceHeight:Float = targetHeight + (targetHeight * intensity);
 
         setGraphicSize(Std.int(bounceWidth), Std.int(bounceHeight));
-        this.updateHitbox();
+
+        if (updateHitbox)
+            this.updateHitbox();
+
         this.updatePosition();
 
         bopTween = FlxTween.num(bounceWidth, targetWidth, Math.min(Conductor.instance.stepLengthMs * 0.002, 0.175), {
@@ -310,7 +313,10 @@ class HealthIcon extends FunkinSprite
             var curHeight = targetHeight + ((bounceHeight - targetHeight) * ratio);
 
             setGraphicSize(Std.int(value), Std.int(curHeight));
-            this.updateHitbox();
+
+            if (updateHitbox)
+                this.updateHitbox();
+            
             this.updatePosition();
         });
     }
