@@ -27,37 +27,37 @@ class MathUtil
      * Exponential decay interpolation.
      *
      * Framerate-independent because the rate-of-change is proportional to the difference, so you can
-     * use the time elapsed since the last frame as `deltaTime` and the function will be consistent.
+     * use the time elapsed since the last frame as `elapsed` and the function will be consistent.
      *
-     * Equivalent to `smoothLerpPrecision(base, target, deltaTime, halfLife, 0.5)`.
+     * Equivalent to `smoothLerpPrecision(base, target, elapsed, halfLife, 0.5)`.
      *
      * @param base The starting or current value.
      * @param target The value this function approaches.
-     * @param deltaTime The change in time along the function in seconds.
+     * @param elapsed The change in time along the function in seconds.
      * @param halfLife Time in seconds to reach halfway to `target`.
      *
      * @see https://twitter.com/FreyaHolmer/status/1757918211679650262
      *
      * @return The interpolated value.
      */
-    public static function smoothLerpDecay(base:Float, target:Float, deltaTime:Float, halfLife:Float):Float
+    public static function smoothLerpDecay(base:Float, target:Float, elapsed:Float, halfLife:Float):Float
     {
-        if (deltaTime == 0) return base;
+        if (elapsed == 0) return base;
         if (base == target) return target;
-        return lerp(target, base, exp2(-deltaTime / halfLife));
+        return lerp(target, base, exp2(-elapsed / halfLife));
     }
 
     /**
      * Exponential decay interpolation.
      *
      * Framerate-independent because the rate-of-change is proportional to the difference, so you can
-     * use the time elapsed since the last frame as `deltaTime` and the function will be consistent.
+     * use the time elapsed since the last frame as `elapsed` and the function will be consistent.
      *
-     * Equivalent to `smoothLerpDecay(base, target, deltaTime, -duration / logBase(2, precision))`.
+     * Equivalent to `smoothLerpDecay(base, target, elapsed, -duration / logBase(2, precision))`.
      *
      * @param base The starting or current value.
      * @param target The value this function approaches.
-     * @param deltaTime The change in time along the function in seconds.
+     * @param elapsed The change in time along the function in seconds.
      * @param duration Time in seconds to reach `target` within `precision`, relative to the original distance.
      * @param precision Relative target precision of the interpolation. Defaults to 1% distance remaining.
      *
@@ -65,11 +65,11 @@ class MathUtil
      *
      * @return The interpolated value.
      */
-    public static function smoothLerpPrecision(base:Float, target:Float, deltaTime:Float, duration:Float, precision:Float = 1 / 100):Float
+    public static function smoothLerpPrecision(base:Float, target:Float, elapsed:Float, duration:Float, precision:Float = 0.01):Float
     {
-        if (deltaTime == 0) return base;
+        if (elapsed == 0) return base;
         if (base == target) return target;
-        return lerp(target, base, Math.pow(precision, deltaTime / duration));
+        return lerp(target, base, Math.pow(precision, elapsed / duration));
     }
 
     /**
@@ -106,23 +106,23 @@ class MathUtil
      * @param ratio A normalized value to use for calculate the new float.
      * @return A value between the target, and base value.
      */
-    public static function linearLerp(base:Float, target:Float, ratio:Float):Float 
+    public static function linearLerp(base:Float, target:Float, elapsed:Float, ratio:Float):Float 
     {
-        return base + (ratio * (FlxG.elapsed / (1 / 60))) * (target - base);
+        return base + (ratio * (elapsed / (1 / 60))) * (target - base);
     }
     
     /**
      * Specifically made to adapt lerps designed for 144 FPS to any framerate.
      * @param base The base value of the float.
-     * @param target The current value.
-     * @param ratio A normalized value to use for calculate the new float.
-     * @param mult A multipler used while calculating the lerp. Defaults to '2.4'.
+     * @param target The target value.
+     * @param ratio A normalized value to use for calculate the final value.
+     * @param mult A multipler used while calculating the lerp.
      * @return A value between the target, and base value that's framerate-independent.
      */
-    public static function framerateLerp(base:Float, target:Float, ratio:Float, mult:Float = 2.4):Float 
+    public static function framerateLerp(base:Float, target:Float, ratio:Float, elapsed:Float, mult:Float = 1.0):Float 
     {
-            return FlxMath.lerp(base, target, (FlxMath.bound((ratio * mult) * 60 * FlxG.elapsed, 0, 1)));
-        }
+        return FlxMath.lerp(base, target, (FlxMath.bound((ratio * mult) * 60 * elapsed, 0, 1.0)));
+    }
 
     /**
      * Get the base-2 exponent of a value.
@@ -133,38 +133,8 @@ class MathUtil
     {
         return Math.pow(2, x);
     }
-  
-    /**
-     * Binds a float value  so that in the case that it goes below or above its minimum or maximum value
-     * it returns back to the maximum or the minimum value.
-     * @param value Value to loop
-     * @param min The minimum value to bind 'value' from.
-     * @param max The maximum value to bind 'value' from.
-     * @return An interger bounded according to its limits.
-    */
-    @:deprecated("clampInt() should do the same thing.")
-    public static function loopInt(value:Int, min:Int, max:Int):Int 
-    {
-        return Std.int(loopFloat(value, min, max));
-    }
 
     /**
-     * Binds a real number so that in the case that it goes below or above its minimum or maximum value
-     * it returns back to the maximum or the minimum value.
-     * @param value Value to loop
-     * @param min The minimum value to bind 'value' from.
-     * @param max The maximum value to bind 'value' from.
-     * @return A real number bounded according to its limits.
-    */
-    @:deprecated("clampFloat() should do the same thing.")
-    public static function loopFloat(value:Float, min:Float, max:Float):Float 
-    {
-        if (value > max) return min;
-        if (value < min) return max;
-        return value;
-    }
-
-      /**
      * Binds a float value so that it doesn't go above, and below the specified values.
      * @param value The value to bound.
      * @param min The minimum value to bind 'value' from.

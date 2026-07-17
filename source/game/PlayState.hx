@@ -387,9 +387,8 @@ class PlayState extends MusicBeatState
     public var songStarted:Bool = false;
 
     /**
-     * Internal variables used for lerping.
+     * Lerp the health values to smoothen its movement.
      */
-    private var scoreLerp:Float = 0;
     private var healthLerp:Float = 0;
 
     /**
@@ -851,7 +850,9 @@ class PlayState extends MusicBeatState
     function saveHighscore()
     {
         if (metrics == null)
+        {
             return;
+        }
 
         var tallies:ScoreTallies =
         {
@@ -866,7 +867,7 @@ class PlayState extends MusicBeatState
             totalNotes: metrics.totalNotes
         };
 
-        Highscore.saveScore(name, difficulty, variation, {score: Std.int(metrics.score), tallies: tallies});
+        Highscore.saveScore(name, difficulty, variation, {score: metrics.score, tallies: tallies});
     }
 
     /**
@@ -904,9 +905,9 @@ class PlayState extends MusicBeatState
         // Lerps the cameras zoom back to their original values.
         lerpCamerasZoom(elapsed);
 
-        // Update the score and the health to a smooth lerp.
-        scoreLerp = MathUtil.framerateLerp(scoreLerp, metrics.score ?? 0, FlxMath.bound(elapsed * (30 * 1.0), 0, 1));
-        healthLerp = MathUtil.framerateLerp(healthLerp, metrics.health ?? 1.0, FlxMath.bound(elapsed * (30 * 1.5), 0, 1));
+        // Smoothen the health bar.
+        healthLerp = FlxMath.lerp(healthLerp, metrics.health, 0.15);
+
         updateScoreText();
 
         manageDebugKeybinds(true);
@@ -914,22 +915,16 @@ class PlayState extends MusicBeatState
 
     /**
      * Updates the default score text. 
-     * Is "dynamic" with the intent of it being overriden by scripts if wished to.
      */
     dynamic function updateScoreText():Void
     {
-        if (scoreText == null) 
+        if (scoreText == null || metrics == null || metrics.score == _lastDisplayedScore) 
         {
             return;
         }
-        
-        var roundedScore:Int = Math.round(scoreLerp);
 
-        if (roundedScore != _lastDisplayedScore)
-        {
-            _lastDisplayedScore = roundedScore;
-            scoreText.text = "Score: " + Std.string(FlxStringUtil.formatMoney(roundedScore, false, true));
-        }
+        _lastDisplayedScore = metrics.score;
+        scoreText.text = "Score: " + Std.string(FlxStringUtil.formatMoney(metrics.score, false, true));
     }
 
     /**

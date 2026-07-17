@@ -135,11 +135,11 @@ class Constants
      */
     public static final JUDGEMENT_MAP:Map<NoteJudgement, Array<Float>> =
     [
-        NoteJudgement.SICK => [1.5, 300.0, 1.0],
-        NoteJudgement.GOOD => [0.75, 100.0, 0.65],
-        NoteJudgement.BAD => [0.0, 10.0, 0.2],
+        NoteJudgement.SICK => [1.5, 300, 1.0],
+        NoteJudgement.GOOD => [0.75, 100, 0.65],
+        NoteJudgement.BAD => [0.0, 10, 0.2],
         NoteJudgement.SHIT => [-1.0, 5, 0.03],
-        NoteJudgement.NONE => [0.0, 0.0, 0.0]
+        NoteJudgement.NONE => [0.0, 0, 0.0]
     ];
 
     /**

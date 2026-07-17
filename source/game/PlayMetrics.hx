@@ -29,12 +29,11 @@ class PlayMetrics
     /**
      * The cumulative score earned by the player.
      */
-    public var score(default, set):Float = 0;
+    public var score(default, set):Int = 0;
 
-    function set_score(value:Float):Float
+    function set_score(value:Int):Int
     {
-        score = Math.max(0, value);
-        return score;
+        return score = value;
     }
 
     /**
@@ -67,8 +66,7 @@ class PlayMetrics
 
     function set_accuracy(value:Float):Float
     {
-        accuracy = MathUtil.limitFloat(value, 0, 100);
-        return accuracy;
+        return (accuracy = MathUtil.limitFloat(value, 0, 100));
     }
 
     /**
@@ -78,8 +76,7 @@ class PlayMetrics
 
     function set_health(value:Float):Float 
     {
-        health = MathUtil.limitFloat(value, Constants.MIN_HEALTH, Constants.MAX_HEALTH);
-        return health;
+        return (health = MathUtil.limitFloat(value, Constants.MIN_HEALTH, Constants.MAX_HEALTH));
     }
 
     /**
@@ -178,7 +175,7 @@ class PlayMetrics
      */
     public function hold(elapsed:Float)
     {
-        score += Constants.SUSTAIN_SCORE_GAIN_PER_SEC * elapsed;
+        score += Std.int(Constants.SUSTAIN_SCORE_GAIN_PER_SEC * elapsed);
         health += Constants.SUSTAIN_HEALTH_GAIN_PER_SEC * elapsed;
     }
 

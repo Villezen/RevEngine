@@ -92,7 +92,7 @@ class TitleState extends MusicBeatState
         add(flashSprite);
         
         if (TitleMenuRegistry.data.intro.skip || skippedIntro)
-            skipIntro(false);
+            skipIntro(false, false);
         else
             FlxG.sound.music.time = 0;
 
@@ -120,7 +120,7 @@ class TitleState extends MusicBeatState
                 }
             }
             else
-                skipIntro();
+                skipIntro(true, true);
         }
     }
 
@@ -161,7 +161,7 @@ class TitleState extends MusicBeatState
     {
         if (action.contains("skipIntro"))
         {
-            skipIntro();
+            skipIntro(true, false);
             return;
         }
 
@@ -220,7 +220,7 @@ class TitleState extends MusicBeatState
         introGroup.clear();
     }
 
-    function skipIntro(?shouldFlash:Bool = true):Void
+    function skipIntro(?shouldFlash:Bool = true, ?shouldSkip:Bool = false):Void
     {
         skippedIntro = true;
 
@@ -232,7 +232,7 @@ class TitleState extends MusicBeatState
 
         clearGroup();
 
-        if (FlxG.sound.music.time < ConfigRegistry.data.song.skipTimestamp)
+        if (FlxG.sound.music.time < ConfigRegistry.data.song.skipTimestamp && shouldSkip)
             FlxG.sound.music.time = ConfigRegistry.data.song.skipTimestamp;
     }
 

@@ -147,21 +147,19 @@ class Pointer extends FlxObject
             {
                 var dynCam:FlxPoint = curTarget != null ? curTarget.dynCamPoint : null;
 
-                dynamicPoint.x = MathUtil.framerateLerp(dynamicPoint.x, dynCam != null ? dynCam.x : 0.0, 0.04 * speed);
-                dynamicPoint.y = MathUtil.framerateLerp(dynamicPoint.y, dynCam != null ? dynCam.y : 0.0, 0.04 * speed);
+                dynamicPoint.x = MathUtil.framerateLerp(dynamicPoint.x, dynCam != null ? dynCam.x : 0.0, elapsed, 0.04 * speed);
+                dynamicPoint.y = MathUtil.framerateLerp(dynamicPoint.y, dynCam != null ? dynCam.y : 0.0, elapsed, 0.04 * speed);
                 
+                var finalDeltaPoint:FlxPoint = FlxPoint.get(0, 0);
+
                 if (updateDeltas && curTarget != null)
                 {
                     targetDelta.set(curTarget.x - baseSnapshot.x, curTarget.y - baseSnapshot.y);
+                    finalDeltaPoint.set(targetDelta.x, targetDelta.y);
+                }
 
-                    deltaPoint.x = MathUtil.framerateLerp(deltaPoint.x, targetDelta.x, 0.08 * speed);
-                    deltaPoint.y = MathUtil.framerateLerp(deltaPoint.y, targetDelta.y, 0.08 * speed);
-                }
-                else
-                {
-                    deltaPoint.x = MathUtil.framerateLerp(deltaPoint.x, 0.0, 0.08 * speed);
-                    deltaPoint.y = MathUtil.framerateLerp(deltaPoint.y, 0.0, 0.08 * speed);
-                }
+                deltaPoint.x = MathUtil.framerateLerp(deltaPoint.x, finalDeltaPoint.x, elapsed, 0.08 * speed);
+                deltaPoint.y = MathUtil.framerateLerp(deltaPoint.y, finalDeltaPoint.y, elapsed, 0.08 * speed);
 
                 setPosition((globalPoint.x + (unlocked ? 0 : dynamicPoint.x + deltaPoint.x)), (globalPoint.y + (unlocked ? 0 : dynamicPoint.y + deltaPoint.y)));
             }
