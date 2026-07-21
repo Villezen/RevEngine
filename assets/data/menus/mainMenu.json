@@ -1,8 +1,8 @@
 {
     "background":
     {
-        "normal": {"path": "menus/backgrounds/menuBG", "scale": [1.05, 1.05]},
-        "flicker": {"path": "menus/backgrounds/menuBGMagenta", "scale": [1.05, 1.05]}
+        "normal": {"path": "menus/backgrounds/menuBG", "scale": [1.07, 1.07]},
+        "flicker": {"path": "menus/backgrounds/menuBGMagenta", "scale": [1.07, 1.07]}
     },
 
     "options":

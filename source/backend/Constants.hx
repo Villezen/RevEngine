@@ -64,7 +64,7 @@ class Constants
     /**
      * Descriptive string identifying the current build version.
      */
-    public static final VERSION_STRING:String = '0.0.2';
+    public static final VERSION_STRING:String = '0.0.3';
 
     /**
      * Checks if this build is in debugging mode or not.
@@ -286,16 +286,4 @@ class Constants
      * By how much the hud cameras shall bop by default.
      */
     public static final CAMHUD_BOP_VALUE:Float = 0.015*2;
-
-    /**
-     * The name of the event that swaps a strumline's character, as defined in `data/events`.
-     * The preloader looks a song's events up by this name so the characters a song only swaps in
-     * partway through are already in memory by the time it does.
-     */
-    public static final CHANGE_CHARACTER_EVENT:String = "Change Character";
-
-    /**
-     * The name of the event that plays a one-off animation on a character, as defined in `data/events`.
-     */
-    public static final PLAY_ANIMATION_EVENT:String = "Play Animation";
 }

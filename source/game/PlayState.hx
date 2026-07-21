@@ -267,14 +267,20 @@ class PlayState extends MusicBeatState
     public var song:Song;
 
     /**
-     * The strumline controlled by the player.
+     * The primary player strumline.
      */
     public var playerStrums:Strumline;
 
     /**
-     * The strumline controlled by the opponent.
+     * The strumline controlled by the opponent (id 0).
      */
     public var enemyStrums:Strumline;
+
+    /**
+     * Every strumline the player controls, in chart order. Notes on these are
+     * driven by input; the rest are cpu.
+     */
+    public var playableStrums:Array<Strumline> = [];
 
     /**
      * A map containing each loaded strumline in the chart.
@@ -562,9 +568,13 @@ class PlayState extends MusicBeatState
      */
     function setupStrumlines()
     {
+        playableStrums = [];
+
         for (entry in chart.strumlines)
         {
-            var strumline:Strumline = new Strumline(entry.position[0], entry.position[1], {data: entry, cpu: entry.id == 1 ? false : true, skin: entry.skin, scale: entry.scale});
+            var isPlayable:Bool = entry.playable == true;
+
+            var strumline:Strumline = new Strumline(entry.position[0], entry.position[1], {data: entry, cpu: !isPlayable, skin: entry.skin, scale: entry.scale});
             strumline.visible = entry.visible;
             strumline.camera = camStrums;
             add(strumline);
@@ -574,17 +584,20 @@ class PlayState extends MusicBeatState
             strumline.onNoteMiss.add(noteMiss);
 
             strumlines.set(entry.id, strumline);
+
+            if (isPlayable)
+                playableStrums.push(strumline);
         }
 
         enemyStrums = strumlines.get(0);
         playerStrums = strumlines.get(1);
 
         metrics = new PlayMetrics(name);
-        
+
         var noteTotal:Int = 0;
         for (entry in chart.strumlines)
         {
-            if (entry.id == 1 && entry.notes != null)
+            if (entry.playable == true && entry.notes != null)
                 noteTotal += entry.notes.length;
         }
 
@@ -602,17 +615,22 @@ class PlayState extends MusicBeatState
     function setupInputs()
     {
         inputs = new Inputs();
-        inputs.setup(playerStrums.keyCount);
+
+        var setupKeys:Int = (playerStrums != null) ? playerStrums.keyCount : 4;
+        for (strumline in playableStrums)
+            if (strumline.keyCount > setupKeys) setupKeys = strumline.keyCount;
+
+        inputs.setup(setupKeys);
 
         inputs.onInputPressed.add(function(entry:InputEntry)
         {
-            if (playerStrums.cpu) return;
-            pressEntryList.push(entry); 
+            if (!hasPlayableInput()) return;
+            pressEntryList.push(entry);
         });
 
         inputs.onInputReleased.add(function(entry:InputEntry)
         {
-            if (playerStrums.cpu) return;
+            if (!hasPlayableInput()) return;
             releaseEntryList.push(entry);
         });
     }
@@ -757,7 +775,7 @@ class PlayState extends MusicBeatState
 
         hasDialogue = true;
 
-        runAfterTransition(() -> FlxTimer.wait(conductor.beatLengthMs / 1000, () -> Manager.openSubState(new DialogueSubState())));
+        runAfterTransition(() -> FlxTimer.wait(conductor.beatLengthMs / 1000, () -> Manager.openSubState(new menus.DialogueSubState())));
     }
 
     /**
@@ -957,7 +975,7 @@ class PlayState extends MusicBeatState
         // Access the chart editor.
         if (FlxG.keys.justPressed.SEVEN)
         {
-            Manager.switchState("Charter");
+            Manager.switchState(new menus.ChartingState(name, difficulty, variation));
         }
 
         // Only add the more sensitive keybinds after this.
@@ -1001,80 +1019,103 @@ class PlayState extends MusicBeatState
     }
 
     /**
+     * Whether any strumline is currently accepting player input.
+     */
+    function hasPlayableInput():Bool
+    {
+        for (strumline in playableStrums)
+            if (strumline != null && !strumline.cpu) return true;
+
+        return false;
+    }
+
+    /**
      * Procces inputs to determine if a note should be hit or not.
      */
     function processInputs(elapsed:Float):Void
     {
-        if (playerStrums == null) return;
-
-        for (sustain in playerStrums.sustains.members)
+        for (strumline in playableStrums)
         {
-            if (sustain == null || !sustain.exists || !sustain.alive) continue;
+            if (strumline == null) continue;
 
-            if (conductor.songPosition >= sustain.time && sustain.hit && !sustain.missed && sustain.mustHit)
-                metrics.hold(elapsed);
+            for (sustain in strumline.sustains.members)
+            {
+                if (sustain == null || !sustain.exists || !sustain.alive) continue;
+
+                if (conductor.songPosition >= sustain.time && sustain.hit && !sustain.missed && sustain.mustHit)
+                    metrics.hold(elapsed);
+            }
         }
 
-        if (pressEntryList.length + releaseEntryList.length <= 0 || playerStrums.cpu) return;
+        if (pressEntryList.length + releaseEntryList.length <= 0 || !hasPlayableInput()) return;
 
         for (pressEntry in pressEntryList)
         {
-            var noteDir:Int = pressEntry.direction;
-            
-            playerStrums.pressKey(noteDir);
-
-            var spr:Strum = playerStrums.strums.members[noteDir];
-            spr?.play("pressed", true);
-
-            var sortedNotesList:Array<Note> = playerStrums.filterHittableNotes(noteDir);
-            sortedNotesList.sort(playerStrums?.sortHitNotes);
-
-            if (sortedNotesList.length > 0) 
-            {
-                var targetNote = sortedNotesList[0];
-                    
-                if (targetNote != null && targetNote.alive)
-                {
-                    if (targetNote.sustain != null)
-                    {
-                        var sustain:SustainNote = targetNote.sustain;
-
-                        sustain.hit = true;
-                        sustain.missed = false;
-                        sustain.missHandled = false;
-
-                        var catchPadding:Float = 0;
-                        if (sustain.strum != null && playerStrums.speed > 0)
-                            catchPadding = (sustain.strum.height / 4) / (0.45 * playerStrums.speed);
-
-                        sustain.fullLength = (sustain.time + sustain.fullLength) - lastConductorPos + catchPadding;
-                        sustain.time = lastConductorPos;
-                        sustain.length = sustain.fullLength;
-
-                        if (sustain.strum != null)
-                        {
-                            sustain.y = sustain.strum.y + sustain.strum.height / 2;
-                            sustain.sync();
-                        }
-                    }
-
-                    playerStrums.onNoteHit.dispatch(targetNote);
-                    targetNote.kill();
-                }           
-            }
+            for (strumline in playableStrums)
+                pressInputOnStrumline(strumline, pressEntry.direction);
         }
         pressEntryList.resize(0);
 
         for (releaseEntry in releaseEntryList)
         {
-            var noteDir:Int = releaseEntry.direction;   
+            for (strumline in playableStrums)
+            {
+                if (strumline == null || strumline.cpu || releaseEntry.direction >= strumline.keyCount) continue;
 
-            playerStrums.releaseKey(noteDir);
-            
-            var spr:Strum = playerStrums.strums.members[noteDir];
-            spr?.play("static", true);      
+                strumline.releaseKey(releaseEntry.direction);
+
+                var spr:Strum = strumline.strums.members[releaseEntry.direction];
+                spr?.play("static", true);
+            }
         }
         releaseEntryList.resize(0);
+    }
+
+    /**
+     * Presses one note direction on one strumline and calculates if an incoming note should be hit.
+     */
+    function pressInputOnStrumline(strumline:Strumline, noteDir:Int):Void
+    {
+        if (strumline == null || strumline.cpu || noteDir >= strumline.keyCount) return;
+
+        strumline.pressKey(noteDir);
+
+        var spr:Strum = strumline.strums.members[noteDir];
+        spr?.play("pressed", true);
+
+        var sortedNotesList:Array<Note> = strumline.filterHittableNotes(noteDir);
+        sortedNotesList.sort(strumline.sortHitNotes);
+
+        if (sortedNotesList.length <= 0) return;
+
+        var targetNote = sortedNotesList[0];
+        if (targetNote == null || !targetNote.alive) return;
+
+        if (targetNote.sustain != null)
+        {
+            var sustain:SustainNote = targetNote.sustain;
+
+            sustain.hit = true;
+            sustain.missed = false;
+            sustain.missHandled = false;
+
+            var catchPadding:Float = 0;
+            if (sustain.strum != null && strumline.speed > 0)
+                catchPadding = (sustain.strum.height / 4) / (0.45 * strumline.speed);
+
+            sustain.fullLength = (sustain.time + sustain.fullLength) - lastConductorPos + catchPadding;
+            sustain.time = lastConductorPos;
+            sustain.length = sustain.fullLength;
+
+            if (sustain.strum != null)
+            {
+                sustain.y = sustain.strum.y + sustain.strum.height / 2;
+                sustain.sync();
+            }
+        }
+
+        strumline.onNoteHit.dispatch(targetNote);
+        targetNote.kill();
     }
 
     /**
@@ -1099,6 +1140,7 @@ class PlayState extends MusicBeatState
         }
 
         missSounds = [];
+        playableStrums = [];
 
         for (cam in [camGame, camBetween, camHUD, camStrums, camMisc, camOverlay])
         {
@@ -1182,7 +1224,7 @@ class PlayState extends MusicBeatState
 
             var object = EventObjectRegistry.findByName(event.name);
 
-            if (object == null || object.name != Constants.CHANGE_CHARACTER_EVENT)
+            if (object == null || object.name != "Change Character")
                 continue;
 
             var target:String = Std.string(event.variables[1]);
@@ -1274,7 +1316,7 @@ class PlayState extends MusicBeatState
 
     public function onSubStateOpen(substate:FlxSubState)
     {
-        if (Std.isOfType(substate, game.DialogueSubState))
+        if (Std.isOfType(substate, menus.DialogueSubState))
 		{
 			persistentDraw = true;
 			persistentUpdate = false;
@@ -1283,7 +1325,7 @@ class PlayState extends MusicBeatState
 
     public function onSubStateClose(substate:FlxSubState)
     {
-        if (Std.isOfType(substate, game.DialogueSubState))
+        if (Std.isOfType(substate, menus.DialogueSubState))
 		{
             if (!songStarted)
                 initCountdown();
@@ -1319,24 +1361,32 @@ class PlayState extends MusicBeatState
         else if (!pressed && FlxG.timeScale != 1.0)
             setTimeScale(1.0);
 
-        if (pressed == timeSkipping || playerStrums == null)
+        if (pressed == timeSkipping)
             return;
 
         timeSkipping = pressed;
-        playerStrums.cpu = pressed;
 
-        if (pressed)
+        for (strumline in playableStrums)
         {
-            for (i in 0...playerStrums.keyCount)
-            {
-                playerStrums.releaseKey(i);
+            if (strumline == null) continue;
 
-                var strum:Strum = playerStrums.strums.members[i];
+            strumline.cpu = pressed;
+
+            if (!pressed) continue;
+
+            for (i in 0...strumline.keyCount)
+            {
+                strumline.releaseKey(i);
+
+                var strum:Strum = strumline.strums.members[i];
 
                 if (strum != null && strum.animation != null && strum.animation.name == "pressed")
                     strum.play("static", true);
             }
+        }
 
+        if (pressed)
+        {
             pressEntryList.resize(0);
             releaseEntryList.resize(0);
         }

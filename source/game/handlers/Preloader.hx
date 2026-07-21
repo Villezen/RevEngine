@@ -122,7 +122,7 @@ class Preloader
 
                 var _object = EventObjectRegistry.findByName(_event.name);
 
-                if (_object == null || _object.name != Constants.CHANGE_CHARACTER_EVENT) continue;
+                if (_object == null || _object.name != "Change Character") continue;
 
                 queueCharacter(_event.variables[1]);
             }

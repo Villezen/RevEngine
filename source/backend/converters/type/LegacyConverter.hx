@@ -356,12 +356,12 @@ class LegacyConverter implements IConverterEntry
             case "Change Character":
                 if (value2 == "") return null;
 
-                return {name: Constants.CHANGE_CHARACTER_EVENT, time: time, variables: [Std.string(resolveCharacterTarget(value1)), value2]};
+                return {name: "Change Character", time: time, variables: [Std.string(resolveCharacterTarget(value1)), value2]};
 
             case "Play Animation":
                 if (value1 == "") return null;
 
-                return {name: Constants.PLAY_ANIMATION_EVENT, time: time, variables: [Std.string(resolveAnimationTarget(value2)), value1]};
+                return {name: "Play Animation", time: time, variables: [Std.string(resolveAnimationTarget(value2)), value1]};
 
             default:
                 return null;

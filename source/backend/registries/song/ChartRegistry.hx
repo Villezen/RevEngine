@@ -25,6 +25,8 @@ typedef ChartStrumline =
     @:optional var visible:Null<Bool>;
     @:optional var keys:Null<Int>;
     @:optional var speed:Null<Float>;
+    @:optional var playable:Null<Bool>;
+
     @:optional var notes:Array<ChartNote>;
 }
 
@@ -190,6 +192,8 @@ class ChartRegistry
             if (strum.visible == null) strum.visible = true;
             if (strum.keys == null || strum.keys <= 0) strum.keys = 4;
             if (strum.speed == null || strum.speed <= 0) strum.speed = 1.0;
+            if (strum.playable == null) strum.playable = (strum.id == 1);
+
             if (strum.notes == null) strum.notes = [];
 
             for (note in strum.notes)

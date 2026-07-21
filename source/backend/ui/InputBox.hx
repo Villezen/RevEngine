@@ -53,8 +53,19 @@ class InputBox extends FlxSpriteGroup implements IUiEntry
 
     public var value:String = "";
 
+    public function setText(s:String):Void
+    {
+        value = (s != null) ? s : "";
+
+        updateTextDisplay();
+        checkAutocomplete();
+
+        targetScroll = 0;
+        currentScroll = 0;
+    }
+
     var hitbox:FunkinSprite;
-    var caret:FunkinSprite; 
+    var caret:FunkinSprite;
     var textInput:FlxBitmapText;
     var autocompleteText:FlxBitmapText;
     
@@ -206,6 +217,9 @@ class InputBox extends FlxSpriteGroup implements IUiEntry
                 if (params != null)
                 {
                     if (params.type == "NUMBER" && !~/[0-9\.\-]/.match(char))
+                        return;
+
+                    if (params.type == "INTEGER" && !~/[0-9\-]/.match(char))
                         return;
 
                     if (params.type == "LETTER" && !~/[a-zA-Z\s]/.match(char))

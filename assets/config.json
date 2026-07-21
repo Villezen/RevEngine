@@ -22,11 +22,7 @@
 
     "overrides":
     {
-        "states":
-        [
-            {"state": "DialogueSubState", "target": "DialogueSubStateScript"},
-            {"state": "FreeplaySubState", "target": "FreeplaySubStateScript"}
-        ],
+        "states": [],
 
         "transitions":
         [

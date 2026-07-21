@@ -12,7 +12,9 @@ typedef InteractiveWindowParams =
     var position:Array<Int>;
     var size:Array<Int>;
     var title:String;
-    var items:Array<FunkinSprite>;
+
+    var items:Array<FlxSprite>;
+
     var minimiziable:Bool;
     var callback:Bool->Void;
 }

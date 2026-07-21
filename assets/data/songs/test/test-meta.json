@@ -12,7 +12,14 @@
 	"album":
 	{
 		"name": "volume1",
-		"ratings": 1,
+		
+		"ratings":
+		[
+			{"difficulty": "easy", "rating": 1},
+			{"difficulty": "normal", "rating": 3},
+			{"difficulty": "hard", "rating": 6}
+		],
+
 		"previewTimestamp": 12840
 	},
 

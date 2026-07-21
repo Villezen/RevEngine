@@ -879,7 +879,7 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
     
     public function onStateCreate(event:ScriptEvent) {}
     public function onCreate(event:ScriptEvent) {}
-    public function onPostCreate(event:ScriptEvent) {}
+    public function onCreatePost(event:ScriptEvent) {}
 
     public function onDestroy(event:ScriptEvent) {}
 

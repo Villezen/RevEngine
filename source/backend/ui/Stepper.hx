@@ -210,6 +210,48 @@ class Stepper extends FlxSpriteGroup implements IUiEntry
             currentValue = params.args[0];
     }
 
+    public function setValue(v:Dynamic)
+    {
+        if (params == null) return;
+
+        if (params.type == "String")
+        {
+            if (params.args != null)
+            {
+                var idx:Int = params.args.indexOf(v);
+                if (idx >= 0) currentIndex = idx;
+            }
+
+            currentValue = v;
+        }
+        else if (params.type == "Int")
+        {
+            var val:Int = Std.int(v);
+
+            if (params.args != null && params.args.length >= 2)
+            {
+                if (val < Std.int(params.args[0])) val = Std.int(params.args[0]);
+                if (val > Std.int(params.args[1])) val = Std.int(params.args[1]);
+            }
+
+            currentValue = val;
+        }
+        else
+        {
+            var val:Float = v;
+
+            if (params.args != null && params.args.length >= 2)
+            {
+                if (val < params.args[0]) val = params.args[0];
+                if (val > params.args[1]) val = params.args[1];
+            }
+
+            currentValue = val;
+        }
+
+        updateLabel();
+    }
+
     private function updateLabel()
     {
         var displayStr:String = "";

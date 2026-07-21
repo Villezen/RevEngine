@@ -4,9 +4,13 @@ import backend.utils.SortUtil;
 
 import backend.modding.modules.Module;
 import backend.modding.modules.ScriptedModule;
+import backend.modding.modules.PlayStateModule;
+import backend.modding.modules.ScriptedPlayStateModule;
 
 import backend.modding.events.ScriptEvent;
 import backend.modding.events.ScriptEventDispatcher;
+
+import game.PlayState;
 
 /**
  * This class manages each module loaded in the state.
@@ -30,7 +34,14 @@ class ModuleHandler
     {
         clear();
 
-        var scriptClass:Dynamic = ScriptedModule;
+        loadScripts(ScriptedModule);
+        loadScripts(ScriptedPlayStateModule);
+
+        reorder();
+    }
+
+    static function loadScripts(scriptClass:Dynamic):Void
+    {
         var moduleClasses:Array<String> = scriptClass.listScriptClasses();
 
         for (moduleEntry in moduleClasses)
@@ -38,11 +49,10 @@ class ModuleHandler
             var module:Module = scriptClass.scriptInit(moduleEntry, moduleEntry);
 
             if (module != null)
-            {   
+            {
                 list.set(module.id, module);
             }
         }
-        reorder();
     }
 
     /**
@@ -81,11 +91,21 @@ class ModuleHandler
      */
     public static function call(event:ScriptEvent):Void
     {
+        var inPlayState:Bool = (FlxG.state is PlayState);
+
         for (moduleID in sortList)
         {
             var module:Module = list.get(moduleID);
 
             if (module == null || !module.active) continue;
+
+            if ((module is PlayStateModule))
+            {
+                if (!inPlayState) continue;
+                
+                cast(module, PlayStateModule).game = PlayState.instance;
+            }
+
             ScriptEventDispatcher.call(module, event);
         }
     }

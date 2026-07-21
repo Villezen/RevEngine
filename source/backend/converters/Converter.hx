@@ -124,7 +124,8 @@ class Converter
             buf.add("\n\t\t\t\"visible\": " + (strumLine.visible ?? true) + ",\n");
 
             buf.add("\n\t\t\t\"speed\": " + (strumLine.speed ?? 1.0) + ",");
-            buf.add("\n\t\t\t\"keys\": " + (strumLine.keys ?? 4) + ",\n");
+            buf.add("\n\t\t\t\"keys\": " + (strumLine.keys ?? 4) + ",");
+            buf.add("\n\t\t\t\"playable\": " + (strumLine.playable ?? (strumLine.id == 1)) + ",\n");
 
             buf.add("\n\t\t\t\"notes\":");
             buf.add("\n\t\t\t[");

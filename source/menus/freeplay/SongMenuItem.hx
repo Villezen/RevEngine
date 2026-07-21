@@ -200,11 +200,18 @@ class SongMenuItem extends FlxSpriteGroup
             if (pixelIcon.char != iconChar) pixelIcon.visible = false;
 
             newText.visible = freeplayData.newlyAdded == true;
-            songText.clipWidth = 290;
+            songText.clipWidth = isFav ? 245 : 290;
             setStatsVisible(true);
         }
 
         updateSelected();
+    }
+
+    public function refreshRating():Void
+    {
+        if (freeplayData == null) return;
+
+        updateDifficultyRating(freeplayData.difficultyRating);
     }
 
     public function staggerNew(index:Int):Void

@@ -73,7 +73,7 @@ class SongModule implements IScriptedClass
 
     public function onCreate(event:ScriptEvent):Void {}
     public function onStateCreate(event:ScriptEvent):Void {}
-    public function onPostCreate(event:ScriptEvent):Void {}
+    public function onCreatePost(event:ScriptEvent):Void {}
 
     public function onUpdate(event:UpdateScriptEvent):Void {}
 

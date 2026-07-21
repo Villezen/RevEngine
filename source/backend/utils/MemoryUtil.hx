@@ -143,6 +143,7 @@ final class MemoryUtil
 
         _pressureBaseline = getGCUsage();
         _pressureTimer = 0.0;
+        _sinceFullClean = 0.0;
         #end
     }
 
@@ -156,10 +157,13 @@ final class MemoryUtil
         #end
     }
 
-    /**
-     * How many bytes the GC may grow past the post-cleanup baseline.
-     */
-    public static inline final PRESSURE_HEADROOM:Float = 16 * 1024 * 1024;
+    public static inline final PRESSURE_LIMIT:Float = 16 * 1024 * 1024;
+    public static inline final IDLE_PRESSURE_LIMIT:Float = 8 * 1024 * 1024;
+
+    public static inline final MAX_MEMORY_GROWTH:Float = 120;
+    public static inline final MIN_MEMORY_GROWTH:Float = 2 * 1024 * 1024;
+
+    static var _sinceFullClean:Float = 0.0;
 
     /**
      * Seconds between pressure checks.
@@ -257,6 +261,8 @@ final class MemoryUtil
     static function checkPressure():Void
     {
         #if cpp
+        _sinceFullClean += FlxG.elapsed;
+
         if (_settlePending)
         {
             _settleTimer += FlxG.elapsed;
@@ -276,9 +282,19 @@ final class MemoryUtil
 
         if (!canCleanNow()) return;
 
-        if (getGCUsage() - _pressureBaseline < PRESSURE_HEADROOM) return;
+        var growth:Float = getGCUsage() - _pressureBaseline;
 
-        collectOnly();
+        if (FlxG.state is game.PlayState)
+        {
+            if (growth >= PRESSURE_LIMIT)
+                collectOnly();
+
+            return;
+        }
+
+        if (growth >= IDLE_PRESSURE_LIMIT || (_sinceFullClean >= MAX_MEMORY_GROWTH && growth >= MIN_MEMORY_GROWTH))
+            freeUnusedMemory();
+
         #end
     }
 

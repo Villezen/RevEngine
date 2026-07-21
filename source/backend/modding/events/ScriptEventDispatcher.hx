@@ -39,7 +39,7 @@ class ScriptEventDispatcher
             }
 
             case POST_CREATE:
-                target.onPostCreate(event);
+                target.onCreatePost(event);
                 return;
 
             case UPDATE:

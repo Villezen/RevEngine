@@ -89,6 +89,7 @@ class PolymodManager
         Polymod.addDefaultImport(backend.modding.ModState);
         Polymod.addDefaultImport(backend.modding.events.ScriptEvent);
         Polymod.addDefaultImport(backend.modding.modules.Module);
+        Polymod.addDefaultImport(backend.modding.modules.PlayStateModule);
         Polymod.addDefaultImport(backend.modding.modules.BackingCard);
         Polymod.addDefaultImport(backend.modding.handlers.BackingCardHandler);
         Polymod.addDefaultImport(backend.modding.songs.SongModule);
@@ -96,6 +97,7 @@ class PolymodManager
 
         Polymod.addDefaultImport(backend.shaders.AngleMask);
         Polymod.addDefaultImport(backend.shaders.GaussianBlurShader);
+        Polymod.addDefaultImport(backend.shaders.HSVShader);
         Polymod.addDefaultImport(backend.shaders.StrokeShader);
 
         Polymod.addDefaultImport(backend.utils.FileUtil);

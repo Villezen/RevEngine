@@ -107,7 +107,7 @@ class Stage extends FlxBasic implements IScriptedClass
     
     public function onStateCreate(event:ScriptEvent) {}
     public function onCreate(event:ScriptEvent) {}
-    public function onPostCreate(event:ScriptEvent) {}
+    public function onCreatePost(event:ScriptEvent) {}
 
     public function onDestroy(event:ScriptEvent) {}
 

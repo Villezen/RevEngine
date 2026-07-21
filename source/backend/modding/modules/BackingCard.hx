@@ -17,7 +17,7 @@ class BackingCard
 
     public function onCreate(freeplay:Dynamic):Void {}
     public function onCardCreate(freeplay:Dynamic):Void {}
-    public function onPostCreate(freeplay:Dynamic):Void {}
+    public function onCreatePost(freeplay:Dynamic):Void {}
 
     public function onIntroDone(freeplay:Dynamic):Void {}
     public function onExit(freeplay:Dynamic):Void {}

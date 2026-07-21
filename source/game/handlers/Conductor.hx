@@ -124,8 +124,17 @@ class Conductor
      */
     public function reset():Void
     {
-        for (i in [currentStep, currentBeat, currentMeasure, songPosition, lastChangeTime, lastChangeStep])
-            i = 0.0;
+        songPosition = 0.0;
+        lastChangeTime = 0.0;
+        lastChangeStep = 0.0;
+
+        currentStepTime = 0;
+        currentBeatTime = 0;
+        currentMeasureTime = 0;
+
+        currentStep = 0;
+        currentBeat = 0;
+        currentMeasure = 0;
 
         cancelBPMTween();
         onBPMChange.removeAll();
@@ -241,6 +250,33 @@ class Conductor
     }
 
     /**
+     * Jumps straight to a position without dispatching the steps in between.
+     * @param newPosition The position to jump to.
+     */
+    public function seek(newPosition:Float):Void
+    {
+        songPosition = newPosition;
+
+        if (stepLengthMs > 0)
+            applyPositionInfo(newPosition);
+    }
+
+    /**
+     * Recalculates the cached step, beat and measure values for a position.
+     * @param newPosition The position to calculate from.
+     */
+    private inline function applyPositionInfo(newPosition:Float):Void
+    {
+        currentStepTime = FlxMath.roundDecimal(lastChangeStep + ((newPosition - lastChangeTime) / stepLengthMs), 4);
+        currentBeatTime = FlxMath.roundDecimal((currentStepTime / 4), 4);
+        currentMeasureTime = FlxMath.roundDecimal((currentBeatTime / 4), 4);
+
+        currentStep = Math.floor(currentStepTime);
+        currentBeat = Math.floor(currentBeatTime);
+        currentMeasure = Math.floor(currentMeasureTime);
+    }
+
+    /**
      * Updates the music info for the Conductor based on a position.
      * @param newPosition The position to check.
      */
@@ -250,14 +286,8 @@ class Conductor
         final oldBeat:Int = currentBeat;
         final oldMeasure:Int = currentMeasure;
 
-        currentStepTime = FlxMath.roundDecimal(lastChangeStep + ((newPosition - lastChangeTime) / stepLengthMs), 4);
-        currentBeatTime = FlxMath.roundDecimal((currentStep / 4), 4);
-        currentMeasureTime = FlxMath.roundDecimal((currentBeat / 4), 4);
+        applyPositionInfo(newPosition);
 
-        currentStep = Math.floor(currentStepTime);
-        currentBeat = Math.floor(currentBeatTime);
-        currentMeasure = Math.floor(currentMeasureTime);
-        
         // Update the song's meter values while checking that it's not trying to repeat a beat.
         // This gets done in a loop between the old and current step to dispatch to make sure
         // we never skip a value, thus preventing breaking stuff like events.
