@@ -173,7 +173,7 @@ class CharterStrumlineBox extends FlxSpriteGroup
     function tintBackground():Void
     {
         var health:FlxColor = healthColorOf(entry.character);
-        var tint:FlxColor = FlxColor.interpolate(FlxColor.WHITE, health, 4);
+        var tint:FlxColor = FlxColor.interpolate(FlxColor.WHITE, health, 0.4);
 
         for (slice in bgSlices)
         {
