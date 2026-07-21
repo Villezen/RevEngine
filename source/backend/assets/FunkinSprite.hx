@@ -2,6 +2,7 @@ package backend.assets;
 
 import animate.FlxAnimate;
 
+import flixel.FlxSprite;
 import flixel.system.FlxAssets.FlxGraphicAsset;
 
 import backend.utils.tools.TagTools.ITaggable;

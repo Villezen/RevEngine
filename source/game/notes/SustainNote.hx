@@ -4,7 +4,6 @@ import flixel.graphics.tile.FlxDrawTrianglesItem.DrawData;
 
 import flixel.animation.FlxAnimation;
 
-import flixel.graphics.FlxGraphic;
 import flixel.graphics.frames.FlxFrame;
 
 import flixel.math.FlxMath;
@@ -73,7 +72,7 @@ class SustainNote extends FunkinSprite
     }
 
     public var subdivisions(default, set):Int = 1;
-    private var renderedSubdivisions:Int;
+    private var _renderedSubdivisions:Int;
 
     function set_subdivisions(value:Int)
     {
@@ -84,28 +83,28 @@ class SustainNote extends FunkinSprite
         updateClipping();
         setupIndices(subdivisions);
         
-        renderedSubdivisions = subdivisions;
+        _renderedSubdivisions = subdivisions;
 
         return value;
     }
 
-    var holdAnimation(default, null):FlxAnimation;
-    var holdEndAnimation(default, null):FlxAnimation;
+    var _holdAnimation(default, null):FlxAnimation;
+    var _holdEndAnimation(default, null):FlxAnimation;
 
     var holdFrame(get, never):FlxFrame;
     function get_holdFrame():FlxFrame
     {
-        if (holdAnimation == null || holdAnimation.frames == null || frames == null || frames.frames == null) 
+        if (_holdAnimation == null || _holdAnimation.frames == null || frames == null || frames.frames == null) 
             return null;
-        return frames?.frames[holdAnimation?.frames[holdAnimation?.curFrame]] ?? null;
+        return frames?.frames[_holdAnimation?.frames[_holdAnimation?.curFrame]] ?? null;
     }
 
     var holdEndFrame(get, never):FlxFrame;
     function get_holdEndFrame():FlxFrame
     {
-        if (holdEndAnimation == null || holdEndAnimation.frames == null || frames == null || frames.frames == null) 
+        if (_holdEndAnimation == null || _holdEndAnimation.frames == null || frames == null || frames.frames == null) 
             return null;
-        return frames?.frames[holdEndAnimation?.frames[holdEndAnimation?.curFrame]] ?? null;
+        return frames?.frames[_holdEndAnimation?.frames[_holdEndAnimation?.curFrame]] ?? null;
     }
 
     var tailTime(get, never):Float;
@@ -133,15 +132,15 @@ class SustainNote extends FunkinSprite
     public var strum:Strum;
     public var strumline:Strumline;
 
-    private var spriteWidth:Float;
-    private var spriteHeight:Float;
+    private var _spriteWidth:Float;
+    private var _spriteHeight:Float;
 
     public var hit:Bool = false;
     public var missed:Bool = false;
     public var missHandled:Bool = false;
 
     public var alphaModifier:Float = 1.0;
-    private var previousSpeed:Float;
+    private var _previousSpeed:Float;
 
     public inline static function sustainHeight(sustainLength:Float, scrollSpeed:Float):Float
     {
@@ -170,19 +169,19 @@ class SustainNote extends FunkinSprite
 
         updateAlpha();
 
-        if (holdAnimation == null || holdEndAnimation == null) return;
+        if (_holdAnimation == null || _holdEndAnimation == null) return;
 
         var lastHoldFrame:FlxFrame = holdFrame;
         var lastHoldEndFrame:FlxFrame = holdEndFrame;
 
-        holdAnimation.update(elapsed * (animation.timeScale * FlxG.animationTimeScale));
-        holdEndAnimation.update(elapsed * (animation.timeScale * FlxG.animationTimeScale));
+        _holdAnimation.update(elapsed * (animation.timeScale * FlxG.animationTimeScale));
+        _holdEndAnimation.update(elapsed * (animation.timeScale * FlxG.animationTimeScale));
 
-        if (previousSpeed != strumline.speed || (lastHoldFrame != holdFrame || lastHoldEndFrame != holdEndFrame))
+        if (_previousSpeed != strumline.speed || (lastHoldFrame != holdFrame || lastHoldEndFrame != holdEndFrame))
         {
             redraw();
         }
-        previousSpeed = strumline.speed;
+        _previousSpeed = strumline.speed;
     }
 
     override public function draw():Void
@@ -195,8 +194,8 @@ class SustainNote extends FunkinSprite
 
     override function updateHitbox()
     {
-        this.width = spriteWidth;
-        this.height = spriteHeight;
+        this.width = _spriteWidth;
+        this.height = _spriteHeight;
 
         origin.set(this.width * 0.5, this.height * 0.5);
     }
@@ -258,11 +257,11 @@ class SustainNote extends FunkinSprite
 
         this.scale.x = note.scale.x;
 
-        holdAnimation = animation.getByName('hold');
-        holdEndAnimation = animation.getByName('tail');
+        _holdAnimation = animation.getByName('hold');
+        _holdEndAnimation = animation.getByName('tail');
 
-        spriteWidth = holdFrame.frame.width * this.scale.x;
-        spriteHeight = sustainHeight(visualLength, strumline.speed) * this.scale.y;
+        _spriteWidth = holdFrame.frame.width * this.scale.x;
+        _spriteHeight = sustainHeight(visualLength, strumline.speed) * this.scale.y;
         
         updateHitbox();
         updateClipping();
@@ -306,13 +305,13 @@ class SustainNote extends FunkinSprite
     public function sync()
     {
         if (strum == null) return;
-        x = strum.x + (strum.width - this.spriteWidth) / 2;
+        x = strum.x + (strum.width - this._spriteWidth) / 2;
     }
 
     function redraw()
     {
-        spriteWidth = (holdFrame?.frame?.width ?? 0.0) * this.scale.x;
-        spriteHeight = sustainHeight(visualLength, strumline.speed) * this.scale.y;
+        _spriteWidth = (holdFrame?.frame?.width ?? 0.0) * this.scale.x;
+        _spriteHeight = sustainHeight(visualLength, strumline.speed) * this.scale.y;
         
         updateClipping();
         updateHitbox();
@@ -344,7 +343,7 @@ class SustainNote extends FunkinSprite
         _tempUVTData.resize(0);
 
         var fullClipHeight = sustainHeight(fullVisualLength, strumline.speed);
-        var clipHeight:Float = FlxMath.bound(sustainHeight(visualLength, strumline.speed), 0, spriteHeight);
+        var clipHeight:Float = FlxMath.bound(sustainHeight(visualLength, strumline.speed), 0, _spriteHeight);
 
         if (clipHeight <= 0)
         {
@@ -376,8 +375,8 @@ class SustainNote extends FunkinSprite
 
         // HOLD VERTICES //
         _tempVertices[0 * 2] = 0.0;
-        _tempVertices[0 * 2 + 1] = flipY ? clipHeight : (spriteHeight - clipHeight);
-        _tempVertices[1 * 2] = spriteWidth;
+        _tempVertices[0 * 2 + 1] = flipY ? clipHeight : (_spriteHeight - clipHeight);
+        _tempVertices[1 * 2] = _spriteWidth;
         _tempVertices[1 * 2 + 1] = _tempVertices[0 * 2 + 1];
 
         var startIndexPoint:Int = 2;
@@ -449,7 +448,7 @@ class SustainNote extends FunkinSprite
         var safeTailTop:Float = holdEndFrame.uv.top + uvInset;
 
         _tempUVTData[0 * 2] = holdFrame.uv.left;
-        _tempUVTData[0 * 2 + 1] = safeHoldTop + (1 - Math.max(0, firstValidHeight / (fullPartHeight / renderedSubdivisions))) * (safeHoldBottom - safeHoldTop);
+        _tempUVTData[0 * 2 + 1] = safeHoldTop + (1 - Math.max(0, firstValidHeight / (fullPartHeight / _renderedSubdivisions))) * (safeHoldBottom - safeHoldTop);
 
         _tempUVTData[1 * 2] = holdFrame.uv.right;
         _tempUVTData[1 * 2 + 1] = _tempUVTData[0 * 2 + 1];
@@ -499,9 +498,9 @@ class SustainNote extends FunkinSprite
         _tempUVTData[(vertexIndex + 3) * 2] = _tempUVTData[(vertexIndex + 1) * 2]; 
         _tempUVTData[(vertexIndex + 3) * 2 + 1] = _tempUVTData[(vertexIndex + 2) * 2 + 1]; 
 
-        if (validSubdivisions != renderedSubdivisions)
+        if (validSubdivisions != _renderedSubdivisions)
         {
-            this.renderedSubdivisions = validSubdivisions;
+            this._renderedSubdivisions = validSubdivisions;
             setupIndices(validSubdivisions);
         }
 

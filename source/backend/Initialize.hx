@@ -1,5 +1,6 @@
 package backend;
 
+import flixel.FlxSprite;
 import flixel.FlxState;
 import flixel.graphics.FlxGraphic;
 import flixel.util.typeLimit.NextState;

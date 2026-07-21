@@ -21,7 +21,6 @@ import flixel.FlxState;
 import flixel.FlxSubState;
 import flixel.math.FlxPoint;
 import flixel.FlxBasic;
-import flixel.FlxSprite;
 import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.group.FlxSpriteGroup.FlxTypedSpriteGroup;
 
@@ -392,9 +391,9 @@ class DEBUG extends Sprite
             var spriteGroup:FlxTypedSpriteGroup<Dynamic> = cast basic;
             getSpriteCounts(spriteGroup.group, counts);
         }
-        else if (Std.isOfType(basic, FlxSprite))
+        else if (Std.isOfType(basic, FunkinSprite))
         {
-            var sprite:FlxSprite = cast basic;
+            var sprite:FunkinSprite = cast basic;
             counts.total++;
 
             if (sprite.visible)

@@ -10,16 +10,38 @@ class NoteSplash extends FunkinSprite
 {
     public var direction(default, null):Int;
     public var data:NoteSplashData;
+
+    private var _maxVariants:Int = 0;
+
     public var skin(default, set):NoteStyle;
 
-    function set_skin(value:NoteStyle):NoteStyle 
+    function set_skin(value:NoteStyle):NoteStyle
     {
         if (value == skin) return value;
 
         data = NoteSkinRegistry.getSplash(value.name);
         value.applyToSplash(this);
 
+        _maxVariants = scanMaxVariants();
+
         return skin = value;
+    }
+
+    function scanMaxVariants():Int
+    {
+        if (animation == null) return 0;
+
+        var max:Int = 0;
+
+        for (animName in animation.getNameList())
+        {
+            var parsed = Std.parseInt(animName);
+
+            if (parsed != null && parsed > max)
+                max = parsed;
+        }
+
+        return max;
     }
 
     public var strumline:Strumline;
@@ -55,22 +77,9 @@ class NoteSplash extends FunkinSprite
 
     public function splash(isVisible:Bool = true)
     {
-        if (animation == null) return;
+        if (animation == null || _maxVariants <= 0) return;
 
-        var maxVariants:Int = 0;
-        
-        for (animName in animation.getNameList())
-        {
-            var parsedNum = Std.parseInt(animName);
-
-            if (parsedNum != null && parsedNum > maxVariants)
-                maxVariants = parsedNum;
-        }
-
-        if (maxVariants <= 0)
-            return;
-
-        var animName = Std.string(FlxG.random.int(1, maxVariants));
+        var animName = Std.string(FlxG.random.int(1, _maxVariants));
 
         if (animation.getByName(animName) == null)
             return;

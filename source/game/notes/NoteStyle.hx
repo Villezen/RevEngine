@@ -24,7 +24,25 @@ typedef NoteStyleParams =
  */
 @:forward
 abstract NoteStyle(NoteStyleParams) from NoteStyleParams to NoteStyleParams
-{   
+{
+    static function loadTexture(sprite:FunkinSprite, path:String, type:String, textureBox:Array<Int>):Bool
+    {
+        if (!Paths.exists('images/$path.png'))
+            return false;
+
+        if (type == "TEXTURE")
+        {
+            var graphic = FlxG.bitmap.add(Paths.image(path));
+            if (graphic == null) return false;
+
+            sprite.loadGraphic(graphic, true, textureBox[0], textureBox[1]);
+        }
+        else
+            sprite.frames = Paths.getSparrowAtlas(path);
+
+        return true;
+    }
+
     public function applyToStrum(strum:Strum)
     {
         if (strum == null || strum.data == null) return;
@@ -33,20 +51,10 @@ abstract NoteStyle(NoteStyleParams) from NoteStyleParams to NoteStyleParams
         strum.animation.reset();
 
         var isEK = KeyUtil.isEK(this.keys);
-        var path = strum.data.type == "SEPARATE" ? 'game/notes/skins/${this.name}/strumline' : 'game/notes/skins/${this.name}/skin';
+        var path = strum.data.type == "SEPARATE" ? 'game/notes/styles/${this.name}/strumline' : 'game/notes/styles/${this.name}/skin';
 
-        if (!Paths.exists('images/$path.png'))
+        if (!loadTexture(strum, path, strum.data.type, strum.data.textureBox))
             return;
-
-        if (strum.data.type == "TEXTURE")
-        {
-            var graphic = FlxG.bitmap.add(Paths.image(path));
-            if (graphic == null) return;
-            
-            strum.loadGraphic(graphic, true, strum.data.textureBox[0], strum.data.textureBox[1]);
-        }
-        else
-            strum.frames = Paths.getSparrowAtlas(path);
 
         var anims:Array<BaseAnimationData> = isEK ? strum.data.animations.extraKeys : strum.data.animations.normal;
         
@@ -111,20 +119,10 @@ abstract NoteStyle(NoteStyleParams) from NoteStyleParams to NoteStyleParams
         note.animation.reset();
 
         var isEK = KeyUtil.isEK(this.keys);
-        var path = note.parent.data.type == "SEPARATE" ? 'game/notes/skins/${this.name}/notes' : 'game/notes/skins/${this.name}/skin';
+        var path = note.parent.data.type == "SEPARATE" ? 'game/notes/styles/${this.name}/notes' : 'game/notes/styles/${this.name}/skin';
 
-        if (!Paths.exists('images/$path.png'))
+        if (!loadTexture(note, path, note.parent.data.type, note.parent.data.textureBox))
             return;
-
-        if (note.parent.data.type == "TEXTURE")
-        {
-            var graphic = FlxG.bitmap.add(Paths.image(path));
-            if (graphic == null) return;
-            
-            note.loadGraphic(graphic, true, note.parent.data.textureBox[0], note.parent.data.textureBox[1]);
-        }
-        else
-            note.frames = Paths.getSparrowAtlas(path);
 
         var anims:Array<BaseAnimationData> = isEK ? note.parent.data.animations.extraKeys : note.parent.data.animations.normal;
         
@@ -173,7 +171,7 @@ abstract NoteStyle(NoteStyleParams) from NoteStyleParams to NoteStyleParams
         sustain.animation.reset();
 
         var isEK = KeyUtil.isEK(this.keys);
-        var path = sustain.strum.data.type == "SEPARATE" ? 'game/notes/skins/${this.name}/sustains' : 'game/notes/skins/${this.name}/skin';
+        var path = sustain.strum.data.type == "SEPARATE" ? 'game/notes/styles/${this.name}/sustains' : 'game/notes/styles/${this.name}/skin';
 
         if (!Paths.exists('images/$path.png'))
             return;
@@ -255,20 +253,8 @@ abstract NoteStyle(NoteStyleParams) from NoteStyleParams to NoteStyleParams
         var colDir:String = (isEK ? Constants.COLOR_DIRECTIONS[this.keys][splash.direction] : Constants.DIRECTIONS[this.keys][splash.direction]);
         var path = splash.data.type == "SEPARATE" ? '$basePath/$colDir' : '$basePath/skin';
 
-        if (!Paths.exists('images/$path.png'))
+        if (!loadTexture(splash, path, splash.data.type, splash.data.textureBox))
             return;
-
-        if (splash.data.type == "TEXTURE")
-        {
-            var graphic = FlxG.bitmap.add(Paths.image(path));
-            if (graphic == null) return;
-            
-            splash.loadGraphic(graphic, true, splash.data.textureBox[0], splash.data.textureBox[1]);
-        }
-        else
-        {
-            splash.frames = Paths.getSparrowAtlas(path);
-        }
 
         if (splash.data.animations != null)
         {
@@ -342,20 +328,8 @@ abstract NoteStyle(NoteStyleParams) from NoteStyleParams to NoteStyleParams
         
         var path = cover.data.type == "SEPARATE" ? '$basePath/$colDir' : '$basePath/skin';
 
-        if (!Paths.exists('images/$path.png'))
+        if (!loadTexture(cover, path, cover.data.type, cover.data.textureBox))
             return;
-
-        if (cover.data.type == "TEXTURE")
-        {
-            var graphic = FlxG.bitmap.add(Paths.image(path));
-            if (graphic == null) return;
-            
-            cover.loadGraphic(graphic, true, cover.data.textureBox[0], cover.data.textureBox[1]);
-        }
-        else
-        {
-            cover.frames = Paths.getSparrowAtlas(path);
-        }
 
         if (cover.data.animations != null)
         {

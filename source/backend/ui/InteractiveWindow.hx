@@ -2,6 +2,7 @@ package backend.ui;
 
 import backend.assets.FunkinSprite;
 
+import flixel.FlxSprite;
 import flixel.graphics.frames.FlxAtlasFrames;
 import flixel.text.FlxBitmapText;
 import flixel.group.FlxSpriteGroup;

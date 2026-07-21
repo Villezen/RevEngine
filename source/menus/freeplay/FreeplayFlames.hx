@@ -2,7 +2,7 @@ package menus.freeplay;
 
 import flixel.group.FlxSpriteGroup;
 
-class FreeplayFlames extends FlxSpriteGroup
+class FreeplayFlames extends FlxTypedSpriteGroup<FunkinSprite>
 {
     static inline final FLAME_COUNT:Int = 5;
 
@@ -25,7 +25,7 @@ class FreeplayFlames extends FlxSpriteGroup
 
         for (i in 0...FLAME_COUNT)
         {
-            var flame:FlxSprite = new FlxSprite(flameX + (flameSpreadX * i), flameY + (flameSpreadY * i));
+            var flame:FunkinSprite = new FunkinSprite(flameX + (flameSpreadX * i), flameY + (flameSpreadY * i));
             flame.frames = Paths.getSparrowAtlas('menus/freeplay/flame');
             flame.animation.addByPrefix("flame", "fire loop full instance 1", FlxG.random.int(23, 25), false);
             flame.animation.play("flame");
@@ -70,7 +70,7 @@ class FreeplayFlames extends FlxSpriteGroup
         {
             if (members[i] == null) continue;
 
-            var flame:FlxSprite = members[i];
+            var flame:FunkinSprite = members[i];
 
             if (i < flameCount)
             {
@@ -105,7 +105,7 @@ class FreeplayFlames extends FlxSpriteGroup
         {
             if (members[i] == null) continue;
 
-            var flame:FlxSprite = members[i];
+            var flame:FunkinSprite = members[i];
             flame.x = x + flameX + (flameSpreadX * i);
             flame.y = y + flameY + (flameSpreadY * i);
         }

@@ -1,6 +1,5 @@
 #if !macro
 import flixel.FlxG;
-import flixel.FlxSprite;
 
 import flixel.util.FlxColor;
 import flixel.util.FlxTimer;

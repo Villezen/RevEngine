@@ -1,6 +1,5 @@
 package menus.charting;
 
-import flixel.FlxSprite;
 import flixel.group.FlxSpriteGroup;
 import flixel.util.FlxColor;
 
@@ -8,9 +7,9 @@ import openfl.geom.Rectangle;
 
 class CharterNotePreview extends FlxSpriteGroup
 {
-    public var notes(default, null):FlxSprite;
-    public var viewport(default, null):FlxSprite;
-    public var playhead(default, null):FlxSprite;
+    public var notes(default, null):FunkinSprite;
+    public var viewport(default, null):FunkinSprite;
+    public var playhead(default, null):FunkinSprite;
 
     public var previewWidth(default, null):Int = 0;
     public var previewHeight(default, null):Int = 0;
@@ -29,16 +28,16 @@ class CharterNotePreview extends FlxSpriteGroup
         this.previewHeight = height;
         this.columnWidth = columnWidth;
 
-        notes = new FlxSprite();
+        notes = new FunkinSprite();
         notes.makeGraphic(width, height, 0xFF606060, true);
         add(notes);
 
-        viewport = new FlxSprite().makeGraphic(1, 1, FlxColor.WHITE);
+        viewport = new FunkinSprite().makeGraphic(1, 1, FlxColor.WHITE);
         viewport.origin.set(0, 0);
         viewport.alpha = 0.25;
         add(viewport);
 
-        playhead = new FlxSprite().makeGraphic(1, 1, 0xFFDDDDDD);
+        playhead = new FunkinSprite().makeGraphic(1, 1, 0xFFDDDDDD);
         playhead.origin.set(0, 0);
         playhead.scale.set(width, 2);
         playhead.alpha = 0.8;

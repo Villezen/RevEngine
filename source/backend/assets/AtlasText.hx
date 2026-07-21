@@ -163,7 +163,7 @@ class AtlasText extends FlxTypedSpriteGroup<AtlasChar> implements ITaggable
     }
 }
 
-class AtlasChar extends FlxSprite
+class AtlasChar extends FunkinSprite
 {
     public var char(default, set):String;
     public var font(default, null):AtlasFontData;

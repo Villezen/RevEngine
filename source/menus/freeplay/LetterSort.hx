@@ -11,13 +11,13 @@ class LetterSort extends FlxSpriteGroup
 
     var leftArrow:FunkinSprite;
     var rightArrow:FunkinSprite;
-    var grpSeperators:FlxSpriteGroup;
+    var grpSeperators:FlxTypedSpriteGroup<FunkinSprite>;
 
     public function new(x:Float, y:Float)
     {
         super(x, y);
 
-        grpSeperators = new FlxSpriteGroup();
+        grpSeperators = new FlxTypedSpriteGroup<FunkinSprite>();
         add(grpSeperators);
 
         leftArrow = new FunkinSprite(-20, 15, 'menus/freeplay/miniArrow');
@@ -75,7 +75,7 @@ class LetterSort extends FlxSpriteGroup
 
     function doLetterChangeAnims(diff:Int):Void
     {
-        var ezTimer = function(frameNum:Int, spr:FlxSprite, offsetNum:Float)
+        var ezTimer = function(frameNum:Int, spr:FunkinSprite, offsetNum:Float)
         {
             new FlxTimer().start(frameNum / 24, function(_)
             {

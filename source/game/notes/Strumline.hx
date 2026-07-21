@@ -35,6 +35,16 @@ typedef StrumlineParams =
 }
 
 /**
+ * A snapshot of a sprite's current animation.
+ */
+typedef AnimState =
+{
+    var name:String;
+    var frame:Int;
+    var visible:Bool;
+}
+
+/**
  * A complex sprite group that handles strum receptors and scrolling notes.
  */
 @:access(game.notes)
@@ -104,6 +114,8 @@ class Strumline extends FlxSpriteGroup
             if (strum.direction < keyCount)
             {
                 strum.skin = getSkinParams();
+                invalidateScale(strum);
+                applyScale(strum);
                 strum.y = ((Constants.STRUM_WIDTH - strum.height) / 2) + strums.y;
             }
         }
@@ -116,7 +128,8 @@ class Strumline extends FlxSpriteGroup
             {
                 note.parent = strums.members[note.direction];
                 note.skin = getSkinParams();
-                note.sync(); 
+                invalidateScale(note);
+                note.sync();
 
                 applyScale(note);
             }
@@ -130,13 +143,14 @@ class Strumline extends FlxSpriteGroup
         for (sustain in sustains.members)
         {
             if (sustain == null || !sustain.exists || !sustain.alive) continue;
-            
+
             if (sustain.direction < keyCount)
             {
                 sustain.strum = strums.members[sustain.direction];
                 sustain.skin = getSkinParams();
+                invalidateScale(sustain);
             }
-        }       
+        }
 
         reload_splashes();
         reload_covers();
@@ -224,14 +238,7 @@ class Strumline extends FlxSpriteGroup
      */
     private var _originalScales:Map<FunkinSprite, FlxPoint> = new Map<FunkinSprite, FlxPoint>();
 
-    /**
-     * Does the skin of this strumline have their own dedicated note splash skin?
-     */
     public var hasSplashes:Bool = false;
-
-    /**
-     * Does the skin of this strumline have their own dedicated hold covers skin?
-     */
     public var hasCovers:Bool = false;
 
     /**
@@ -287,6 +294,7 @@ class Strumline extends FlxSpriteGroup
             {
                 note.parent = strums.members[note.direction];
                 note.skin = getSkinParams();
+                invalidateScale(note);
             }
             else
             {
@@ -298,11 +306,12 @@ class Strumline extends FlxSpriteGroup
         for (sustain in sustains.members)
         {
             if (sustain == null || !sustain.exists || !sustain.alive) continue;
-            
+
             if (sustain.direction < keyCount)
             {
                 sustain.strum = strums.members[sustain.direction];
                 sustain.skin = getSkinParams();
+                invalidateScale(sustain);
                 sustain.visible = true;
             }
         }
@@ -353,12 +362,12 @@ class Strumline extends FlxSpriteGroup
     /**
      * Local copy of the chart's raw data.
      */
-    private var noteList(default, null):Array<ChartNote> = [];
+    private var _noteList(default, null):Array<ChartNote> = [];
 
     /**
-     * Tracking index to know which note in `noteList` should be spawned net.
+     * Tracking index to know which note in `_noteList` should be spawned.
      */
-    private var currentNoteIndex:Int = 0;
+    private var _currentNoteIndex:Int = 0;
 
     /**
      * Timers used to track the 'confirm' state of the receptors when notes are hit.
@@ -373,7 +382,7 @@ class Strumline extends FlxSpriteGroup
     /**
      * Mapping of the currently held note directions.
      */
-    private var heldKeys:Array<Bool> = [];
+    private var _heldKeys:Array<Bool> = [];
 
     /**
      * Disables key and skin switching during the intro animation.
@@ -458,8 +467,8 @@ class Strumline extends FlxSpriteGroup
         splashes = FlxDestroyUtil.destroy(splashes);
         covers = FlxDestroyUtil.destroy(covers);
 
-        if (noteList != null) { noteList.resize(0); noteList = null; }
-        if (heldKeys != null) { heldKeys.resize(0); heldKeys = null; }
+        if (_noteList != null) { _noteList.resize(0); _noteList = null; }
+        if (_heldKeys != null) { _heldKeys.resize(0); _heldKeys = null; }
         if (strumGlowTimers != null) { strumGlowTimers.resize(0); strumGlowTimers = null; }
         if (_hittableNotesCache != null) { _hittableNotesCache.resize(0); _hittableNotesCache = null; }
         
@@ -484,23 +493,17 @@ class Strumline extends FlxSpriteGroup
      * Respawn each strum receptor in order to be updated with its key amount and skin.
      */
     function reload_strums()
-    {        
-        var oldAnimsStrums:Array<{name:String, frame:Int, visible:Bool}> = []; 
-
-        for (i in 0...strums.members.length)
-        {  
-            var strum = strums.members[i];
-
-            if (strum != null && strum.exists && strum.animation != null && strum.animation.curAnim != null)
-                oldAnimsStrums[i] = {name: strum.animation.curAnim.name, frame: strum.animation.curAnim.curFrame, visible: strum.visible};
-        }    
+    {
+        var oldAnimsStrums:Array<AnimState> = captureAnimStates(strums.members);
 
         if (strums.length > 0)
         {
             for (arrow in strums.members)
             {
-                if (arrow != null)
-                    arrow.destroy();
+                if (arrow == null) continue;
+
+                invalidateScale(arrow);
+                arrow.destroy();
             }
 
             strums.clear();
@@ -576,168 +579,234 @@ class Strumline extends FlxSpriteGroup
             arrow.x += offsetX;
     }
 
+    /**
+     * Rebuilds the note splash pool.
+     */
     function reload_splashes()
     {
-        var oldAnimsSplashes:Array<{name:String, frame:Int, visible:Bool}> = []; 
+        var oldAnims:Array<AnimState> = captureAnimStates(splashes.members);
+        clearGroup(splashes);
 
-        for (i in 0...splashes.members.length)
-        {  
-            var splash = splashes.members[i];
+        var splashSkin:String = resolveSplashSkin();
+        hasSplashes = splashSkin != null;
 
-            if (splash != null && splash.exists && splash.animation != null && splash.animation.curAnim != null)
-                oldAnimsSplashes[i] = {name: splash.animation.curAnim.name, frame: splash.animation.curAnim.curFrame, visible: splash.visible};
-        }  
+        if (!hasSplashes || cpu)
+            return;
 
-        if (strums.length > 0)
-        {
-            for (splash in splashes.members)
-            {
-                if (splash != null)
-                    splash.destroy();
-            }
-
-            splashes.clear();
-        }
-
-        hasSplashes = false;
-        var splashPath = 'game/notes/splashes/' + skin;
-        var splashData = NoteSkinRegistry.getSplash(skin);
-
-        if (splashData != null)
-        {
-            if (splashData.type == "COMBINED")
-            {
-                if (Paths.exists('images/$splashPath/skin.png')) 
-                    hasSplashes = true;
-            }
-            else if (splashData.type == "SEPARATE")
-            {
-                for (i in 0...keyCount) 
-                {
-                    var colDir:String = (KeyUtil.isEK(keyCount) ? Constants.COLOR_DIRECTIONS[keyCount][i] : Constants.DIRECTIONS[keyCount][i]);
-                    if (Paths.exists('images/$splashPath/$colDir.png')) 
-                    {
-                        hasSplashes = true;
-                        break;
-                    }
-                }
-            }
-        }
+        var styleRef:NoteStyle = {name: splashSkin, keys: keyCount};
 
         for (i in 0...keyCount)
         {
-            var strum = strums.members[i];
+            var splash = new NoteSplash(i, styleRef);
+            splash.strumline = this;
+            splash.parent = strums.members[i];
 
-            if (hasSplashes && !cpu)
+            applyScale(splash);
+
+            var old = oldAnims[i];
+
+            if (old != null)
             {
-                var splash = new NoteSplash(i, getSkinParams());
-                splash.strumline = this;
-                splash.parent = strum;
-
-                applyScale(splash);
-
-                if (oldAnimsSplashes[i] != null)
-                {
-                    splash.animation.play(oldAnimsSplashes[i].name, true, false, oldAnimsSplashes[i].frame);
-                    splash.visible = oldAnimsSplashes[i].visible;
-                }
-
-                splashes.add(splash);
-            }
-        }
-    }
-
-    function reload_covers()
-    {
-        var oldAnimsCovers:Array<{name:String, frame:Int, visible:Bool}> = []; 
-
-        for (i in 0...covers.members.length)
-        {  
-            var cover = covers.members[i];
-
-            if (cover != null && cover.exists && cover.animation != null && cover.animation.curAnim != null)
-                oldAnimsCovers[i] = {name: cover.animation.curAnim.name, frame: cover.animation.curAnim.curFrame, visible: cover.visible};
-        }
-
-        if (strums.length > 0)
-        {
-            for (cover in covers.members)
-            {
-                if (cover != null)
-                    cover.destroy();
+                splash.animation.play(old.name, true, false, old.frame);
+                splash.visible = old.visible;
             }
 
-            covers.clear();
-        }
-
-        hasCovers = false;
-        var coverPath = 'game/notes/covers/' + skin;
-        var coverData = NoteSkinRegistry.getCover(skin);
-
-        if (coverData != null)
-        {
-            if (coverData.type == "COMBINED")
-            {
-                if (Paths.exists('images/$coverPath/skin.png')) 
-                    hasCovers = true;
-            }
-            else if (coverData.type == "SEPARATE")
-            {
-                for (i in 0...keyCount) 
-                {
-                    var colDir:String = (KeyUtil.isEK(keyCount) ? Constants.COLOR_DIRECTIONS[keyCount][i] : Constants.DIRECTIONS[keyCount][i]);
-                    if (Paths.exists('images/$coverPath/$colDir.png')) 
-                    {
-                        hasCovers = true;
-                        break;
-                    }
-                }
-            }
-        }
-
-        for (i in 0...keyCount)
-        {
-            var strum = strums.members[i];
-
-            if (hasCovers)
-            {
-                var cover = new HoldCover(i, getSkinParams());
-                cover.strumline = this;
-                cover.parent = strum;
-
-                applyScale(cover);
-
-                if (oldAnimsCovers[i] != null)
-                {
-                    cover.playAnimation(oldAnimsCovers[i].name, true, false, oldAnimsCovers[i].frame);
-                    cover.visible = oldAnimsCovers[i].visible;
-                }
-                
-                covers.add(cover);
-            }
+            splashes.add(splash);
         }
     }
 
     /**
-     * Safely scales a sprite by tracking its original native scale.
-     * @param sprite The sprite to scale.
-     * @param isSustain Whether this is a hold note (prevents Y-axis stretch breaking).
+     * Rebuilds the hold cover pool.
+     */
+    function reload_covers()
+    {
+        var oldAnims:Array<AnimState> = captureAnimStates(covers.members);
+        clearGroup(covers);
+
+        var coverSkin:String = resolveCoverSkin();
+        hasCovers = coverSkin != null;
+
+        if (!hasCovers)
+            return;
+
+        var styleRef:NoteStyle = {name: coverSkin, keys: keyCount};
+
+        for (i in 0...keyCount)
+        {
+            var cover = new HoldCover(i, styleRef);
+            cover.strumline = this;
+            cover.parent = strums.members[i];
+
+            applyScale(cover);
+
+            var old = oldAnims[i];
+
+            if (old != null)
+            {
+                cover.playAnimation(old.name, true, false, old.frame);
+                cover.visible = old.visible;
+            }
+
+            covers.add(cover);
+        }
+    }
+
+    /**
+     * Scales a sprite by tracking its original scale.
      */
     function applyScale(sprite:FunkinSprite, isSustain:Bool = false)
     {
         if (sprite == null || !sprite.exists) return;
 
         if (!_originalScales.exists(sprite))
-            _originalScales.set(sprite, flixel.math.FlxPoint.get(sprite.scale.x, sprite.scale.y));
+            _originalScales.set(sprite, FlxPoint.get(sprite.scale.x, sprite.scale.y));
 
         var orig = _originalScales.get(sprite);
-        
+
         if (isSustain)
             sprite.scale.x = orig.x * scaleMult;
         else
             sprite.scale.set(orig.x * scaleMult, orig.y * scaleMult);
-        
+
         sprite.updateHitbox();
+    }
+
+    /**
+     * Removes a sprite's cached scale so the next `applyScale` validates it.
+     */
+    inline function invalidateScale(sprite:FunkinSprite):Void
+    {
+        if (sprite != null && _originalScales.exists(sprite))
+        {
+            _originalScales.get(sprite).put();
+            _originalScales.remove(sprite);
+        }
+    }
+
+    /**
+     * Snapshots the current animation state of every member in a group so it can be restored after the group is rebuilt.
+     * @param members The group members to capture.
+     * @return An index array of animation snapshots.
+     */
+    function captureAnimStates<T:FunkinSprite>(members:Array<T>):Array<AnimState>
+    {
+        var states:Array<AnimState> = [];
+
+        for (i in 0...members.length)
+        {
+            var member = members[i];
+
+            if (member != null && member.exists && member.animation != null && member.animation.curAnim != null)
+                states[i] = {name: member.animation.curAnim.name, frame: member.animation.curAnim.curFrame, visible: member.visible};
+        }
+
+        return states;
+    }
+
+    /**
+     * Destroys and clears every member of a note-object group, releasing any cached scale.
+     * @param group The group to empty.
+     */
+    function clearGroup<T:FunkinSprite>(group:FlxTypedSpriteGroup<T>):Void
+    {
+        if (group == null || group.length == 0) return;
+
+        for (member in group.members)
+        {
+            if (member == null) continue;
+
+            invalidateScale(member);
+            member.destroy();
+        }
+
+        group.clear();
+    }
+
+    /**
+     * Resolves which noteskin should load the hold covers for the active style.
+     * @return The skin name to load covers from.
+     */
+    function resolveCoverSkin():String
+    {
+        var style = NoteSkinRegistry.getStyle(skin);
+
+        if (style == null || style.hasCovers == false)
+            return null;
+
+        if (skinHasCovers(skin))
+            return skin;
+
+        var fallback = (style.fallbackCovers != null && style.fallbackCovers != "") ? style.fallbackCovers : "default";
+
+        if (fallback != skin && skinHasCovers(fallback))
+            return fallback;
+
+        return null;
+    }
+
+    /**
+     * Resolves which noteskin should supply the note splashes for the active style.
+     * @return The skin name to load splashes from.
+     */
+    function resolveSplashSkin():String
+    {
+        var style = NoteSkinRegistry.getStyle(skin);
+
+        if (style == null || style.hasSplashes == false)
+            return null;
+
+        if (skinHasSplashes(skin))
+            return skin;
+
+        var fallback = (style.fallbackSplashes != null && style.fallbackSplashes != "") ? style.fallbackSplashes : "default";
+
+        if (fallback != skin && skinHasSplashes(fallback))
+            return fallback;
+
+        return null;
+    }
+
+    /**
+     * Whether the given skin actually has hold cover skins for the current key count.
+     */
+    inline function skinHasCovers(name:String):Bool
+    {
+        var data = NoteSkinRegistry.getCover(name);
+        return data != null && hasSkinImages('game/notes/covers/$name', data.type);
+    }
+
+    /**
+     * Whether the given skin actually has note splash skins for the current key count.
+     */
+    inline function skinHasSplashes(name:String):Bool
+    {
+        var data = NoteSkinRegistry.getSplash(name);
+        return data != null && hasSkinImages('game/notes/splashes/$name', data.type);
+    }
+
+    /**
+     * Checks whether the image assets for a splash/cover skin exist.
+     * @param basePath The image folder for the skin (without extension).
+     * @param type The skin's `type`.
+     * @return Whether at least one required image exists.
+     */
+    function hasSkinImages(basePath:String, type:String):Bool
+    {
+        if (type == "SEPARATE")
+        {
+            var isEK:Bool = KeyUtil.isEK(keyCount);
+
+            for (i in 0...keyCount)
+            {
+                var colDir:String = isEK ? Constants.COLOR_DIRECTIONS[keyCount][i] : Constants.DIRECTIONS[keyCount][i];
+                if (Paths.exists('images/$basePath/$colDir.png'))
+                    return true;
+            }
+
+            return false;
+        }
+
+        return Paths.exists('images/$basePath/skin.png');
     }
 
     /**
@@ -747,10 +816,10 @@ class Strumline extends FlxSpriteGroup
     {                
         for (data in params.data.notes)
         {
-            noteList.push(data);
+            _noteList.push(data);
         }
 
-        noteList.sort(function(a, b) return FlxSort.byValues(FlxSort.ASCENDING, a.time, b.time));
+        _noteList.sort(function(a, b) return FlxSort.byValues(FlxSort.ASCENDING, a.time, b.time));
     }
 
     /**
@@ -784,30 +853,23 @@ class Strumline extends FlxSpriteGroup
     }
 
     /**
-     * Checks if `noteList` against the `Conductor` position to see if any new notes should be spawned.
+     * Checks if `_noteList` against the `Conductor` position to see if any new notes should be spawned.
      */
     private function handle_spawning():Void
     {
-        var spawned:Bool = false;
-
-        while (currentNoteIndex < noteList.length) 
+        while (_currentNoteIndex < _noteList.length)
         {
-            var data = noteList[currentNoteIndex];
-            
-            if (data.time - Conductor.instance.songPosition >= Constants.NOTE_SPAWN_TIME) 
-            {
-                break; 
-            }
+            var data = _noteList[_currentNoteIndex];
+
+            if (data.time - Conductor.instance.songPosition >= Constants.NOTE_SPAWN_TIME)
+                break;
 
             var note:Note = create_note(data);
 
             if (data.length > 0)
-            {
                 note.sustain = create_sustain(data, note);
-            }
 
-            currentNoteIndex++;
-            spawned = true;
+            _currentNoteIndex++;
         }
     }
 
@@ -1050,6 +1112,7 @@ class Strumline extends FlxSpriteGroup
         {
             note.parent = strums.members[note.direction];
             note.skin = getSkinParams();
+            invalidateScale(note);
         }
         else
         {
@@ -1099,6 +1162,7 @@ class Strumline extends FlxSpriteGroup
         sustain.direction = data.direction;
 
         sustain.skin = getSkinParams();
+        invalidateScale(sustain);
         sustain.length = data.length;
 
         sustain.hit = false;
@@ -1155,7 +1219,7 @@ class Strumline extends FlxSpriteGroup
      */
     public function pressKey(direction:Int)
     {
-        heldKeys[direction] = true;
+        _heldKeys[direction] = true;
     }
 
     /**
@@ -1164,7 +1228,7 @@ class Strumline extends FlxSpriteGroup
      */
     public function releaseKey(direction:Int)
     {
-        heldKeys[direction] = false;
+        _heldKeys[direction] = false;
     }
 
     /**
@@ -1174,6 +1238,6 @@ class Strumline extends FlxSpriteGroup
      */
     function isKeyHeld(direction:Int):Bool
     {
-        return heldKeys[direction] == true;
+        return _heldKeys[direction] == true;
     }
 }

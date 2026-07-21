@@ -30,8 +30,6 @@ class Note extends FunkinSprite
 
         value.applyToNote(this);
 
-        animation.play('scroll');
-
         var keyCount = parent.parent.keyCount;
         var isExtraKeys = KeyUtil.isEK(keyCount);
 
@@ -44,14 +42,14 @@ class Note extends FunkinSprite
 
         for (animEntry in anims)
         {
-            var isBind = animEntry.prefix.indexOf("keybind[") != -1;
+            var isBind = Std.string(animEntry.prefix).indexOf("keybind[") != -1;
             var checkName = isBind ? bindTargetName : targetAnimName;
 
             if (animEntry.name == checkName)
             {
                 skinOffsetX = animEntry.offsets[0] * -1;
                 skinOffsetY = animEntry.offsets[1] * -1;
-                
+
                 break;
             }
         }

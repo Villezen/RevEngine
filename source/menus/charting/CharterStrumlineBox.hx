@@ -8,7 +8,6 @@ import backend.registries.world.CharacterRegistry;
 import backend.utils.MathUtil;
 
 import flixel.FlxCamera;
-import flixel.FlxSprite;
 import flixel.graphics.frames.FlxAtlasFrames;
 import flixel.group.FlxSpriteGroup;
 import flixel.text.FlxBitmapText;
@@ -295,7 +294,7 @@ class CharterStrumIcon
         pixelIcon.antialiasing = false;
     }
 
-    public function sprites():Array<FlxSprite>
+    public function sprites():Array<FunkinSprite>
     {
         return [normalIcon, pixelIcon];
     }
@@ -401,7 +400,7 @@ class CharterStrumIcon
         fit(phase == "PIXEL" ? pixelIcon : normalIcon);
     }
 
-    function fit(spr:FlxSprite):Void
+    function fit(spr:FunkinSprite):Void
     {
         if (spr == null || spr.frameWidth <= 0 || spr.frameWidth <= 0) return;
 

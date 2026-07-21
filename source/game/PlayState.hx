@@ -804,7 +804,7 @@ class PlayState extends MusicBeatState
             action();
         };
 
-        TransitionLoader._onTransitionFinish.addOnce(_onTransitionFinish);
+        TransitionLoader.onTransitionFinish.addOnce(_onTransitionFinish);
     }
 
     /**
@@ -1135,7 +1135,7 @@ class PlayState extends MusicBeatState
 
         if (_onTransitionFinish != null)
         {
-            TransitionLoader._onTransitionFinish.remove(_onTransitionFinish);
+            TransitionLoader.onTransitionFinish.remove(_onTransitionFinish);
             _onTransitionFinish = null;
         }
 

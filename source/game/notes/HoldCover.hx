@@ -1,7 +1,5 @@
 package game.notes;
 
-import haxe.Json;
-
 import backend.registries.ui.NoteSkinRegistry;
 import backend.registries.ui.NoteSkinRegistry.HoldCoverData;
 import backend.registries.ui.NoteSkinRegistry.BaseAnimationData;
@@ -9,6 +7,11 @@ import backend.utils.KeyUtil;
 
 class HoldCover extends FunkinSprite
 {
+    /**
+     * A near-zero alpha used to hide the cover while still drawing it to avoid stutters.
+     */
+    static inline final HIDDEN_ALPHA:Float = 0.0000000000000000000000000001;
+
     /**
      * Whether the hold cover is allowed to be shown or not.
      */
@@ -27,7 +30,7 @@ class HoldCover extends FunkinSprite
     /**
      * Used to emulate hiding the cover when it finishes playing so it doesn't stop being drawn on the screen.
      */
-    private var alphaMult:Float = 1.0;
+    private var _alphaMult:Float = 1.0;
 
     /**
      * The note style of this hold cover.
@@ -61,7 +64,7 @@ class HoldCover extends FunkinSprite
         this.direction = direction;
         this.skin = skin;
 
-        alphaMult = 0.0000000000000000000000000001;
+        _alphaMult = HIDDEN_ALPHA;
         playAnimation('start', true);
 
         if (animation != null && animation.onFinish != null)
@@ -92,7 +95,7 @@ class HoldCover extends FunkinSprite
         if (!show) return;
 
         playAnimation('start', true);
-        alphaMult = 1.0;
+        _alphaMult = 1.0;
     }
 
     public function finish()
@@ -102,12 +105,12 @@ class HoldCover extends FunkinSprite
         playAnimation('end', true);
     }
 
-    public function hide(?stop:Bool = true) 
+    public function hide(?stop:Bool = true)
     {
         if (stop)
             animation.stop();
 
-        alphaMult = 0.0000000000000000000000000001;
+        _alphaMult = HIDDEN_ALPHA;
     }
 
     /**
@@ -156,7 +159,7 @@ class HoldCover extends FunkinSprite
             x = (parent.x + (parent.width - width) / 2) + data.position[0];
             y = (parent.y + (parent.height - height) / 2) + (data.position[1] * downscrollMult);
 
-            alpha = parent.alpha * alphaMult;
+            alpha = parent.alpha * _alphaMult;
             angle = parent.angle;
         }
 

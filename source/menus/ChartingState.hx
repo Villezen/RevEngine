@@ -84,7 +84,7 @@ class ChartingState extends MusicBeatState
     var camUI:FlxCamera;
 
     var gridFollow:FlxObject;
-    var bg:FlxSprite;
+    var bg:FunkinSprite;
 
     var camZoom:Float = 1.0;
     var camOffset:FlxPoint;
@@ -98,9 +98,9 @@ class ChartingState extends MusicBeatState
 
     var noteData:Array<Array<CharterNote>> = [];
 
-    var conductorLine:FlxSprite;
-    var gridBox:FlxSprite;
-    var selectionBox:FlxSprite;
+    var conductorLine:FunkinSprite;
+    var gridBox:FunkinSprite;
+    var selectionBox:FunkinSprite;
 
     var selectedNotes:Array<CharterNote> = [];
     var selectionLookup:Map<CharterNote, Bool> = new Map();
@@ -214,7 +214,7 @@ class ChartingState extends MusicBeatState
 
     function initBackground():Void
     {
-        bg = new FlxSprite().loadGraphic(Paths.image("menus/backgrounds/menuDesat"));
+        bg = new FunkinSprite().loadGraphic(Paths.image("menus/backgrounds/menuDesat"));
         bg.setGraphicSize(FlxG.width, FlxG.height);
         bg.updateHitbox();
         bg.color = 0xFF3F3F4E;
@@ -477,20 +477,20 @@ class ChartingState extends MusicBeatState
 
         var lineWidth:Float = Math.max(0, totalWidth - STRUMLINE_GAP);
 
-        conductorLine = new FlxSprite().makeGraphic(Std.int(lineWidth), 5, 0xFFDDDDDD);
+        conductorLine = new FunkinSprite().makeGraphic(Std.int(lineWidth), 5, 0xFFDDDDDD);
         conductorLine.camera = camGrid;
         conductorLine.y = GRID_OUTLINE + yFromTime(conductor.songPosition);
         conductorLine.offset.y = conductorLine.height;
         add(conductorLine);
 
-        gridBox = new FlxSprite().makeGraphic(Std.int(GRID_SIZE), Std.int(GRID_SIZE), 0xFFDDDDDD);
+        gridBox = new FunkinSprite().makeGraphic(Std.int(GRID_SIZE), Std.int(GRID_SIZE), 0xFFDDDDDD);
         gridBox.camera = camGrid;
         gridBox.alpha = 0.5;
         add(gridBox);
 
         applySnap();
 
-        selectionBox = new FlxSprite().makeGraphic(1, 1, 0x550088FF);
+        selectionBox = new FunkinSprite().makeGraphic(1, 1, 0x550088FF);
         selectionBox.origin.set(0, 0);
         selectionBox.camera = camGrid;
         selectionBox.visible = false;

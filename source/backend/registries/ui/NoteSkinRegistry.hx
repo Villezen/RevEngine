@@ -16,6 +16,13 @@ typedef NoteStyleData =
     @:optional var strumSize:Null<Float>;
     @:optional var strumWidth:Null<Int>;
     @:optional var sustainAlpha:Null<Float>;
+
+    @:optional var hasCovers:Null<Bool>;
+    @:optional var hasSplashes:Null<Bool>;
+
+    @:optional var fallbackCovers:String;
+    @:optional var fallbackSplashes:String;
+
     @:optional var animations:BaseAnimations;
 }
 
@@ -59,7 +66,7 @@ typedef BaseAnimationData =
 
 class NoteSkinRegistry
 {
-    inline static final PATH_SKINS:String = 'data/notes/skins';
+    inline static final PATH_STYLES:String = 'data/notes/styles';
     inline static final PATH_SPLASHES:String = 'data/notes/splashes';
     inline static final PATH_COVERS:String = 'data/notes/covers';
 
@@ -74,8 +81,8 @@ class NoteSkinRegistry
     public static function init():Void
     {
         #if sys
-        for (file in Paths.readDirectory(PATH_SKINS))
-            if (Path.extension(file) == "json") reloadSkin(Path.withoutExtension(file));
+        for (file in Paths.readDirectory(PATH_STYLES))
+            if (Path.extension(file) == "json") reloadStyle(Path.withoutExtension(file));
 
         for (file in Paths.readDirectory(PATH_SPLASHES))
             if (Path.extension(file) == "json") reloadSplash(Path.withoutExtension(file));
@@ -85,10 +92,10 @@ class NoteSkinRegistry
         #end
     }
 
-    public static inline function getSkin(name:String):NoteStyleData
+    public static inline function getStyle(name:String):NoteStyleData
     {
-        if (!styleList.exists(name)) reloadSkin(name);
-        return styleList.get(name); 
+        if (!styleList.exists(name)) reloadStyle(name);
+        return styleList.get(name);
     }
 
     public static inline function getSplash(name:String):NoteSplashData
@@ -105,20 +112,20 @@ class NoteSkinRegistry
 
     public static function reload(name:String):Void
     {
-        reloadSkin(name);
+        reloadStyle(name);
         reloadSplash(name);
         reloadCover(name);
     }
 
-    public static function reloadSkin(name:String):Void
+    public static function reloadStyle(name:String):Void
     {
         var rawData:String = "{}";
         #if sys
-        if (Paths.exists('$PATH_SKINS/$name.json'))
-            rawData = Paths.data('$name.json', PATH_SKINS);
+        if (Paths.exists('$PATH_STYLES/$name.json'))
+            rawData = Paths.data('$name.json', PATH_STYLES);
         #end
-        styleParser.fromJson(rawData, '$PATH_SKINS/$name.json');
-        RegistryUtil.reportErrors('$PATH_SKINS/$name.json', styleParser.errors);
+        styleParser.fromJson(rawData, '$PATH_STYLES/$name.json');
+        RegistryUtil.reportErrors('$PATH_STYLES/$name.json', styleParser.errors);
         styleList.set(name, validateStyleData(styleParser.value));
     }
 
@@ -190,6 +197,12 @@ class NoteSkinRegistry
         if (data.strumWidth == null) data.strumWidth = 150;
 
         if (data.sustainAlpha == null) data.sustainAlpha = 1.0;
+
+        if (data.hasCovers == null) data.hasCovers = true;
+        if (data.hasSplashes == null) data.hasSplashes = true;
+
+        if (data.fallbackCovers == null) data.fallbackCovers = "default";
+        if (data.fallbackSplashes == null) data.fallbackSplashes = "default";
 
         data.animations = validateBaseAnimations(data.animations);
 

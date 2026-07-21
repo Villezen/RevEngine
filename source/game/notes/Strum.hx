@@ -1,8 +1,5 @@
 package game.notes;
 
-import openfl.utils.Assets;
-import haxe.Json;
-
 import backend.registries.ui.NoteSkinRegistry;
 import backend.registries.ui.NoteSkinRegistry.BaseAnimationData;
 
@@ -40,7 +37,7 @@ class Strum extends FunkinSprite
         if (skin == value) return skin;
 
         FlxTween.cancelTweensOf(this);
-        data = NoteSkinRegistry.getSkin(value.name);
+        data = NoteSkinRegistry.getStyle(value.name);
 
         value.applyToStrum(this);
         play('static', true);

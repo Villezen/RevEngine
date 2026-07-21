@@ -2,7 +2,6 @@ package menus.charting;
 
 import flixel.FlxBasic;
 import flixel.FlxCamera;
-import flixel.FlxSprite;
 import flixel.addons.display.FlxRuntimeShader;
 import flixel.graphics.FlxGraphic;
 import flixel.math.FlxRect;
@@ -43,14 +42,14 @@ class CharterStrumline extends FlxBasic
     public var columnGraphics(default, null):Array<Int> = [];
     public var maxSustain(default, null):Float = 0.0;
 
-    public var grid(default, null):FlxSprite;
+    public var grid(default, null):FunkinSprite;
 
     var graphics:CharterNoteGraphics;
     var gridCamera:FlxCamera;
 
-    var headPools:Array<Array<FlxSprite>> = [];
-    var bodyPools:Array<Array<FlxSprite>> = [];
-    var capPools:Array<Array<FlxSprite>> = [];
+    var headPools:Array<Array<FunkinSprite>> = [];
+    var bodyPools:Array<Array<FunkinSprite>> = [];
+    var capPools:Array<Array<FunkinSprite>> = [];
 
     var headCounts:Array<Int> = [];
     var bodyCounts:Array<Int> = [];
@@ -94,7 +93,7 @@ class CharterStrumline extends FlxBasic
 
         if (grid == null)
         {
-            grid = new FlxSprite();
+            grid = new FunkinSprite();
             grid.loadGraphic(Paths.image("menus/charter/pixel"));
             grid.camera = gridCamera;
         }
@@ -291,25 +290,25 @@ class CharterStrumline extends FlxBasic
 
             if (bodyHeight > 0)
             {
-                var body:FlxSprite = acquire(bodyPools[graphic], bodyCounts[graphic]++, graphics.bodies[graphic]);
+                var body:FunkinSprite = acquire(bodyPools[graphic], bodyCounts[graphic]++, graphics.bodies[graphic]);
                 place(body, sustainX, sustainY, sustainWidth, bodyHeight + 1.0, alpha, state);
             }
 
-            var cap:FlxSprite = acquire(capPools[graphic], capCounts[graphic]++, graphics.caps[graphic]);
+            var cap:FunkinSprite = acquire(capPools[graphic], capCounts[graphic]++, graphics.caps[graphic]);
             place(cap, sustainX, sustainY + bodyHeight, sustainWidth, capHeight, alpha, state);
         }
 
-        var head:FlxSprite = acquire(headPools[graphic], headCounts[graphic]++, graphics.heads[graphic]);
+        var head:FunkinSprite = acquire(headPools[graphic], headCounts[graphic]++, graphics.heads[graphic]);
         place(head, noteX, noteY, gridSize, gridSize, alpha, state);
     }
 
-    inline function acquire(pool:Array<FlxSprite>, slot:Int, graphic:FlxGraphic):FlxSprite
+    inline function acquire(pool:Array<FunkinSprite>, slot:Int, graphic:FlxGraphic):FunkinSprite
     {
-        var sprite:FlxSprite = (slot < pool.length) ? pool[slot] : null;
+        var sprite:FunkinSprite = (slot < pool.length) ? pool[slot] : null;
 
         if (sprite == null)
         {
-            sprite = new FlxSprite();
+            sprite = new FunkinSprite();
 
             if (graphic != null)
                 sprite.loadGraphic(graphic);
@@ -323,7 +322,7 @@ class CharterStrumline extends FlxBasic
         return sprite;
     }
 
-    inline function place(sprite:FlxSprite, x:Float, y:Float, width:Float, height:Float, alpha:Float, state:Int):Void
+    inline function place(sprite:FunkinSprite, x:Float, y:Float, width:Float, height:Float, alpha:Float, state:Int):Void
     {
         if (Math.abs(sprite.width - width) > 0.05 || Math.abs(sprite.height - height) > 0.05)
         {
@@ -352,12 +351,12 @@ class CharterStrumline extends FlxBasic
 
         for (graphic in 0...KEY_AMOUNT)
         {
-            var pool:Array<FlxSprite> = headPools[graphic];
+            var pool:Array<FunkinSprite> = headPools[graphic];
             var count:Int = headCounts[graphic];
 
             for (i in 0...count)
             {
-                var sprite:FlxSprite = pool[i];
+                var sprite:FunkinSprite = pool[i];
 
                 if (sprite.ID == STATE_SELECTED)
                 {
@@ -378,17 +377,17 @@ class CharterStrumline extends FlxBasic
         }
     }
 
-    inline function shade(sprite:FlxSprite, mult:Float, alpha:Float):Void
+    inline function shade(sprite:FunkinSprite, mult:Float, alpha:Float):Void
     {
         sprite.setColorTransform(mult, mult, mult, alpha, 0, 0, 0, 0);
     }
 
-    inline function lighten(sprite:FlxSprite, alpha:Float):Void
+    inline function lighten(sprite:FunkinSprite, alpha:Float):Void
     {
         sprite.setColorTransform(1, 1, 1, alpha, 80, 80, 80, 0);
     }
 
-    inline function drawPulsed(sprite:FlxSprite):Void
+    inline function drawPulsed(sprite:FunkinSprite):Void
     {
         if (selectionPulse == 1.0)
         {
@@ -404,11 +403,11 @@ class CharterStrumline extends FlxBasic
         sprite.scale.set(baseX, baseY);
     }
 
-    function drawSustainPool(pool:Array<FlxSprite>, count:Int):Void
+    function drawSustainPool(pool:Array<FunkinSprite>, count:Int):Void
     {
         for (i in 0...count)
         {
-            var sprite:FlxSprite = pool[i];
+            var sprite:FunkinSprite = pool[i];
 
             if (sprite.ID == STATE_SELECTED)
             {

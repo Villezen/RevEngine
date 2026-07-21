@@ -3,6 +3,7 @@ package menus;
 import haxe.io.Path;
 
 import flixel.FlxCamera;
+import flixel.FlxSprite;
 import flixel.sound.FlxSound;
 import flixel.group.FlxSpriteGroup;
 import flixel.text.FlxText;
@@ -28,17 +29,17 @@ class DialogueSubState extends MusicBeatSubState
     var songData:DialogueSongData = null;
 
     var dataList:Map<String, DialogueCharacterData> = new Map();
-    var characters:Map<String, Map<String, FlxSprite>> = new Map();
+    var characters:Map<String, Map<String, FunkinSprite>> = new Map();
     var vocals:Map<String, Array<FlxSound>> = new Map();
 
     var camDialogue:FlxCamera;
-    var solid:FlxSprite;
+    var solid:FunkinSprite;
 
     var portraitGroup:FlxSpriteGroup;
     var boxGroup:FlxSpriteGroup;
     var textGroup:FlxSpriteGroup;
 
-    var box:FlxSprite;
+    var box:FunkinSprite;
 
     var wordQueue:Array<DialogueWord> = [];
     var currentWordIndex:Int = 0;
@@ -109,7 +110,7 @@ class DialogueSubState extends MusicBeatSubState
         camDialogue.bgColor = 0x00000000;
         FlxG.cameras.add(camDialogue, false);
 
-        solid = new FlxSprite().makeGraphic(camDialogue.width, camDialogue.height, 0xFF000000);
+        solid = new FunkinSprite().makeGraphic(camDialogue.width, camDialogue.height, 0xFF000000);
         solid.camera = camDialogue;
         solid.alpha = 0;
         add(solid);
@@ -161,7 +162,7 @@ class DialogueSubState extends MusicBeatSubState
         if (!Paths.exists("images/" + boxData.path + ".png"))
             return;
 
-        box = new FlxSprite();
+        box = new FunkinSprite();
 
         if (Paths.exists("images/" + boxData.path + ".xml"))
             box.frames = Paths.getSparrowAtlas(boxData.path);
@@ -268,7 +269,7 @@ class DialogueSubState extends MusicBeatSubState
             if (data == null || expressionData == null)
                 continue;
 
-            var spr = new FlxSprite();
+            var spr = new FunkinSprite();
 
             if (Paths.exists("images/" + data.folder + "/" + expression + ".png"))
                 spr.loadGraphic(Paths.image(data.folder + '/' + expression));
@@ -641,7 +642,7 @@ class DialogueSubState extends MusicBeatSubState
 
             if (chunk.isImage == true)
             {
-                var imgSprite = new FlxSprite(cursorX, cursorY);
+                var imgSprite = new FunkinSprite(cursorX, cursorY);
                 imgSprite.loadGraphic(Paths.image(chunk.path));
 
                 if (chunk.width != null && chunk.width > 0 && chunk.height != null && chunk.height > 0)
