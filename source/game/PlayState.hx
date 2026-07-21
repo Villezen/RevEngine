@@ -298,16 +298,6 @@ class PlayState extends MusicBeatState
     public var inputs:Inputs;
 
     /**
-     * Queue for key presses to be processed in the next update tick.
-     */
-    private var pressEntryList:Array<InputEntry> = [];
-
-    /**
-     * Queue for key releases to be processed in the next update tick.
-     */
-    private var releaseEntryList:Array<InputEntry> = [];
-
-    /**
      * The player's health bar. 
      */
     public var healthBar:HealthBar;
@@ -393,9 +383,24 @@ class PlayState extends MusicBeatState
     public var songStarted:Bool = false;
 
     /**
+     * Maps each strumline id to its owning character.
+     */
+    private var _strumlineCharacters:Map<Int, String> = [];
+
+    /**
+     * Queue for key presses to be processed in the next update tick.
+     */
+    private var _pressEntryList:Array<InputEntry> = [];
+
+    /**
+     * Queue for key releases to be processed in the next update tick.
+     */
+    private var _releaseEntryList:Array<InputEntry> = [];
+
+    /**
      * Lerp the health values to smoothen its movement.
      */
-    private var healthLerp:Float = 0;
+    private var _healthLerp:Float = 0;
 
     /**
      * Cached HUD camera list, so the per-frame zoom lerp doesn't allocate an array every update.
@@ -410,27 +415,27 @@ class PlayState extends MusicBeatState
     /**
      * Set when the window regains focus.
      */
-    private var reanchorConductor:Bool = false;
+    private var _reanchorConductor:Bool = false;
 
     /**
      * The Conductor position the strumline is last rendered with.
      */
-    private var lastConductorPos:Float = 0;
+    private var _lastConductorPos:Float = 0;
 
     /**
      * Internal variable to check if the player is currently able to skip through the song.
      */
-    private var canSkip:Bool = false;
+    private var _canSkip:Bool = false;
 
     /**
      * Internal variable to check if the player is currently skipping through the song in any way.
      */
-    private var timeSkipping:Bool = false;
+    private var _timeSkipping:Bool = false;
 
     /**
      * Transition-finish listener, kept so destroy() can invalidate it if this state dies before the transition completes.
      */
-    private var onTransitionFinish:Void->Void;
+    private var _onTransitionFinish:Void->Void;
 
     public function new(?params:PlayStateParams)
     {
@@ -585,6 +590,9 @@ class PlayState extends MusicBeatState
 
             strumlines.set(entry.id, strumline);
 
+            if (!_strumlineCharacters.exists(entry.id))
+                _strumlineCharacters.set(entry.id, entry.character);
+
             if (isPlayable)
                 playableStrums.push(strumline);
         }
@@ -625,13 +633,13 @@ class PlayState extends MusicBeatState
         inputs.onInputPressed.add(function(entry:InputEntry)
         {
             if (!hasPlayableInput()) return;
-            pressEntryList.push(entry);
+            _pressEntryList.push(entry);
         });
 
         inputs.onInputReleased.add(function(entry:InputEntry)
         {
             if (!hasPlayableInput()) return;
-            releaseEntryList.push(entry);
+            _releaseEntryList.push(entry);
         });
     }
 
@@ -726,7 +734,7 @@ class PlayState extends MusicBeatState
     {
         if (generateHUD)
         {
-            healthBar = new HealthBar(0, 0, {parent: this, parentVar: 'healthLerp', characters: [PlayState.instance.dad, PlayState.instance.boyfriend]});
+            healthBar = new HealthBar(0, 0, {parent: this, parentVar: '_healthLerp', characters: [PlayState.instance.dad, PlayState.instance.boyfriend]});
             healthBar.screenCenter(X);
             healthBar.y = camera.height * 0.1;
             healthBar.camera = camHUD;
@@ -750,7 +758,7 @@ class PlayState extends MusicBeatState
         ratings.camera = Reflect.field(this, ratings.data.camera);
         add(ratings);
 
-        healthLerp = metrics.health ?? 1.0;
+        _healthLerp = metrics.health ?? 1.0;
 
         countdown = new Countdown({skin: meta.countdown.skin, audio: meta.countdown.audio});
         countdown.camera = camMisc;
@@ -790,13 +798,13 @@ class PlayState extends MusicBeatState
             return;
         }
 
-        onTransitionFinish = function()
+        _onTransitionFinish = function()
         {
-            onTransitionFinish = null;
+            _onTransitionFinish = null;
             action();
         };
 
-        TransitionLoader.onTransitionFinish.addOnce(onTransitionFinish);
+        TransitionLoader._onTransitionFinish.addOnce(_onTransitionFinish);
     }
 
     /**
@@ -833,7 +841,7 @@ class PlayState extends MusicBeatState
     function startSong()
     {
         songStarted = true;
-        canSkip = true;
+        _canSkip = true;
 
         if (song != null)
 			song.inst.onComplete = endSong;
@@ -851,7 +859,7 @@ class PlayState extends MusicBeatState
     {
         songStarted = false;
         updateConductor = false;
-        canSkip = false;
+        _canSkip = false;
 
         if (song != null)
             song.stop();
@@ -895,7 +903,7 @@ class PlayState extends MusicBeatState
     {
         super.update(elapsed);
 
-        lastConductorPos = conductor.songPosition;
+        _lastConductorPos = conductor.songPosition;
 
         // Handle instrumental resync
         if (updateConductor)
@@ -906,13 +914,13 @@ class PlayState extends MusicBeatState
             {
                 var drift:Float = song.inst.time - newPosition;
                 
-                if (reanchorConductor || Math.abs(drift) > Constants.CONDUCTOR_HARD_RESYNC)
+                if (_reanchorConductor || Math.abs(drift) > Constants.CONDUCTOR_HARD_RESYNC)
                     newPosition = song.inst.time;
                 else
                     newPosition += drift * Math.min(1.0, elapsed * Constants.CONDUCTOR_DRIFT_RATE);
             }
 
-            reanchorConductor = false;
+            _reanchorConductor = false;
 
             conductor.update(newPosition);
         }
@@ -924,7 +932,7 @@ class PlayState extends MusicBeatState
         lerpCamerasZoom(elapsed);
 
         // Smoothen the health bar.
-        healthLerp = FlxMath.lerp(healthLerp, metrics.health, 0.15);
+        _healthLerp = FlxMath.lerp(_healthLerp, metrics.health, 0.15);
 
         updateScoreText();
 
@@ -1008,11 +1016,11 @@ class PlayState extends MusicBeatState
         }
 
         // Makes the game fast forward.
-        if (canSkip)
+        if (_canSkip)
         {
-            updateTimeSkipping(FlxG.keys.pressed.TWO || FlxG.keys.pressed.ONE, (FlxG.keys.pressed.TWO ? 3.0 : 0.5));
+            update_timeSkipping(FlxG.keys.pressed.TWO || FlxG.keys.pressed.ONE, (FlxG.keys.pressed.TWO ? 3.0 : 0.5));
         }
-        else if (!canSkip && FlxG.timeScale != 1.0)
+        else if (!_canSkip && FlxG.timeScale != 1.0)
         {
             setTimeScale(1.0);
         }
@@ -1047,16 +1055,16 @@ class PlayState extends MusicBeatState
             }
         }
 
-        if (pressEntryList.length + releaseEntryList.length <= 0 || !hasPlayableInput()) return;
+        if (_pressEntryList.length + _releaseEntryList.length <= 0 || !hasPlayableInput()) return;
 
-        for (pressEntry in pressEntryList)
+        for (pressEntry in _pressEntryList)
         {
             for (strumline in playableStrums)
                 pressInputOnStrumline(strumline, pressEntry.direction);
         }
-        pressEntryList.resize(0);
+        _pressEntryList.resize(0);
 
-        for (releaseEntry in releaseEntryList)
+        for (releaseEntry in _releaseEntryList)
         {
             for (strumline in playableStrums)
             {
@@ -1068,7 +1076,7 @@ class PlayState extends MusicBeatState
                 spr?.play("static", true);
             }
         }
-        releaseEntryList.resize(0);
+        _releaseEntryList.resize(0);
     }
 
     /**
@@ -1103,8 +1111,8 @@ class PlayState extends MusicBeatState
             if (sustain.strum != null && strumline.speed > 0)
                 catchPadding = (sustain.strum.height / 4) / (0.45 * strumline.speed);
 
-            sustain.fullLength = (sustain.time + sustain.fullLength) - lastConductorPos + catchPadding;
-            sustain.time = lastConductorPos;
+            sustain.fullLength = (sustain.time + sustain.fullLength) - _lastConductorPos + catchPadding;
+            sustain.time = _lastConductorPos;
             sustain.length = sustain.fullLength;
 
             if (sustain.strum != null)
@@ -1125,10 +1133,10 @@ class PlayState extends MusicBeatState
     {
         FlxG.signals.focusGained.remove(onWindowRefocus);
 
-        if (onTransitionFinish != null)
+        if (_onTransitionFinish != null)
         {
-            TransitionLoader.onTransitionFinish.remove(onTransitionFinish);
-            onTransitionFinish = null;
+            TransitionLoader._onTransitionFinish.remove(_onTransitionFinish);
+            _onTransitionFinish = null;
         }
 
         for (snd in missSounds)
@@ -1311,7 +1319,7 @@ class PlayState extends MusicBeatState
      */
     function onWindowRefocus():Void
     {
-        reanchorConductor = true;
+        _reanchorConductor = true;
     }
 
     public function onSubStateOpen(substate:FlxSubState)
@@ -1354,17 +1362,17 @@ class PlayState extends MusicBeatState
      * Makes the player strumline cpu controlled and disables rating calculation and health gain/loss.
      * @param pressed Whether the fast-forward key is being held.
      */
-    private function updateTimeSkipping(pressed:Bool, speed:Float)
+    private function update_timeSkipping(pressed:Bool, speed:Float)
     {
         if (pressed && FlxG.timeScale != speed)
             setTimeScale(speed);
         else if (!pressed && FlxG.timeScale != 1.0)
             setTimeScale(1.0);
 
-        if (pressed == timeSkipping)
+        if (pressed == _timeSkipping)
             return;
 
-        timeSkipping = pressed;
+        _timeSkipping = pressed;
 
         for (strumline in playableStrums)
         {
@@ -1387,8 +1395,8 @@ class PlayState extends MusicBeatState
 
         if (pressed)
         {
-            pressEntryList.resize(0);
-            releaseEntryList.resize(0);
+            _pressEntryList.resize(0);
+            _releaseEntryList.resize(0);
         }
     }
 
@@ -1465,6 +1473,17 @@ class PlayState extends MusicBeatState
         SongEventModuleHandler.execute(scriptEvent);
     }
 
+    /**
+     * Changes the volume of the track owned by a given note's strumline.
+     */
+    function changeNoteVocals(note:Note, volume:Float):Void
+    {
+        if (song == null || note.strumline == null || !_strumlineCharacters.exists(note.strumline.id))
+            return;
+
+        song.changePlayerVolume(volume, _strumlineCharacters.get(note.strumline.id));
+    }
+
     public function noteHit(note:Note)
     {
         var event = new NoteHitScriptEvent(NOTE_HIT, note, 150, true, true, true);
@@ -1526,7 +1545,7 @@ class PlayState extends MusicBeatState
                             if (strum.animation.curAnim.name == "confirm")
                                 strum.play("pressed", true);
 
-                            strum.timer == null;
+                            strum.timer = null;
                         });
                     }
                 }
@@ -1546,16 +1565,7 @@ class PlayState extends MusicBeatState
             }
         }
 
-        for (entry in chart.strumlines)
-        {
-            if (entry.id == note.strumline.id)
-            {
-                if (song != null)
-                    song.changePlayerVolume(1.0, entry.character);
-
-                break;
-            }
-        }
+        changeNoteVocals(note, 1.0);
     }
 
     public function sustainHit(sustain:SustainNote)
@@ -1637,16 +1647,7 @@ class PlayState extends MusicBeatState
             metrics.miss();
             metrics.calculateAccuracy();
 
-            for (entry in chart.strumlines)
-            {
-                if (entry.id == note.strumline.id)
-                {
-                    if (song != null)
-                        song.changePlayerVolume(0.0, entry.character);
-
-                    break;
-                }
-            }
+            changeNoteVocals(note, 0.0);
 
             var index = FlxG.random.int(0, 2);
 
