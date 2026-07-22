@@ -8,6 +8,8 @@ import flixel.math.FlxRect;
 import flixel.util.FlxColor;
 import flixel.util.FlxDestroyUtil;
 
+import backend.registries.world.CharacterRegistry;
+
 typedef CharterNoteGraphics =
 {
     var heads:Array<FlxGraphic>;
@@ -111,6 +113,10 @@ class CharterStrumline extends FlxBasic
         shader.setFloat("u_outline", gridOutline);
         shader.setBool("u_outlineTop", true);
         shader.setBool("u_outlineBottom", true);
+        shader.setBool("u_horizontal", false);
+
+        var tint:FlxColor = FlxColor.interpolate(FlxColor.WHITE, CharacterRegistry.healthColor(character), 0.2);
+        shader.setFloatArray("u_tint", [tint.redFloat, tint.greenFloat, tint.blueFloat]);
     }
 
     public function setX(value:Float):Void

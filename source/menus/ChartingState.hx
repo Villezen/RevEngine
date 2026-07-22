@@ -7,6 +7,8 @@ import backend.registries.song.ChartRegistry.ChartData;
 import backend.registries.song.ChartRegistry.ChartNote;
 import backend.registries.song.ChartRegistry.ChartStrumline;
 import backend.registries.song.EventRegistry;
+import backend.registries.song.EventObjectRegistry;
+import backend.registries.song.EventObjectRegistry.EventObjectData;
 import backend.registries.song.MetaRegistry;
 import backend.ui.Bar;
 import backend.ui.Button;
@@ -15,6 +17,7 @@ import backend.ui.Dropdown;
 import backend.ui.InputBox;
 import backend.ui.InteractiveWindow;
 import backend.ui.Label;
+import backend.ui.ScrollContainer;
 import backend.ui.Separator;
 import backend.ui.Stepper;
 import backend.ui.UiManager;
@@ -34,6 +37,11 @@ import game.handlers.Conductor;
 
 import haxe.io.Path;
 
+import lime.app.Application;
+
+import menus.charting.CharterEvent;
+import menus.charting.CharterEventGrid;
+import menus.charting.CharterEventTooltip;
 import menus.charting.CharterNote;
 import menus.charting.CharterNotePreview;
 import menus.charting.CharterStrumline;
@@ -50,6 +58,13 @@ class ChartingState extends MusicBeatState
     static inline final GRID_OUTLINE:Float = 5.0;
     static inline final STRUMLINE_GAP:Float = 50.0;
     static inline final TOP_BAR_HEIGHT:Float = 30.0;
+
+    static inline final EVENT_CELL:Float = 34.0;
+    static inline final EVENT_OUTLINE:Float = 3.0;
+    static inline final EVENT_STRIP_H:Float = EVENT_CELL + (EVENT_OUTLINE * 2);
+    static inline final EVENT_STRIP_MARGIN:Float = 10.0;
+
+    static inline final EVENT_STRIP_BOUND:Int = 50;
 
     static inline final NOTE_RENDER_Y_OFFSET:Float = 4.0;
 
@@ -81,7 +96,11 @@ class ChartingState extends MusicBeatState
 
     var camBG:FlxCamera;
     var camGrid:FlxCamera;
+    var camEvents:FlxCamera;
     var camUI:FlxCamera;
+
+    var viewWidth:Float = FlxG.width;
+    var viewHeight:Float = FlxG.height;
 
     var gridFollow:FlxObject;
     var bg:FunkinSprite;
@@ -97,6 +116,11 @@ class ChartingState extends MusicBeatState
     var strumlineBoxes:Array<CharterStrumlineBox> = [];
 
     var noteData:Array<Array<CharterNote>> = [];
+
+    var eventData:Array<CharterEvent> = [];
+    var eventLane:CharterEventGrid;
+    var eventTooltip:CharterEventTooltip;
+    var hoveredEvent:CharterEvent;
 
     var conductorLine:FunkinSprite;
     var gridBox:FunkinSprite;
@@ -130,7 +154,7 @@ class ChartingState extends MusicBeatState
     var snapIndex:Int = 3;
     var curSnap:Float = 1.0;
 
-    var history:Array<Array<StrumlineSnapshot>> = [];
+    var history:Array<EditorSnapshot> = [];
     var historyIndex:Int = -1;
 
     var preview:CharterNotePreview;
@@ -144,6 +168,17 @@ class ChartingState extends MusicBeatState
 
     var editWindow:InteractiveWindow;
     var editIndex:Int = -1;
+
+    var eventWindow:InteractiveWindow;
+    var editingEvent:CharterEvent;
+    var pendingEventTime:Float = 0.0;
+    var pendingEventClose:Bool = false;
+
+    var eventVarWidgets:Array<FlxSprite> = [];
+    var eventContainer:ScrollContainer;
+    var eventDescription:FlxBitmapText;
+    var eventFieldWidth:Int = 200;
+    var eventContentWidth:Int = 340;
 
     var metaWindow:InteractiveWindow;
 
@@ -189,6 +224,8 @@ class ChartingState extends MusicBeatState
 
         buildStrumlines();
         buildUI();
+
+        resizeCameras(Application.current.window.width, Application.current.window.height);
     }
 
     function initCameras():Void
@@ -200,6 +237,10 @@ class ChartingState extends MusicBeatState
         camGrid = new FlxCamera();
         camGrid.bgColor = 0x00000000;
         FlxG.cameras.add(camGrid, false);
+
+        camEvents = new FlxCamera();
+        camEvents.bgColor = 0x00000000;
+        FlxG.cameras.add(camEvents, false);
 
         camUI = new FlxCamera();
         camUI.bgColor = 0x00000000;
@@ -222,6 +263,100 @@ class ChartingState extends MusicBeatState
         add(bg);
     }
 
+    public override function onResize(width:Int, height:Int):Void
+    {
+        super.onResize(width, height);
+
+        resizeCameras(width, height);
+    }
+
+    function resizeCameras(width:Int, height:Int):Void
+    {
+        if (width <= 0 || height <= 0) return;
+
+        var ratio:Float = width / height;
+        var baseRatio:Float = FlxG.width / FlxG.height;
+
+        var camWidth:Int = FlxG.width;
+        var camHeight:Int = FlxG.height;
+
+        if (ratio > baseRatio)
+            camWidth = Std.int(FlxG.height * ratio);
+        else
+            camHeight = Std.int(FlxG.width / ratio);
+
+        var camX:Float = -(camWidth - FlxG.width) / 2;
+        var camY:Float = -(camHeight - FlxG.height) / 2;
+
+        for (camera in FlxG.cameras.list)
+        {
+            if (camera == null) continue;
+
+            camera.width = camWidth;
+            camera.height = camHeight;
+            camera.x = camX;
+            camera.y = camY;
+        }
+
+        if (camGrid != null && gridFollow != null)
+            camGrid.follow(gridFollow);
+
+        viewWidth = camWidth;
+        viewHeight = camHeight;
+
+        layoutUI();
+    }
+
+    function layoutUI():Void
+    {
+        if (bg != null)
+        {
+            bg.setGraphicSize(Std.int(viewWidth), Std.int(viewHeight));
+            bg.updateHitbox();
+            bg.setPosition(0, 0);
+        }
+
+        if (topBar != null)
+            topBar.resize(viewWidth);
+
+        layoutPreview();
+
+        centerWindow(exportWindow);
+        centerWindow(conductorWindow);
+        centerWindow(welcomeWindow);
+        centerWindow(editWindow);
+        centerWindow(metaWindow);
+        centerWindow(eventWindow);
+
+        layoutEventLane();
+    }
+
+    function layoutPreview():Void
+    {
+        if (preview == null) return;
+
+        var targetHeight:Int = Std.int(viewHeight - TOP_BAR_HEIGHT - EVENT_STRIP_H - EVENT_STRIP_MARGIN - 20);
+
+        if (preview.previewHeight != targetHeight)
+        {
+            buildPreview();
+            return;
+        }
+
+        preview.setPosition(viewWidth - preview.previewWidth - 4, TOP_BAR_HEIGHT + 10);
+    }
+
+    function centerWindow(window:InteractiveWindow):Void
+    {
+        if (window == null) return;
+
+        window.x = (viewWidth - window.width) / 2;
+        window.y = (viewHeight - window.height) / 2;
+
+        var minY:Float = 30 + window.borderOffsetY;
+        if (window.y < minY) window.y = minY;
+    }
+
     function loadChart():Void
     {
         ChartRegistry.reload(songName, difficulty, variation);
@@ -231,6 +366,7 @@ class ChartingState extends MusicBeatState
         meta = MetaRegistry.get(songName, variation);
 
         EventRegistry.reload(songName);
+        loadEvents();
 
         history = [];
         historyIndex = -1;
@@ -441,6 +577,13 @@ class ChartingState extends MusicBeatState
         if (gridBox != null) { remove(gridBox); gridBox.destroy(); }
         if (selectionBox != null) { remove(selectionBox); selectionBox.destroy(); }
 
+        if (eventLane != null)
+        {
+            remove(eventLane);
+            eventLane.destroy();
+            eventLane = null;
+        }
+
         totalWidth = 0;
         allowedXOffset = 0;
 
@@ -506,7 +649,30 @@ class ChartingState extends MusicBeatState
             strumlineBoxes.push(box);
         }
 
+        buildEventLane();
         buildPreview();
+    }
+
+    function buildEventLane():Void
+    {
+        eventLane = new CharterEventGrid(eventData, EVENT_CELL, EVENT_OUTLINE, camEvents);
+
+        var timelineWidth:Float = (totalHeight / GRID_SIZE) * EVENT_CELL;
+        eventLane.build(timelineWidth);
+
+        add(eventLane);
+
+        layoutEventLane();
+    }
+
+    function layoutEventLane():Void
+    {
+        if (eventLane == null) return;
+
+        var stripTop:Float = viewHeight - eventLane.stripHeight - EVENT_STRIP_MARGIN;
+        var markerX:Float = Math.max(150, viewWidth * 0.13);
+
+        eventLane.layout(stripTop, markerX, viewWidth);
     }
 
     function updateStrumlineBoxes():Void
@@ -542,9 +708,142 @@ class ChartingState extends MusicBeatState
     function anyBoxHovered():Bool
     {
         for (box in strumlineBoxes)
-            if (box.hovered) return true;
+        {
+            if (box.hovered)
+                return true;
+        }
 
         return false;
+    }
+
+    function updateEventLane():Void
+    {
+        if (eventLane == null) return;
+
+        var stepLength:Float = conductor.stepLengthMs;
+
+        if (conductorLine != null)
+        {
+            var laneOffset:Float = ((conductorLine.y - GRID_OUTLINE) / GRID_SIZE) * EVENT_CELL;
+            var scrollX:Float = (EVENT_OUTLINE + laneOffset) - eventLane.markerX;
+            
+            var minScroll:Float = (EVENT_OUTLINE + 1) - eventLane.markerX;
+            var maxScroll:Float = (eventLane.timelineWidth + EVENT_OUTLINE - 2) - eventLane.markerX;
+            if (maxScroll < minScroll) maxScroll = minScroll;
+
+            camEvents.scroll.x = FlxMath.bound(scrollX, minScroll, maxScroll);
+        }
+
+        camEvents.scroll.y = 0;
+
+        hoveredEvent = null;
+
+        var showHover:Bool = canInteract && !playing && !windowBlockingInput() && !isSelecting && !isDragging;
+
+        if (showHover && stepLength > 0)
+        {
+            var pointer = FlxG.mouse.getWorldPosition(camEvents);
+
+            if (eventLane.containsStrip(pointer.y))
+            {
+                eventLane.updateHover(pointer.x, curSnap, FlxG.keys.pressed.SHIFT);
+                hoveredEvent = eventLane.eventAt(pointer.x, pointer.y, stepLength);
+            }
+            else
+                eventLane.hideHover();
+
+            pointer.put();
+        }
+        else
+            eventLane.hideHover();
+
+        if (eventTooltip != null)
+        {
+            if (hoveredEvent != null && stepLength > 0)
+            {
+                var scale:Float = EVENT_CELL / stepLength;
+                var centerX:Float = (EVENT_OUTLINE + hoveredEvent.time * scale) - camEvents.scroll.x + (EVENT_CELL / 2);
+
+                eventTooltip.showAt(hoveredEvent, EventObjectRegistry.findByName(hoveredEvent.name), centerX, eventLane.stripTop, viewWidth);
+            }
+            else
+                eventTooltip.hide();
+        }
+    }
+
+    function mouseOverEventStrip():Bool
+    {
+        if (eventLane == null) return false;
+
+        var pointer = FlxG.mouse.getWorldPosition(camEvents);
+        var over:Bool = eventLane.containsStrip(pointer.y);
+        pointer.put();
+
+        return over;
+    }
+
+    function loadEvents():Void
+    {
+        eventData = [];
+
+        var data = EventRegistry.get(songName);
+
+        if (data != null && data.events != null)
+            for (entry in data.events) eventData.push(CharterEvent.fromEntry(entry));
+
+        sortEvents();
+    }
+
+    function sortEvents():Void
+    {
+        eventData.sort(CharterEvent.compare);
+    }
+
+    function deleteEvent(event:CharterEvent):Void
+    {
+        if (event == null) return;
+
+        eventData.remove(event);
+        if (hoveredEvent == event) hoveredEvent = null;
+
+        FunkinSound.playOnce(Paths.sound("menus/charter/notes/delete"), 0.1);
+        pushHistory();
+    }
+
+    function handleEventLaneMouse(pointer:FlxPoint, stepLength:Float):Void
+    {
+        var event:CharterEvent = eventLane.eventAt(pointer.x, pointer.y, stepLength);
+
+        if (FlxG.mouse.justPressedRight)
+        {
+            if (event != null) deleteEvent(event);
+            return;
+        }
+
+        if (!FlxG.mouse.justPressed) return;
+
+        if (event != null)
+        {
+            openEventWindow(event);
+            return;
+        }
+
+        if (!eventLane.inGrid(pointer.x)) return;
+
+        var time:Float = eventLane.timeAtX(pointer.x, stepLength);
+
+        if (!FlxG.keys.pressed.SHIFT)
+        {
+            var snap:Float = stepLength * curSnap;
+            time = Math.floor(time / snap) * snap;
+        }
+
+        if (time < 0) time = 0;
+
+        var maxTime:Float = (eventLane.timelineWidth - EVENT_CELL) * stepLength / EVENT_CELL;
+        if (maxTime > 0 && time > maxTime) time = maxTime;
+
+        openEventWindow(null, time);
     }
 
     function buildPreview():Void
@@ -568,9 +867,9 @@ class ChartingState extends MusicBeatState
         if (columns > 20) columnWidth = 2;
 
         var width:Int = columnWidth * columns;
-        var height:Int = Std.int(FlxG.height - TOP_BAR_HEIGHT - 20);
+        var height:Int = Std.int(viewHeight - TOP_BAR_HEIGHT - EVENT_STRIP_H - EVENT_STRIP_MARGIN - 20);
 
-        preview = new CharterNotePreview(FlxG.width - width - 10, TOP_BAR_HEIGHT + 10, width, height, columnWidth);
+        preview = new CharterNotePreview(viewWidth - width - 4, TOP_BAR_HEIGHT + 10, width, height, columnWidth);
         preview.camera = camUI;
         add(preview);
     }
@@ -725,6 +1024,12 @@ class ChartingState extends MusicBeatState
             buildStrumlines();
         }
 
+        if (pendingEventClose)
+        {
+            pendingEventClose = false;
+            closeEventWindow();
+        }
+
         mouseOverUI = computeMouseOverUI();
 
         handleInput(elapsed);
@@ -737,6 +1042,7 @@ class ChartingState extends MusicBeatState
 
         updateCamera(elapsed);
         updateStrumlineBoxes();
+        updateEventLane();
         renderNotes();
 
         updateGridBox();
@@ -770,6 +1076,16 @@ class ChartingState extends MusicBeatState
 
         for (strumline in strumlines)
             strumline.refresh(topTime, bottomTime, stepLength, playheadY, selectionLookup, isDragging ? draggedNotes : null);
+
+        if (eventLane != null)
+        {
+            var scaleX:Float = EVENT_CELL / stepLength;
+            var leftTime:Float = (camEvents.scroll.x - EVENT_OUTLINE) / scaleX;
+            var rightTime:Float = (camEvents.scroll.x + viewWidth - EVENT_OUTLINE) / scaleX;
+            var playheadX:Float = eventLane.markerX + camEvents.scroll.x;
+
+            eventLane.refresh(leftTime, rightTime, stepLength, playheadX);
+        }
 
         if (isDragging)
         {
@@ -1212,6 +1528,21 @@ class ChartingState extends MusicBeatState
 
         var pointer = FlxG.mouse.getWorldPosition(camGrid);
         var stepLength:Float = conductor.stepLengthMs;
+
+        if (eventLane != null && !isSelecting && !isDragging)
+        {
+            var eventPointer = FlxG.mouse.getWorldPosition(camEvents);
+
+            if (eventLane.containsStrip(eventPointer.y))
+            {
+                handleEventLaneMouse(eventPointer, stepLength);
+                eventPointer.put();
+                pointer.put();
+                return;
+            }
+
+            eventPointer.put();
+        }
 
         if (FlxG.mouse.justPressedRight)
             deleteNoteAt(pointer, stepLength);
@@ -1760,7 +2091,7 @@ class ChartingState extends MusicBeatState
     {
         if (gridBox == null || chart == null) return;
 
-        if (!canInteract || playing || isSelecting || isDragging || mouseOverUI || (preview != null && preview.scrubbing))
+        if (!canInteract || playing || isSelecting || isDragging || mouseOverUI || mouseOverEventStrip() || (preview != null && preview.scrubbing))
         {
             gridBox.visible = false;
             return;
@@ -1792,9 +2123,9 @@ class ChartingState extends MusicBeatState
         pointer.put();
     }
 
-    function snapshot():Array<StrumlineSnapshot>
+    function snapshot():EditorSnapshot
     {
-        var state:Array<StrumlineSnapshot> = [];
+        var strumlineState:Array<StrumlineSnapshot> = [];
 
         for (i in 0...chart.strumlines.length)
         {
@@ -1806,7 +2137,7 @@ class ChartingState extends MusicBeatState
 
             var position:Array<Int> = (entry.position != null && entry.position.length >= 2) ? [entry.position[0], entry.position[1]] : [0, 0];
 
-            state.push
+            strumlineState.push
             ({
                 id: entry.id ?? 0,
                 character: entry.character,
@@ -1821,10 +2152,13 @@ class ChartingState extends MusicBeatState
             });
         }
 
-        return state;
+        var events:Array<CharterEvent> = [];
+        for (event in eventData) events.push(event.clone());
+
+        return {strumlines: strumlineState, events: events};
     }
 
-    function restore(state:Array<StrumlineSnapshot>):Void
+    function restore(state:EditorSnapshot):Void
     {
         clearSelection();
 
@@ -1835,15 +2169,22 @@ class ChartingState extends MusicBeatState
         draggedNotes.clear();
 
         closeEditWindow();
+        closeEventWindow();
 
-        if (structureMatches(state))
+        eventData.resize(0);
+        for (event in state.events) eventData.push(event.clone());
+        sortEvents();
+
+        var strumlineState:Array<StrumlineSnapshot> = state.strumlines;
+
+        if (structureMatches(strumlineState))
         {
-            for (i in 0...state.length)
+            for (i in 0...strumlineState.length)
             {
                 var notes:Array<CharterNote> = noteData[i];
                 notes.resize(0);
 
-                for (note in state[i].notes)
+                for (note in strumlineState[i].notes)
                     notes.push(note.clone());
 
                 strumlines[i].refreshSustainBounds();
@@ -1856,7 +2197,7 @@ class ChartingState extends MusicBeatState
         chart.strumlines = [];
         noteData = [];
 
-        for (s in state)
+        for (s in strumlineState)
         {
             chart.strumlines.push
             ({
@@ -1965,7 +2306,32 @@ class ChartingState extends MusicBeatState
         Paths.createDirectory(directory);
         File.saveContent('$directory/$songName-chart-$difficulty.json', data);
 
+        writeEventsData();
+
         FunkinSound.playOnce(Paths.sound("menus/charter/save"), 0.3);
+    }
+
+    function writeEventsData():Void
+    {
+        var out:String = Converter.writeEvents(songName, {events: [for (event in eventData) event.toEntry()]});
+        var directory:String = songDirectory();
+
+        Paths.createDirectory(directory);
+        File.saveContent('$directory/$songName-events.json', out);
+    }
+
+    public function saveEvents():Void
+    {
+        writeEventsData();
+        FunkinSound.playOnce(Paths.sound("menus/charter/save"), 0.3);
+    }
+
+    public function saveEventsAs():Void
+    {
+        var out:String = Converter.writeEvents(songName, {events: [for (event in eventData) event.toEntry()]});
+
+        fileReference = new FileReference();
+        fileReference.save(out, '$songName-events.json');
     }
 
     public function saveChartAs():Void
@@ -1998,6 +2364,9 @@ class ChartingState extends MusicBeatState
 
     public function exitEditor():Void
     {
+        syncChartData();
+        EventRegistry.set(songName, {events: [for (event in eventData) event.toEntry()]});
+
         FlxG.mouse.visible = false;
         Manager.switchState(new PlayState({song: songName, difficulty: difficulty, variation: variation}));
     }
@@ -2012,6 +2381,8 @@ class ChartingState extends MusicBeatState
                 {text: "Save Chart As...", altText: "CTRL + SHIFT + S", separate: true, callback: saveChartAs},
                 {text: "Save Metadata", altText: "CTRL + M", separate: false, callback: saveMetadata},
                 {text: "Save Metadata As...", altText: "CTRL + SHIFT + M", separate: true, callback: () -> trace("WIP", "WARNING")},
+                {text: "Save Events", altText: "", separate: false, callback: saveEvents},
+                {text: "Save Events As...", altText: "", separate: true, callback: saveEventsAs},
                 {text: "Import Chart", altText: "", separate: false, callback: () -> trace("WIP", "WARNING")},
                 {text: "Export Chart", altText: "", separate: true, callback: () -> exportWindow.windowVisible = !exportWindow.windowVisible},
                 {text: "Import Metadata", altText: "", separate: false, callback: () -> trace("WIP", "WARNING")},
@@ -2048,6 +2419,10 @@ class ChartingState extends MusicBeatState
         buildExportWindow();
         buildConductorWindow();
         buildWelcomeWindow();
+
+        eventTooltip = new CharterEventTooltip();
+        eventTooltip.camera = camUI;
+        add(eventTooltip);
     }
 
     function buildConductorWindow():Void
@@ -2082,7 +2457,8 @@ class ChartingState extends MusicBeatState
         conductorWindow = new InteractiveWindow({position: [0, 0], size: [w, h], title: "Conductor", minimiziable: true, items: items, callback: null});
         conductorWindow.windowVisible = false;
         conductorWindow.camera = camUI;
-        conductorWindow.screenCenter();
+        centerWindow(conductorWindow);
+        conductorWindow.borderOffsetBottom = EVENT_STRIP_BOUND;
         conductorWindow.borderOffsetY = Std.int(TOP_BAR_HEIGHT);
         add(conductorWindow);
     }
@@ -2164,8 +2540,9 @@ class ChartingState extends MusicBeatState
         ], callback: (value:Bool) -> canInteract = !value});
 
         exportWindow.windowVisible = false;
-        exportWindow.screenCenter();
+        centerWindow(exportWindow);
         exportWindow.camera = camUI;
+        exportWindow.borderOffsetBottom = EVENT_STRIP_BOUND;
         exportWindow.borderOffsetY = Std.int(TOP_BAR_HEIGHT);
         add(exportWindow);
     }
@@ -2222,7 +2599,8 @@ class ChartingState extends MusicBeatState
         ], callback: (value:Bool) -> canInteract = !value});
 
         welcomeWindow.camera = camUI;
-        welcomeWindow.screenCenter();
+        centerWindow(welcomeWindow);
+        welcomeWindow.borderOffsetBottom = EVENT_STRIP_BOUND;
         welcomeWindow.borderOffsetY = Std.int(TOP_BAR_HEIGHT);
         add(welcomeWindow);
     }
@@ -2375,7 +2753,8 @@ class ChartingState extends MusicBeatState
             }});
 
         editWindow.camera = camUI;
-        editWindow.screenCenter();
+        centerWindow(editWindow);
+        editWindow.borderOffsetBottom = EVENT_STRIP_BOUND;
         editWindow.borderOffsetY = Std.int(TOP_BAR_HEIGHT);
         add(editWindow);
     }
@@ -2383,6 +2762,247 @@ class ChartingState extends MusicBeatState
     function editLabel(text:String, x:Int, y:Int, scale:Float = 0.3):Label
     {
         return new Label({position: [x, y], size: [scale, scale], type: "SOLID", alpha: 0.9, color: 0xFFFFFFFF, text: text});
+    }
+
+    function listEventTypes():Array<String>
+    {
+        if (!EventObjectRegistry.list.keys().hasNext())
+            EventObjectRegistry.init();
+
+        var names:Array<String> = [];
+
+        for (data in EventObjectRegistry.list)
+        {
+            if (data == null || data.name == null) continue;
+            if (names.indexOf(data.name) == -1) names.push(data.name);
+        }
+
+        names.sort(function(a, b) return (a < b) ? -1 : (a > b) ? 1 : 0);
+        return names;
+    }
+
+    function resolveEventTypeName(name:String):String
+    {
+        var data:EventObjectData = EventObjectRegistry.findByName(name);
+        return (data != null && data.name != null) ? data.name : name;
+    }
+
+    function openEventWindow(?event:CharterEvent, ?time:Float):Void
+    {
+        closeEventWindow();
+
+        var types:Array<String> = listEventTypes();
+
+        if (types.length == 0)
+        {
+            trace("No event definitions found in data/events.", "WARNING");
+            return;
+        }
+
+        editingEvent = event;
+        pendingEventTime = (time != null) ? time : ((event != null) ? event.time : conductor.songPosition);
+
+        var w:Int = 380;
+        var h:Int = 470;
+
+        var labelX:Int = 20;
+        var ctrlX:Int = 120;
+
+        eventContentWidth = w - 40;
+
+        var startName:String = (event != null) ? resolveEventTypeName(event.name) : types[0];
+        if (types.indexOf(startName) == -1) startName = types[0];
+
+        eventVarWidgets = [];
+
+        eventDescription = new FlxBitmapText(0, 0, "", Paths.getAngelFont("jetbrains"));
+        eventDescription.scale.set(0.24, 0.24);
+        eventDescription.color = 0xFFFFFFFF;
+        eventDescription.alpha = 0.65;
+        eventDescription.autoSize = false;
+        eventDescription.wordWrap = true;
+        eventDescription.fieldWidth = Std.int((w - 40) / 0.24);
+        eventDescription.setPosition(labelX, 62);
+        eventDescription.updateHitbox();
+
+        eventContainer = new ScrollContainer({position: [labelX, 150], size: [w - 40, h - 150 - 62]});
+
+        var typeItems = [for (name in types) {name: name, callback: null}];
+
+        var typeDropdown = new Dropdown({position: [ctrlX, 14], size: [w - ctrlX - 20, 30], items: typeItems,
+            callback: (selected:String) -> rebuildEventFields(selected)});
+
+        var saveButton = new Button({position: [w - 96, h - 46], size: [80, 34], text: "Save", callback: function()
+        {
+            var selectedName:String = typeDropdown.selectedItem;
+
+            var vars:Array<String> = [];
+            for (widget in eventVarWidgets) vars.push(readWidgetValue(widget));
+
+            if (editingEvent != null)
+            {
+                editingEvent.name = selectedName;
+                editingEvent.variables = vars;
+            }
+            else
+                eventData.push(new CharterEvent(selectedName, pendingEventTime, vars));
+
+            sortEvents();
+            pushHistory();
+
+            FunkinSound.playOnce(Paths.sound("menus/charter/save"), 0.3);
+            pendingEventClose = true;
+        }});
+
+        var items:Array<FlxSprite> =
+        [
+            editLabel("Event", labelX, 22),
+            new Separator({position: [labelX, 52], size: [w - 40, 3], alpha: 0.4, color: 0xFFFFFFFF, blending: true}),
+            eventDescription,
+            eventContainer,
+            saveButton
+        ];
+
+        if (event != null)
+        {
+            items.push(new Button({position: [w - 186, h - 46], size: [80, 34], text: "Delete", callback: function()
+            {
+                if (editingEvent != null) deleteEvent(editingEvent);
+                pendingEventClose = true;
+            }}));
+        }
+
+        items.push(typeDropdown);
+
+        eventWindow = new InteractiveWindow({position: [0, 0], size: [w, h], title: (event != null) ? "Edit Event" : "Create Event",
+            minimiziable: false, items: items, callback: (open:Bool) -> canInteract = !open});
+
+        eventWindow.camera = camUI;
+        centerWindow(eventWindow);
+        eventWindow.borderOffsetBottom = EVENT_STRIP_BOUND;
+        eventWindow.borderOffsetY = Std.int(TOP_BAR_HEIGHT);
+        add(eventWindow);
+
+        typeDropdown.selectItem(startName);
+        rebuildEventFields(startName);
+    }
+
+    function rebuildEventFields(typeName:String):Void
+    {
+        if (eventContainer == null) return;
+
+        var data:EventObjectData = EventObjectRegistry.findByName(typeName);
+
+        if (eventDescription != null)
+        {
+            eventDescription.text = (data != null && data.description != null) ? data.description : "";
+            eventDescription.updateHitbox();
+        }
+
+        eventContainer.clearContent();
+        eventVarWidgets = [];
+
+        if (data == null || data.variables == null) return;
+
+        var rowHeight:Float = 44;
+        var labelX:Float = 4;
+
+        var reuse:Bool = (editingEvent != null && data.name == editingEvent.name);
+
+        var labels:Array<Label> = [];
+        var maxLabelWidth:Float = 0;
+
+        for (def in data.variables)
+        {
+            if (def == null) continue;
+
+            var label = new Label({position: [0, 0], size: [0.26, 0.26], type: "SOLID", alpha: 0.9, color: 0xFFFFFFFF, text: def.name});
+            labels.push(label);
+
+            if (label.width > maxLabelWidth) maxLabelWidth = label.width;
+        }
+
+        var fieldX:Float = labelX + maxLabelWidth + 12;
+
+        var boxWidth:Int = eventContentWidth - Std.int(fieldX) - 14;
+        if (boxWidth < 60) boxWidth = 60;
+        eventFieldWidth = boxWidth;
+
+        var row:Int = 0;
+
+        for (i in 0...data.variables.length)
+        {
+            var def = data.variables[i];
+            if (def == null) continue;
+
+            var value:String = (reuse && i < editingEvent.variables.length)
+                ? editingEvent.variables[i]
+                : ((def.defaultValue != null) ? def.defaultValue : "");
+
+            var rowY:Float = row * rowHeight;
+
+            eventContainer.addContent(labels[row], labelX, rowY + 13, rowHeight);
+
+            var widget:FlxSprite = makeVariableWidget(def.type, value);
+            eventContainer.addContent(widget, fieldX, rowY + 4, rowHeight);
+
+            eventVarWidgets.push(widget);
+
+            row++;
+        }
+    }
+
+    function makeVariableWidget(type:String, value:String):FlxSprite
+    {
+        switch (type)
+        {
+            case "Bool":
+                var box = new Checkbox({position: [0, 0], size: [30, 30], callback: null});
+                box.value = (value == "true" || value == "1");
+                return box;
+
+            case "Int":
+                var input = new InputBox({position: [0, 0], size: [eventFieldWidth, 32], type: "INTEGER", callback: null});
+                input.setText(value);
+                return input;
+
+            case "Float":
+                var input = new InputBox({position: [0, 0], size: [eventFieldWidth, 32], type: "NUMBER", callback: null});
+                input.setText(value);
+                return input;
+
+            default:
+                var input = new InputBox({position: [0, 0], size: [eventFieldWidth, 32], type: "ANY", callback: null});
+                input.setText(value);
+                return input;
+        }
+    }
+
+    function readWidgetValue(widget:FlxSprite):String
+    {
+        if (Std.isOfType(widget, InputBox)) return (cast widget:InputBox).value;
+        if (Std.isOfType(widget, Checkbox)) return (cast widget:Checkbox).value ? "true" : "false";
+
+        return "";
+    }
+
+    function closeEventWindow():Void
+    {
+        if (eventWindow != null)
+        {
+            eventWindow.windowVisible = false;
+            UiManager.unregister(eventWindow);
+
+            remove(eventWindow);
+            eventWindow.destroy();
+
+            eventWindow = null;
+        }
+
+        editingEvent = null;
+        eventContainer = null;
+        eventDescription = null;
+        eventVarWidgets = [];
     }
 
     function openMetadataWindow():Void
@@ -2423,10 +3043,10 @@ class ChartingState extends MusicBeatState
         var ratingsSkinInput = metaInput(rCtrl, rowY(3), ctrlW, "ANY", metaSubString("ratings", "skin", "default"), null);
         var ratingsInput = metaInput(rCtrl, rowY(4), ctrlW, "ANY", formatRatings(meta.album.ratings), null);
 
-        var hideBox = new Checkbox({position: [rCtrl, rowY(5)], size: [28, 28], callback: null});
+        var hideBox = new Checkbox({position: [rCtrl + 40, rowY(5)], size: [28, 28], callback: null});
         hideBox.value = (meta.freeplay.hide == true);
 
-        var newlyBox = new Checkbox({position: [rCtrl + 92, rowY(5)], size: [28, 28], callback: null});
+        var newlyBox = new Checkbox({position: [rCtrl + 40, rowY(6)], size: [28, 28], callback: null});
         newlyBox.value = (meta.freeplay.newlyAdded == true);
 
         var closeButton = new Button({position: [w - 104, h - 46], size: [88, 36], text: "Close", callback: function()
@@ -2480,8 +3100,8 @@ class ChartingState extends MusicBeatState
             editLabel("Charters", rLabel, labelY(2), ls),
             editLabel("Rank Skin", rLabel, labelY(3), ls),
             editLabel("Ratings", rLabel, labelY(4), ls),
-            editLabel("Hide", rLabel, labelY(5), ls),
-            editLabel("New", rCtrl + 34, labelY(5), ls),
+            editLabel("Hide From Freeplay", rLabel, labelY(5), ls),
+            editLabel("Mark as Newly Added", rLabel, labelY(6), ls),
 
             new Label({position: [lLabel, h - 68], size: [0.24, 0.24], type: "SOLID", alpha: 0.55, color: 0xFFFFFFFF,
                 text: "Lists are comma-separated values.\nRatings are difficulty:stars   (use * for all)."}),
@@ -2495,7 +3115,8 @@ class ChartingState extends MusicBeatState
             items: items, callback: function(open:Bool) canInteract = !open});
 
         metaWindow.camera = camUI;
-        metaWindow.screenCenter();
+        centerWindow(metaWindow);
+        metaWindow.borderOffsetBottom = EVENT_STRIP_BOUND;
         metaWindow.borderOffsetY = Std.int(TOP_BAR_HEIGHT);
         add(metaWindow);
     }
@@ -2697,6 +3318,15 @@ class ChartingState extends MusicBeatState
         metaWindow = null;
         conductorWindow = null;
         conductorValues = [];
+
+        eventLane = null;
+        eventTooltip = null;
+        eventWindow = null;
+        eventContainer = null;
+        eventDescription = null;
+        eventVarWidgets = [];
+        editingEvent = null;
+        eventData = [];
     }
 }
 
@@ -2718,4 +3348,10 @@ typedef StrumlineSnapshot =
     var playable:Bool;
     var position:Array<Int>;
     var notes:Array<CharterNote>;
+}
+
+typedef EditorSnapshot =
+{
+    var strumlines:Array<StrumlineSnapshot>;
+    var events:Array<CharterEvent>;
 }

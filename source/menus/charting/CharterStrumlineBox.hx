@@ -171,7 +171,7 @@ class CharterStrumlineBox extends FlxSpriteGroup
 
     function tintBackground():Void
     {
-        var health:FlxColor = healthColorOf(entry.character);
+        var health:FlxColor = CharacterRegistry.healthColor(entry.character);
         var tint:FlxColor = FlxColor.interpolate(FlxColor.WHITE, health, 0.4);
 
         for (slice in bgSlices)
@@ -179,17 +179,6 @@ class CharterStrumlineBox extends FlxSpriteGroup
             slice.color = tint;
             slice.alpha = 0.55;
         }
-    }
-
-    function healthColorOf(character:String):FlxColor
-    {
-        if (character == null || character == "") return FlxColor.WHITE;
-
-        var data = CharacterRegistry.get(character);
-        if (data == null || data.color == null) return FlxColor.WHITE;
-
-        var parsed:Null<FlxColor> = FlxColor.fromString(data.color);
-        return (parsed != null) ? parsed : FlxColor.WHITE;
     }
 
     public function follow(naturalY:Float, viewTop:Float, topMargin:Float):Void
@@ -228,7 +217,11 @@ class CharterStrumlineBox extends FlxSpriteGroup
 
         if (interactable && visible)
         {
-            hovered = FlxG.mouse.overlaps(this, gridCamera);
+            var pointer = FlxG.mouse.getWorldPosition(gridCamera);
+            
+            hovered = pointer.x >= originX && pointer.x <= originX + builtWidth && pointer.y >= originY && pointer.y <= originY + 83;
+            pointer.put();
+
             overIcon = FlxG.mouse.overlaps(iconBox, gridCamera);
             editHover = FlxG.mouse.overlaps(editButton, gridCamera);
 

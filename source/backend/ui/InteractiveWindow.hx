@@ -97,6 +97,7 @@ class InteractiveWindow extends FlxSpriteGroup implements IUiEntry
     private var dragOffsetY:Float = 0;
     public var borderOffsetX:Int = 0;
     public var borderOffsetY:Int = 0;
+    public var borderOffsetBottom:Int = 0;
 
     private var params:InteractiveWindowParams;
 
@@ -342,8 +343,9 @@ class InteractiveWindow extends FlxSpriteGroup implements IUiEntry
                     this.y = 30 + borderOffsetY;
                 
                 var curHeight = isMinimized ? bottomSolid.height : windowHitbox.height;
-                if (this.y > FlxG.camera.height - curHeight) 
-                    this.y = FlxG.camera.height - curHeight;
+                
+                if (this.y > FlxG.camera.height - curHeight - borderOffsetBottom)
+                    this.y = FlxG.camera.height - curHeight - borderOffsetBottom;
             }
         }
     }

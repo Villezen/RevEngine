@@ -244,7 +244,7 @@ class Constants
      */
     public static final PRELOAD_ASSETS:Array<String> =
     [
-        'images/game/ui/missVignette'
+        
     ];
     
     /**

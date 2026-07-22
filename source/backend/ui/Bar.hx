@@ -128,6 +128,53 @@ class Bar extends FlxSpriteGroup implements IUiEntry
         return slice;
     }
 
+    public function resize(width:Float):Void
+    {
+        if (params == null || params.size == null) return;
+
+        var w:Float = width;
+        var h:Float = params.size[1];
+
+        params.size[0] = Std.int(w);
+
+        var cw:Float = Math.min(8.0, w / 2);
+        var ch:Float = Math.min(8.0, h / 2);
+
+        var midW:Float = w - (cw * 2);
+        var midH:Float = h - (ch * 2);
+
+        positionSlice("tl", 0, 0, cw, ch);
+        positionSlice("t", cw, 0, midW, ch);
+        positionSlice("tr", w - cw, 0, cw, ch);
+
+        positionSlice("ml", 0, ch, cw, midH);
+        positionSlice("m", cw, ch, midW, midH);
+        positionSlice("mr", w - cw, ch, cw, midH);
+
+        positionSlice("bl", 0, h - ch, cw, ch);
+        positionSlice("b", cw, h - ch, midW, ch);
+        positionSlice("br", w - cw, h - ch, cw, ch);
+
+        if (baseHitbox != null)
+        {
+            baseHitbox.width = w;
+            baseHitbox.height = h;
+        }
+    }
+
+    private function positionSlice(key:String, localX:Float, localY:Float, sliceW:Float, sliceH:Float):Void
+    {
+        var slice:FunkinSprite = sliceMap.get(key);
+        if (slice == null) return;
+
+        if (sliceW <= 0.01) sliceW = 0.01;
+        if (sliceH <= 0.01) sliceH = 0.01;
+
+        slice.setGraphicSize(sliceW, sliceH);
+        slice.updateHitbox();
+        slice.setPosition(x + localX, y + localY);
+    }
+
     public function showMenu(index:Int)
     {
         var itemData = params.items[index];

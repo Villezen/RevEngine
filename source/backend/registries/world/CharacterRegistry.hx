@@ -63,6 +63,21 @@ class CharacterRegistry
         return list.get(name);
     }
 
+    public static function healthColor(name:String):FlxColor
+    {
+        if (name == null || name == "")
+            return FlxColor.WHITE;
+
+        var data:CharacterData = get(name);
+
+        if (data == null || data.color == null)
+            return FlxColor.WHITE;
+
+        var parsed:Null<FlxColor> = FlxColor.fromString(data.color);
+        
+        return (parsed != null) ? parsed : FlxColor.WHITE;
+    }
+
     public static function reload(name:String):Void
     {
         var rawData:String = "{}";

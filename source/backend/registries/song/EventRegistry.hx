@@ -56,6 +56,11 @@ class EventRegistry
         list.set(name, validateData(loadEventData(name)));
     }
 
+    public static function set(name:String, data:EventData):Void
+    {
+        list.set(name, validateData(data));
+    }
+
     private static function validateData(data:EventData):EventData
     {
         if (data == null) data = {};
