@@ -2,7 +2,6 @@ package menus.freeplay;
 
 import flixel.group.FlxSpriteGroup;
 import flixel.math.FlxRect;
-import flixel.util.FlxColor;
 
 class DifficultySelector extends FlxSpriteGroup
 {

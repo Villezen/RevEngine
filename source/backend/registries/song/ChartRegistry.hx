@@ -6,7 +6,6 @@ import json2object.JsonParser;
 
 import backend.converters.Converter;
 import backend.converters.IConverterEntry;
-import backend.assets.Paths;
 
 import backend.utils.RegistryUtil;
 

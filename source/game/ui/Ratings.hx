@@ -1,7 +1,5 @@
 package game.ui;
 
-import backend.assets.FunkinSprite;
-
 import flixel.group.FlxSpriteGroup;
 
 import game.PlayMetrics.NoteJudgement;

@@ -3,8 +3,6 @@ package backend.registries.misc;
 import haxe.Json;
 import json2object.JsonParser;
 
-import backend.assets.Paths;
-
 import backend.utils.RegistryUtil;
 
 /**

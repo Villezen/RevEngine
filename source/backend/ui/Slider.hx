@@ -1,7 +1,5 @@
 package backend.ui;
 
-import backend.assets.FunkinSprite;
-
 import flixel.graphics.frames.FlxAtlasFrames;
 import flixel.group.FlxSpriteGroup;
 import flixel.math.FlxMath;

@@ -1,8 +1,5 @@
 package menus.charting;
 
-import backend.assets.FunkinSound;
-import backend.assets.FunkinSprite;
-import backend.assets.Paths;
 import backend.registries.song.ChartRegistry.ChartStrumline;
 import backend.registries.world.CharacterRegistry;
 import backend.utils.MathUtil;
@@ -11,12 +8,13 @@ import flixel.FlxCamera;
 import flixel.graphics.frames.FlxAtlasFrames;
 import flixel.group.FlxSpriteGroup;
 import flixel.text.FlxBitmapText;
-import flixel.util.FlxColor;
 
 import game.ui.HealthIcon;
 
 class CharterStrumlineBox extends FlxSpriteGroup
 {
+    public static inline final HEIGHT:Float = 83;
+
     public var entry:ChartStrumline;
     public var strumline:CharterStrumline;
 

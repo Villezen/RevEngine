@@ -20,6 +20,36 @@
 
             {"name": "1RIGHT", "prefix": "note impact 1 red", "offsets": [0, 0]},
             {"name": "2RIGHT", "prefix": "note impact 2 red", "offsets": [0, 0]}
+        ],
+
+        "multikeys":
+        [
+            {"name": "1PURPLE", "prefix": "note impact 1 purple"},
+            {"name": "2PURPLE", "prefix": "note impact 2 purple"},
+
+            {"name": "1BLUE", "prefix": "note impact 1 blue"},
+            {"name": "2BLUE", "prefix": "note impact 2 blue"},
+
+            {"name": "1GREEN", "prefix": "note impact 1 green"},
+            {"name": "2GREEN", "prefix": "note impact 2 green"},
+
+            {"name": "1RED", "prefix": "note impact 1 red"},
+            {"name": "2RED", "prefix": "note impact 2 red"},
+
+            {"name": "1WHITE", "prefix": "note impact 1 white"},
+            {"name": "2WHITE", "prefix": "note impact 2 white"},
+
+            {"name": "1YELLOW", "prefix": "note impact 1 yellow"},
+            {"name": "2YELLOW", "prefix": "note impact 2 yellow"},
+
+            {"name": "1VIOLET", "prefix": "note impact 1 violet"},
+            {"name": "2VIOLET", "prefix": "note impact 2 violet"},
+
+            {"name": "1DARKRED", "prefix": "note impact 1 darkred"},
+            {"name": "2DARKRED", "prefix": "note impact 2 darkred"},
+
+            {"name": "1DARKBLUE", "prefix": "note impact 1 darkblue"},
+            {"name": "2DARKBLUE", "prefix": "note impact 2 darkblue"}
         ]
     }
 }

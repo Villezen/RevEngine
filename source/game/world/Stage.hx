@@ -1,7 +1,5 @@
 package game.world;
 
-import backend.assets.FunkinSprite;
-
 import flixel.FlxState;
 import flixel.FlxCamera;
 import flixel.FlxBasic;

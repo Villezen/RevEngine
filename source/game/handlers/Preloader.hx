@@ -7,7 +7,6 @@ import sys.FileSystem;
 import json2object.JsonParser;
 
 import backend.assets.AsyncPaths;
-import backend.assets.Paths;
 import game.world.Stage;
 
 import backend.registries.misc.PreloaderRegistry;
@@ -22,8 +21,6 @@ import backend.registries.world.StageRegistry;
 
 import flixel.graphics.FlxGraphic;
 import openfl.media.Sound;
-
-using StringTools;
 
 class Preloader
 {
@@ -111,6 +108,53 @@ class Preloader
             }
         };
 
+        var queueNoteskin = function(_name:String)
+        {
+            if (_name == null || _name == "") return;
+
+            for (_folder in ['styles', 'covers', 'splashes'])
+            {
+                var _base:String = 'images/game/notes/$_folder/$_name';
+
+                for (_file in Paths.readDirectoryRecursive(_base))
+                {
+                    var _fullPath:String = '$_base/$_file';
+
+                    if (_file.endsWith('.png'))
+                    {
+                        addToQueue(_fullPath, function()
+                        {
+                            AsyncPaths.image('assets/' + _fullPath, "", "", true, true, false, function(g)
+                            {
+                                checkDone('(Note Skin) Preloaded: $_folder/$_name/${_file.replace(".png", "")}');
+                            });
+                        });
+                    }
+                    else if (_file.endsWith('.xml') || _file.endsWith('.json'))
+                    {
+                        addToQueue(_fullPath, function()
+                        {
+                            AsyncPaths.data('assets/' + _fullPath, "", true, function(d)
+                            {
+                                checkDone('(Note Skin) Preloaded: $_folder/$_name/$_file');
+                            });
+                        });
+
+                        if (_file.endsWith('.xml'))
+                        {
+                            var _atlas:String = 'game/notes/$_folder/$_name/${_file.replace(".xml", "")}';
+
+                            addToQueue('atlas:$_atlas', function()
+                            {
+                                Paths.getSparrowAtlas(_atlas);
+                                checkDone('(Note Skin) Parsed atlas: $_folder/$_name/${_file.replace(".xml", "")}');
+                            });
+                        }
+                    }
+                }
+            }
+        };
+
         if (data.general.characters)
         {
             for (_strumline in _chart.strumlines)
@@ -185,73 +229,17 @@ class Preloader
         if (data.general.noteskins)
         {
             for (_strumline in _chart.strumlines)
+                queueNoteskin(_strumline.skin);
+
+            for (_event in EventRegistry.get(name).events)
             {
-                var _skinPaths = ['${_strumline.skin}.png', '${_strumline.skin}_ek.png'];
-                var _coverPaths = ['covers/${_strumline.skin}/blue.png', 'covers/${_strumline.skin}/green.png', 'covers/${_strumline.skin}/purple.png', 'covers/${_strumline.skin}/red.png'];
-                var _splashPaths = ['splashes/${_strumline.skin}.png', 'splashes/${_strumline.skin}_ek.png'];
+                if (_event == null || _event.variables == null || _event.variables.length < 2) continue;
 
-                for (_p in _skinPaths)
-                {
-                    var pth = 'images/game/notes/$_p';
-                    addToQueue(pth, function()
-                    {
-                        AsyncPaths.image('assets/' + pth, "", "", true, false, true, function(g)
-                        {
-                            checkDone('(Note Skin) Preloaded Noteskin: $_p');
-                        });
-                    });
+                var _object = EventObjectRegistry.findByName(_event.name);
 
-                    var xmlPth = pth.replace(".png", ".xml");
-                    if (Paths.exists(xmlPth))
-                    {
-                        addToQueue(xmlPth, function()
-                        {
-                            AsyncPaths.data('assets/' + xmlPth, "", true, function(d) { checkDone(); });
-                        });
-                    }
-                }
+                if (_object == null || _object.name != "Change Noteskin") continue;
 
-                for (_p in _coverPaths)
-                {
-                    var pth = 'images/game/notes/$_p';
-                    addToQueue(pth, function()
-                    {
-                        AsyncPaths.image('assets/' + pth, "", "", true, false, true, function(g)
-                        {
-                            checkDone('(Cover Skin) Preloaded Hold Cover: $_p');
-                        });
-                    });
-
-                    var xmlPth = pth.replace(".png", ".xml");
-                    if (Paths.exists(xmlPth))
-                    {
-                        addToQueue(xmlPth, function()
-                        {
-                            AsyncPaths.data('assets/' + xmlPth, "", true, function(d) { checkDone(); });
-                        });
-                    }
-                }
-
-                for (_p in _splashPaths)
-                {
-                    var pth = 'images/game/notes/$_p';
-                    addToQueue(pth, function()
-                    {
-                        AsyncPaths.image('assets/' + pth, "", "", true, false, true, function(g)
-                        {
-                            checkDone('(Splash Skin) Preloaded Splash: $_p');
-                        });
-                    });
-
-                    var xmlPth = pth.replace(".png", ".xml");
-                    if (Paths.exists(xmlPth))
-                    {
-                        addToQueue(xmlPth, function()
-                        {
-                            AsyncPaths.data('assets/' + xmlPth, "", true, function(d) { checkDone(); });
-                        });
-                    }
-                }
+                queueNoteskin(_event.variables[1]);
             }
         }
 

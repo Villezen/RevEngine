@@ -9,14 +9,11 @@ import openfl.media.Sound;
 import openfl.display.BitmapData;
 import openfl.text.Font;
 import flixel.graphics.FlxGraphic;
-import flixel.FlxG;
 
 import backend.utils.MemoryUtil;
 #if lime
 import lime.utils.Assets as LimeAssets;
 #end
-
-using StringTools;
 
 class Cacher
 {

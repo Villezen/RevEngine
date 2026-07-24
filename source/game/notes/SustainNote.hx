@@ -13,13 +13,11 @@ import flixel.math.FlxPoint.FlxCallbackPoint;
 import backend.registries.ui.NoteSkinRegistry.BaseAnimationData;
 import backend.utils.KeyUtil;
 
-/**
- * A custom display object class for the sustain notes, using a custom mesh built by vertices and indices.
- * It uses UV mapping to avoid distortion while scaling.
- * * 90% of the code here is written by T5mpler & The Funkin Team (huge shoutouts). The other 10% is just stuff to ensure everything works properly on the engine.
- */
 class SustainNote extends FunkinSprite
 {
+    private var _appliedSkin:String = null;
+    private var _appliedKeys:Int = -1;
+
     public var vertices:DrawData<Float> = new DrawData<Float>();
     public var indices:DrawData<Int> = new DrawData<Int>();
     public var uvtData:DrawData<Float> = new DrawData<Float>();
@@ -54,19 +52,24 @@ class SustainNote extends FunkinSprite
 
     function set_skin(value:NoteStyle):NoteStyle
     {
-        if (skin == value) return skin;
-
         if (value == null)
         {
-            skin = null;
-            return null;
+            _appliedSkin = null;
+            _appliedKeys = -1;
+            return skin = null;
         }
+
+        if (value.name == _appliedSkin && value.keys == _appliedKeys)
+            return skin = value;
 
         if (strum == null || strum.data == null || strum.parent == null)
             return skin = value;
 
         build(value);
         sync();
+
+        _appliedSkin = value.name;
+        _appliedKeys = value.keys;
 
         return skin = value;
     }
@@ -253,9 +256,18 @@ class SustainNote extends FunkinSprite
 
         noteStyle.applyToSustain(this);
 
-        if (animation == null || animation.getByName('hold') == null || animation.getByName('tail') == null) return;
+        if (animation == null || animation.getByName('hold') == null || animation.getByName('tail') == null)
+        {
+            _holdAnimation = null;
+            _holdEndAnimation = null;
 
-        this.scale.x = note.scale.x;
+            setVertices([]);
+            setIndices([]);
+
+            return;
+        }
+
+        this.scale.x = strum.data.noteSize * KeyUtil.getKeyScaleOffset(strum.parent.keyCount) * strum.parent.scaleMult;
 
         _holdAnimation = animation.getByName('hold');
         _holdEndAnimation = animation.getByName('tail');
@@ -273,8 +285,8 @@ class SustainNote extends FunkinSprite
             this.antialiasing = strum.data.antialiasing;
 
             var keyCount = strum.parent.keyCount;
-            var anims:Array<BaseAnimationData> = KeyUtil.isEK(keyCount) ? strum.data.animations.extraKeys : strum.data.animations.normal;
-            var colorStr:String = (KeyUtil.isEK(keyCount) ? Constants.COLOR_DIRECTIONS[keyCount][direction] : Constants.DIRECTIONS[keyCount][direction]).toUpperCase();
+            var anims:Array<BaseAnimationData> = KeyUtil.isMultiKey(keyCount) ? strum.data.animations.multikeys : strum.data.animations.normal;
+            var colorStr:String = (KeyUtil.isMultiKey(keyCount) ? Constants.COLOR_DIRECTIONS[keyCount][direction] : Constants.DIRECTIONS[keyCount][direction]).toUpperCase();
 
             var targetName = 'hold$colorStr';
 

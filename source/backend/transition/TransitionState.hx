@@ -2,21 +2,16 @@ package backend.transition;
 
 import flixel.util.FlxSignal;
 import sys.FileSystem;
-import flixel.FlxG;
 import flixel.FlxCamera;
 import flixel.FlxSubState;
 import flixel.math.FlxMath;
 import flixel.util.FlxSort;
-import flixel.util.FlxTimer;
 import flixel.util.FlxDestroyUtil;
 import flixel.util.typeLimit.NextState;
-import flixel.tweens.FlxTween;
-import flixel.tweens.FlxEase;
 import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.addons.display.FlxRuntimeShader;
 import openfl.filters.ShaderFilter;
 import flixel.group.FlxSpriteGroup;
-import backend.assets.FunkinSprite;
 
 import backend.modding.handlers.TransitionHandler;
 

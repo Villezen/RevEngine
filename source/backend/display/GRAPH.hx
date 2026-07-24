@@ -1,7 +1,6 @@
 package backend.display;
 
 import flixel.math.FlxMath;
-import flixel.util.FlxColor;
 import openfl.display.Shape;
 import openfl.display.Sprite;
 import openfl.text.TextField;

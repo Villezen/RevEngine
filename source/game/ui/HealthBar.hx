@@ -1,7 +1,5 @@
 package game.ui;
 
-import backend.assets.FunkinSprite;
-import flixel.util.FlxColor;
 import flixel.ui.FlxBar;
 import flixel.group.FlxSpriteGroup;
 

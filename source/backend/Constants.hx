@@ -196,15 +196,15 @@ class Constants
      */
     public static var COLOR_DIRECTIONS:Map<Int, Array<String>> =
     [
-        1 => ['E'],
+        1 => ['white'],
         2 => ['purple', 'red'],
-        3 => ['A', 'E', 'D'],
+        3 => ['purple', 'white', 'red'],
         4 => ['purple', 'blue', 'green', 'red'],
-        5 => ['A', 'B', 'E', 'C', 'D'],
-        6 => ['A', 'C', 'D', 'F', 'G', 'I'],
-        7 => ['A', 'C', 'D', 'E', 'F', 'G', 'I'],
-        8 => ['A', 'B', 'C', 'D', 'F', 'G', 'H', 'I'],
-        9 => ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
+        5 => ['purple', 'blue', 'white', 'green', 'red'],
+        6 => ['purple', 'green', 'red', 'yellow', 'violet', 'darkblue'],
+        7 => ['purple', 'green', 'red', 'white', 'yellow', 'violet', 'darkblue'],
+        8 => ['purple', 'blue', 'green', 'red', 'yellow', 'violet', 'darkred', 'darkblue'],
+        9 => ['purple', 'blue', 'green', 'red', 'white', 'yellow', 'violet', 'darkred', 'darkblue']
     ];
 
     /**

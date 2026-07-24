@@ -1,0 +1,88 @@
+{
+    "type": "TEXTURE",
+    "textureBox": [17, 17],
+
+    "position": [0, 0],
+    "antialiasing": false,
+
+    "noteSize": 6.0,
+    "strumSize": 6.0,
+    "strumWidth": 160,
+    "sustainAlpha": 1,
+
+    "hasSplashes": true,
+
+    "animations":
+    {
+        "normal":
+        [
+            {"name": "staticLEFT", "frames": [0]},
+            {"name": "pressedLEFT", "frames": [4, 8], "fps": 12},
+            {"name": "confirmLEFT", "frames": [12, 16], "fps": 24},
+            {"name": "arrowLEFT", "frames": [4]},
+
+            {"name": "staticDOWN", "frames": [1]},
+            {"name": "pressedDOWN", "frames": [5, 9], "fps": 12},
+            {"name": "confirmDOWN", "frames": [13, 17], "fps": 24},
+            {"name": "arrowDOWN", "frames": [5]},
+
+            {"name": "staticUP", "frames": [2]},
+            {"name": "pressedUP", "frames": [6, 10], "fps": 12},
+            {"name": "confirmUP", "frames": [14, 18], "fps": 24},
+            {"name": "arrowUP", "frames": [6]},
+
+            {"name": "staticRIGHT", "frames": [3]},
+            {"name": "pressedRIGHT", "frames": [7, 11], "fps": 12},
+            {"name": "confirmRIGHT", "frames": [15, 19], "fps": 24},
+            {"name": "arrowRIGHT", "frames": [7]}
+        ],
+
+        "multikeys":
+        [
+            {"name": "staticPURPLE", "frames": [0]},
+            {"name": "pressedPURPLE", "frames": [9, 18], "fps": 12},
+            {"name": "confirmPURPLE", "frames": [27, 36], "fps": 24},
+            {"name": "arrowPURPLE", "frames": [9]},
+
+            {"name": "staticBLUE", "frames": [1]},
+            {"name": "pressedBLUE", "frames": [10, 19], "fps": 12},
+            {"name": "confirmBLUE", "frames": [28, 37], "fps": 24},
+            {"name": "arrowBLUE", "frames": [10]},
+
+            {"name": "staticGREEN", "frames": [2]},
+            {"name": "pressedGREEN", "frames": [11, 20], "fps": 12},
+            {"name": "confirmGREEN", "frames": [29, 38], "fps": 24},
+            {"name": "arrowGREEN", "frames": [11]},
+
+            {"name": "staticRED", "frames": [3]},
+            {"name": "pressedRED", "frames": [12, 21], "fps": 12},
+            {"name": "confirmRED", "frames": [30, 39], "fps": 24},
+            {"name": "arrowRED", "frames": [12]},
+
+            {"name": "staticWHITE", "frames": [4]},
+            {"name": "pressedWHITE", "frames": [13, 22], "fps": 12},
+            {"name": "confirmWHITE", "frames": [31, 40], "fps": 24},
+            {"name": "arrowWHITE", "frames": [13]},
+
+            {"name": "staticYELLOW", "frames": [5]},
+            {"name": "pressedYELLOW", "frames": [14, 23], "fps": 12},
+            {"name": "confirmYELLOW", "frames": [32, 41], "fps": 24},
+            {"name": "arrowYELLOW", "frames": [14]},
+
+            {"name": "staticVIOLET", "frames": [6]},
+            {"name": "pressedVIOLET", "frames": [15, 24], "fps": 12},
+            {"name": "confirmVIOLET", "frames": [33, 42], "fps": 24},
+            {"name": "arrowVIOLET", "frames": [15]},
+
+            {"name": "staticDARKRED", "frames": [7]},
+            {"name": "pressedDARKRED", "frames": [16, 25], "fps": 12},
+            {"name": "confirmDARKRED", "frames": [34, 43], "fps": 24},
+            {"name": "arrowDARKRED", "frames": [16]},
+
+            {"name": "staticDARKBLUE", "frames": [8]},
+            {"name": "pressedDARKBLUE", "frames": [17, 26], "fps": 12},
+            {"name": "confirmDARKBLUE", "frames": [35, 44], "fps": 24},
+            {"name": "arrowDARKBLUE", "frames": [17]}
+        ]
+    }
+}

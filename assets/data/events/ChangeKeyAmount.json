@@ -1,0 +1,18 @@
+{
+    "name": "Change Key Amount",
+    "alias": [],
+    "description": "Changes the key count of a target strumline.",
+    "variables":
+    [
+        {
+            "name": "Target",
+            "type": "Int",
+            "defaultValue": "0"
+        },
+        {
+            "name": "Keys",
+            "type": "Int",
+            "defaultValue": "4"
+        }
+    ]
+}

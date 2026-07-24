@@ -7,8 +7,6 @@ import sys.FileSystem;
 import sys.io.File;
 #end
 
-import backend.assets.Paths;
-
 import backend.registries.song.ChartRegistry.ChartData;
 import backend.registries.song.ChartRegistry.ChartStrumline;
 import backend.registries.song.ChartRegistry.ChartNote;

@@ -1,7 +1,6 @@
 package backend.shaders;
 
 import flixel.system.FlxAssets.FlxShader;
-import flixel.util.FlxColor;
 
 class AngleMask extends FlxShader
 {

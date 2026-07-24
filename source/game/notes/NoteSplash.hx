@@ -65,8 +65,10 @@ class NoteSplash extends FunkinSprite
 
         if (parent != null)
         {
-            this.x = (parent.x + (parent.width * 0.5) - (this.width * 0.5)) + data.position[0];
-            this.y = (parent.y + (parent.height * 0.5) - (this.height * 0.5)) + (data.position[1] * downscrollMult);
+            var posScale:Float = KeyUtil.getKeyScaleOffset(skin != null ? skin.keys : 4);
+
+            this.x = (parent.x + (parent.width * 0.5) - (this.width * 0.5)) + (data.position[0] * posScale);
+            this.y = (parent.y + (parent.height * 0.5) - (this.height * 0.5)) + (data.position[1] * posScale * downscrollMult);
 
             this.alpha = parent.alpha * data.alpha;
             this.angle = parent.angle;
@@ -90,8 +92,8 @@ class NoteSplash extends FunkinSprite
         if (data != null && data.animations != null)
         {
             var animArray:Array<Float> = [0, 0];
-            var anims:Array<BaseAnimationData> = KeyUtil.isEK(skin.keys) ? data.animations.extraKeys : data.animations.normal;
-            var colorStr:String = (KeyUtil.isEK(skin.keys) ? Constants.COLOR_DIRECTIONS[skin.keys][direction] : Constants.DIRECTIONS[skin.keys][direction]).toUpperCase();
+            var anims:Array<BaseAnimationData> = KeyUtil.isMultiKey(skin.keys) ? data.animations.multikeys : data.animations.normal;
+            var colorStr:String = (KeyUtil.isMultiKey(skin.keys) ? Constants.COLOR_DIRECTIONS[skin.keys][direction] : Constants.DIRECTIONS[skin.keys][direction]).toUpperCase();
 
             for (animEntry in anims)
             {

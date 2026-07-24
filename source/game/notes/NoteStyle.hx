@@ -25,6 +25,17 @@ typedef NoteStyleParams =
 @:forward
 abstract NoteStyle(NoteStyleParams) from NoteStyleParams to NoteStyleParams
 {
+    static function resolveTexturePath(base:String, suffix:String):String
+    {
+        if (suffix != "" && Paths.exists('images/$base$suffix.png'))
+            return '$base$suffix';
+
+        if (Paths.exists('images/$base.png'))
+            return base;
+
+        return null;
+    }
+
     static function loadTexture(sprite:FunkinSprite, path:String, type:String, textureBox:Array<Int>):Bool
     {
         if (!Paths.exists('images/$path.png'))
@@ -50,15 +61,16 @@ abstract NoteStyle(NoteStyleParams) from NoteStyleParams to NoteStyleParams
         strum.animation.destroyAnimations();
         strum.animation.reset();
 
-        var isEK = KeyUtil.isEK(this.keys);
-        var path = strum.data.type == "SEPARATE" ? 'game/notes/styles/${this.name}/strumline' : 'game/notes/styles/${this.name}/skin';
+        var isMultiKey = KeyUtil.isMultiKey(this.keys);
+        var suffix = isMultiKey ? '-multikey' : '';
+        var path = resolveTexturePath(strum.data.type == "COMBINED" ? 'game/notes/styles/${this.name}/skin' : 'game/notes/styles/${this.name}/strumline', suffix);
 
-        if (!loadTexture(strum, path, strum.data.type, strum.data.textureBox))
+        if (path == null || !loadTexture(strum, path, strum.data.type, strum.data.textureBox))
             return;
 
-        var anims:Array<BaseAnimationData> = isEK ? strum.data.animations.extraKeys : strum.data.animations.normal;
+        var anims:Array<BaseAnimationData> = isMultiKey ? strum.data.animations.multikeys : strum.data.animations.normal;
         
-        var baseColor = (isEK ? Constants.COLOR_DIRECTIONS[this.keys][strum.direction] : Constants.DIRECTIONS[this.keys][strum.direction]).toUpperCase();
+        var baseColor = (isMultiKey ? Constants.COLOR_DIRECTIONS[this.keys][strum.direction] : Constants.DIRECTIONS[this.keys][strum.direction]).toUpperCase();
         var bindColor = Constants.DIRECTIONS_KEYBIND[this.keys][strum.direction].toUpperCase();
 
         var statBase = 'static$baseColor';
@@ -71,26 +83,24 @@ abstract NoteStyle(NoteStyleParams) from NoteStyleParams to NoteStyleParams
 
         for (anim in anims)
         {
-            var isArray:Bool = Std.isOfType(anim.prefix, Array);
-            var prefixStr:String = isArray ? "" : Std.string(anim.prefix);
-            var isBind:Bool = !isArray && prefixStr.indexOf("keybind[") != -1;
-            
+            var hasFrames:Bool = anim.frames != null && anim.frames.length > 0;
+            var prefixStr:String = hasFrames ? "" : Std.string(anim.prefix);
+            var isBind:Bool = !hasFrames && prefixStr.indexOf("keybind[") != -1;
+
             var tStat = isBind ? statBind : statBase;
             var tPres = isBind ? presBind : presBase;
             var tConf = isBind ? confBind : confBase;
 
-            if (strum.data.type == "TEXTURE" && isArray)
+            if (strum.data.type == "TEXTURE" && hasFrames)
             {
-                var framesArray:Array<Int> = cast anim.prefix;
-                
                 if (anim.name == tStat)
-                    strum.animation.add('static', framesArray, anim.fps);
-                else if (anim.name == tPres)  
-                    strum.animation.add('pressed', framesArray, anim.fps, false);
-                else if (anim.name == tConf) 
-                    strum.animation.add('confirm', framesArray, anim.fps, false);
+                    strum.animation.add('static', anim.frames, anim.fps);
+                else if (anim.name == tPres)
+                    strum.animation.add('pressed', anim.frames, anim.fps, false);
+                else if (anim.name == tConf)
+                    strum.animation.add('confirm', anim.frames, anim.fps, false);
             }
-            else if (!isArray)
+            else if (!hasFrames)
             {
                 var finalPrefix = isBind ? KeyUtil.formatNoteBind(prefixStr, this.keys) : prefixStr;
 
@@ -118,15 +128,26 @@ abstract NoteStyle(NoteStyleParams) from NoteStyleParams to NoteStyleParams
         note.animation.destroyAnimations();
         note.animation.reset();
 
-        var isEK = KeyUtil.isEK(this.keys);
-        var path = note.parent.data.type == "SEPARATE" ? 'game/notes/styles/${this.name}/notes' : 'game/notes/styles/${this.name}/skin';
+        var isMultiKey = KeyUtil.isMultiKey(this.keys);
+        var suffix = isMultiKey ? '-multikey' : '';
 
-        if (!loadTexture(note, path, note.parent.data.type, note.parent.data.textureBox))
+        var path:String;
+        if (note.parent.data.type == "COMBINED")
+            path = resolveTexturePath('game/notes/styles/${this.name}/skin', suffix);
+        else
+        {
+            path = resolveTexturePath('game/notes/styles/${this.name}/notes', suffix);
+
+            if (path == null)
+                path = resolveTexturePath('game/notes/styles/${this.name}/strumline', suffix);
+        }
+
+        if (path == null || !loadTexture(note, path, note.parent.data.type, note.parent.data.textureBox))
             return;
 
-        var anims:Array<BaseAnimationData> = isEK ? note.parent.data.animations.extraKeys : note.parent.data.animations.normal;
-        
-        var baseColor = (isEK ? Constants.COLOR_DIRECTIONS[this.keys][note.direction] : Constants.DIRECTIONS[this.keys][note.direction]).toUpperCase();
+        var anims:Array<BaseAnimationData> = isMultiKey ? note.parent.data.animations.multikeys : note.parent.data.animations.normal;
+
+        var baseColor = (isMultiKey ? Constants.COLOR_DIRECTIONS[this.keys][note.direction] : Constants.DIRECTIONS[this.keys][note.direction]).toUpperCase();
         var bindColor = Constants.DIRECTIONS_KEYBIND[this.keys][note.direction].toUpperCase();
 
         var arrowBase = 'arrow$baseColor';
@@ -134,20 +155,17 @@ abstract NoteStyle(NoteStyleParams) from NoteStyleParams to NoteStyleParams
 
         for (anim in anims)
         {
-            var isArray:Bool = Std.isOfType(anim.prefix, Array);
-            var prefixStr:String = isArray ? "" : Std.string(anim.prefix);
-            var isBind:Bool = !isArray && prefixStr.indexOf("keybind[") != -1;
-            
+            var hasFrames:Bool = anim.frames != null && anim.frames.length > 0;
+            var prefixStr:String = hasFrames ? "" : Std.string(anim.prefix);
+            var isBind:Bool = !hasFrames && prefixStr.indexOf("keybind[") != -1;
+
             var targetName = isBind ? arrowBind : arrowBase;
 
             if (anim.name == targetName)
             {
-                if (note.parent.data.type == "TEXTURE" && isArray)
-                {
-                    var framesArray:Array<Int> = cast anim.prefix;
-                    note.animation.add('scroll', framesArray, anim.fps);
-                }
-                else if (!isArray)
+                if (note.parent.data.type == "TEXTURE" && hasFrames)
+                    note.animation.add('scroll', anim.frames, anim.fps);
+                else if (!hasFrames)
                 {
                     var finalPrefix = isBind ? KeyUtil.formatNoteBind(prefixStr, this.keys) : prefixStr;
                     note.animation.addByPrefix('scroll', finalPrefix, anim.fps);
@@ -170,73 +188,58 @@ abstract NoteStyle(NoteStyleParams) from NoteStyleParams to NoteStyleParams
         sustain.animation.destroyAnimations();
         sustain.animation.reset();
 
-        var isEK = KeyUtil.isEK(this.keys);
-        var path = sustain.strum.data.type == "SEPARATE" ? 'game/notes/styles/${this.name}/sustains' : 'game/notes/styles/${this.name}/skin';
+        var isMultiKey = KeyUtil.isMultiKey(this.keys);
+        var suffix = isMultiKey ? '-multikey' : '';
+        var isCombined = sustain.strum.data.type == "COMBINED";
+        var base = isCombined ? 'game/notes/styles/${this.name}/skin' : 'game/notes/styles/${this.name}/sustains';
 
-        if (!Paths.exists('images/$path.png'))
-            return;
+        var path = resolveTexturePath(base, suffix);
+        if (path == null) return;
 
-        if (sustain.strum.data.type == "SEPARATE")
+        var usedMultiKey = path.endsWith('-multikey');
+
+        if (!isCombined)
         {
             var graphic = FlxG.bitmap.add(Paths.image(path));
             if (graphic == null) return;
 
-            sustain.loadGraphic(graphic, true, Std.int(graphic.width / (isEK ? 18 : 8)), Std.int(graphic.height));
+            var columns:Int = usedMultiKey ? 18 : 8;
+            sustain.loadGraphic(graphic, true, Std.int(graphic.width / columns), Std.int(graphic.height));
+
+            var frameIndex:Int = sustain.direction;
+            var palette:Array<String> = usedMultiKey ? Constants.COLOR_DIRECTIONS[this.keys] : Constants.DIRECTIONS[this.keys];
+            var order:Array<String> = usedMultiKey ? Constants.COLOR_DIRECTIONS[9] : Constants.DIRECTIONS[4];
+
+            if (palette != null && order != null && sustain.direction < palette.length)
+            {
+                var sheetIndex:Int = order.indexOf(palette[sustain.direction]);
+                if (sheetIndex != -1) frameIndex = sheetIndex;
+            }
+
+            if (frameIndex < 0 || (frameIndex * 2) + 1 >= columns)
+                frameIndex = 0;
+
+            sustain.animation.add('hold', [frameIndex * 2], 24);
+            sustain.animation.add('tail', [(frameIndex * 2) + 1], 24);
         }
-        else if (sustain.strum.data.type == "TEXTURE")
+        else
         {
-            var graphic = FlxG.bitmap.add(Paths.image(path));
-            if (graphic == null) return;
-            
-            sustain.loadGraphic(graphic, true, sustain.strum.data.textureBox[0], sustain.strum.data.textureBox[1]);
-        }
-        else 
             sustain.frames = Paths.getSparrowAtlas(path);
 
-        var anims:Array<BaseAnimationData> = isEK ? sustain.strum.data.animations.extraKeys : sustain.strum.data.animations.normal;
-        
-        var baseColor = (isEK ? Constants.COLOR_DIRECTIONS[this.keys][sustain.direction] : Constants.DIRECTIONS[this.keys][sustain.direction]).toUpperCase();
-        var bindColor = Constants.DIRECTIONS_KEYBIND[this.keys][sustain.direction].toUpperCase();
+            var anims:Array<BaseAnimationData> = isMultiKey ? sustain.strum.data.animations.multikeys : sustain.strum.data.animations.normal;
+            var baseColor = (isMultiKey ? Constants.COLOR_DIRECTIONS[this.keys][sustain.direction] : Constants.DIRECTIONS[this.keys][sustain.direction]).toUpperCase();
 
-        var holdBase = 'hold$baseColor';
-        var tailBase = 'tail$baseColor';
-        var holdBind = 'hold$bindColor';
-        var tailBind = 'tail$bindColor';
-
-        for (anim in anims)
-        {
-            var isArray:Bool = Std.isOfType(anim.prefix, Array);
-            var prefixStr:String = isArray ? "" : Std.string(anim.prefix);
-            var isBind:Bool = !isArray && prefixStr.indexOf("keybind[") != -1;
-
-            var tHold = isBind ? holdBind : holdBase;
-            var tTail = isBind ? tailBind : tailBase;
-
-            if (sustain.strum.data.type == "SEPARATE")
+            for (anim in anims)
             {
-                sustain.animation.add('hold', [sustain.direction * 2], anim.fps);
-                sustain.animation.add('tail', [(sustain.direction * 2) + 1], anim.fps);
-            }
-            else if (sustain.strum.data.type == "TEXTURE" && isArray)
-            {
-                var framesArray:Array<Int> = cast anim.prefix;
+                if (anim.frames != null && anim.frames.length > 0) continue;
 
-                if (anim.name == 'hold' || anim.name == tHold)
-                    sustain.animation.add('hold', framesArray, anim.fps);
-                else if (anim.name == 'tail' || anim.name == tTail)
-                    sustain.animation.add('tail', framesArray, anim.fps);
-            }
-            else if (!isArray)
-            {
-                var finalPrefix = isBind ? KeyUtil.formatNoteBind(prefixStr, this.keys) : prefixStr;
-
-                if (anim.name == 'hold' || anim.name == tHold)
-                    sustain.animation.addByPrefix('hold', finalPrefix, anim.fps);
-                else if (anim.name == 'tail' || anim.name == tTail)
-                    sustain.animation.addByPrefix('tail', finalPrefix, anim.fps);
+                if (anim.name == 'hold' || anim.name == 'hold$baseColor')
+                    sustain.animation.addByPrefix('hold', Std.string(anim.prefix), anim.fps);
+                else if (anim.name == 'tail' || anim.name == 'tail$baseColor')
+                    sustain.animation.addByPrefix('tail', Std.string(anim.prefix), anim.fps);
             }
         }
-        
+
         sustain.antialiasing = sustain.strum.data.antialiasing;
     }
 
@@ -247,27 +250,28 @@ abstract NoteStyle(NoteStyleParams) from NoteStyleParams to NoteStyleParams
         splash.animation.destroyAnimations();
         splash.animation.reset();
 
-        var isEK = KeyUtil.isEK(this.keys);
+        var isMultiKey = KeyUtil.isMultiKey(this.keys);
         var basePath = 'game/notes/splashes/${this.name}';
-        
-        var colDir:String = (isEK ? Constants.COLOR_DIRECTIONS[this.keys][splash.direction] : Constants.DIRECTIONS[this.keys][splash.direction]);
-        var path = splash.data.type == "SEPARATE" ? '$basePath/$colDir' : '$basePath/skin';
+        var suffix = isMultiKey ? '-multikey' : '';
 
-        if (!loadTexture(splash, path, splash.data.type, splash.data.textureBox))
+        var colDir:String = (isMultiKey ? Constants.COLOR_DIRECTIONS[this.keys][splash.direction] : Constants.DIRECTIONS[this.keys][splash.direction]);
+        var path = splash.data.type == "SEPARATE" ? '$basePath/$colDir' : resolveTexturePath('$basePath/skin', suffix);
+
+        if (path == null || !loadTexture(splash, path, splash.data.type, splash.data.textureBox))
             return;
 
         if (splash.data.animations != null)
         {
-            var anims:Array<BaseAnimationData> = isEK ? splash.data.animations.extraKeys : splash.data.animations.normal;
+            var anims:Array<BaseAnimationData> = isMultiKey ? splash.data.animations.multikeys : splash.data.animations.normal;
             
             var baseColor = colDir.toUpperCase();
             var bindColor = Constants.DIRECTIONS_KEYBIND[this.keys][splash.direction].toUpperCase();
             
             for (anim in anims)
             {
-                var isArray:Bool = Std.isOfType(anim.prefix, Array);
-                var prefixStr:String = isArray ? "" : Std.string(anim.prefix);
-                var isBind:Bool = !isArray && prefixStr.indexOf("keybind[") != -1;
+                var hasFrames:Bool = anim.frames != null && anim.frames.length > 0;
+                var prefixStr:String = hasFrames ? "" : Std.string(anim.prefix);
+                var isBind:Bool = !hasFrames && prefixStr.indexOf("keybind[") != -1;
                 var finalPrefix = isBind ? KeyUtil.formatNoteBind(prefixStr, this.keys) : prefixStr;
 
                 var name = anim.name;
@@ -292,15 +296,10 @@ abstract NoteStyle(NoteStyleParams) from NoteStyleParams to NoteStyleParams
 
                 if (targetName != "")
                 {
-                    if (splash.data.type == "TEXTURE" && isArray)
-                    {
-                        var framesArray:Array<Int> = cast anim.prefix;
-                        splash.animation.add(targetName, framesArray, anim.fps, false);
-                    }
-                    else if (!isArray)
-                    {
+                    if (splash.data.type == "TEXTURE" && hasFrames)
+                        splash.animation.add(targetName, anim.frames, anim.fps, false);
+                    else if (!hasFrames)
                         splash.animation.addByPrefix(targetName, finalPrefix, anim.fps, false);
-                    }
                 }
             }
 
@@ -322,18 +321,19 @@ abstract NoteStyle(NoteStyleParams) from NoteStyleParams to NoteStyleParams
         cover.animation.destroyAnimations();
         cover.animation.reset();
 
-        var isEK = KeyUtil.isEK(this.keys);
+        var isMultiKey = KeyUtil.isMultiKey(this.keys);
         var basePath = 'game/notes/covers/${this.name}';
-        var colDir:String = (isEK ? Constants.COLOR_DIRECTIONS[this.keys][cover.direction] : Constants.DIRECTIONS[this.keys][cover.direction]);
-        
-        var path = cover.data.type == "SEPARATE" ? '$basePath/$colDir' : '$basePath/skin';
+        var suffix = isMultiKey ? '-multikey' : '';
+        var colDir:String = Constants.COLOR_DIRECTIONS[this.keys][cover.direction];
 
-        if (!loadTexture(cover, path, cover.data.type, cover.data.textureBox))
+        var path = cover.data.type == "SEPARATE" ? '$basePath/$colDir' : resolveTexturePath('$basePath/skin', suffix);
+
+        if (path == null || !loadTexture(cover, path, cover.data.type, cover.data.textureBox))
             return;
 
         if (cover.data.animations != null)
         {
-            var anims:Array<BaseAnimationData> = isEK ? cover.data.animations.extraKeys : cover.data.animations.normal;
+            var anims:Array<BaseAnimationData> = isMultiKey ? cover.data.animations.multikeys : cover.data.animations.normal;
             
             var baseColor = colDir.toUpperCase();
             var bindColor = Constants.DIRECTIONS_KEYBIND[this.keys][cover.direction].toUpperCase();
@@ -348,26 +348,24 @@ abstract NoteStyle(NoteStyleParams) from NoteStyleParams to NoteStyleParams
 
             for (anim in anims)
             {
-                var isArray:Bool = Std.isOfType(anim.prefix, Array);
-                var prefixStr:String = isArray ? "" : Std.string(anim.prefix);
-                var isBind:Bool = !isArray && prefixStr.indexOf("keybind[") != -1;
+                var hasFrames:Bool = anim.frames != null && anim.frames.length > 0;
+                var prefixStr:String = hasFrames ? "" : Std.string(anim.prefix);
+                var isBind:Bool = !hasFrames && prefixStr.indexOf("keybind[") != -1;
 
                 var tStart = isBind ? startBind : startBase;
                 var tLoop = isBind ? loopBind : loopBase;
                 var tEnd = isBind ? endBind : endBase;
-                
-                if (cover.data.type == "TEXTURE" && isArray)
-                {
-                    var framesArray:Array<Int> = cast anim.prefix;
 
+                if (cover.data.type == "TEXTURE" && hasFrames)
+                {
                     if (anim.name == 'start' || anim.name == tStart)
-                        cover.animation.add('start', framesArray, anim.fps, false);
+                        cover.animation.add('start', anim.frames, anim.fps, false);
                     else if (anim.name == 'loop' || anim.name == tLoop)
-                        cover.animation.add('loop', framesArray, anim.fps, true);
+                        cover.animation.add('loop', anim.frames, anim.fps, true);
                     else if (anim.name == 'end' || anim.name == tEnd)
-                        cover.animation.add('end', framesArray, anim.fps, false);
+                        cover.animation.add('end', anim.frames, anim.fps, false);
                 }
-                else if (!isArray)
+                else if (!hasFrames)
                 {
                     var finalPrefix = isBind ? KeyUtil.formatNoteBind(prefixStr, this.keys) : prefixStr;
 

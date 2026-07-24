@@ -3,10 +3,8 @@ package game;
 import flixel.FlxCamera;
 import flixel.FlxSubState;
 
-import backend.assets.FunkinSound;
 import flixel.math.FlxMath;
 
-import flixel.util.FlxTimer;
 import flixel.util.FlxSignal.FlxTypedSignal;
 import flixel.util.FlxStringUtil;
 
@@ -1294,20 +1292,13 @@ class PlayState extends MusicBeatState
 
         if (chart != null && chart.strumlines != null)
         {
-            var noteskinsToReset:Array<String> = [];
             var charactersToReset:Array<String> = [];
 
             for (entry in chart.strumlines)
             {
-                if (!noteskinsToReset.contains(entry.skin))
-                    noteskinsToReset.push(entry.skin);
-
                 if (!charactersToReset.contains(entry.character))
                     charactersToReset.push(entry.character);
             }
-
-            for (skin in noteskinsToReset)
-                NoteSkinRegistry.reload(skin);
 
             for (character in charactersToReset)
                 CharacterRegistry.reload(character);
@@ -1531,7 +1522,7 @@ class PlayState extends MusicBeatState
             {
                 var strum = strumline.strums.members[note.direction];
 
-                if (note.direction < strumline.keyCount && strum != null)
+                if (note.direction < strumline.keyCount && strum != null && !strumline.hasActiveSustain(note.direction))
                 {
                     if (strum.timer != null)
                         strum.timer.cancel();
@@ -1540,7 +1531,7 @@ class PlayState extends MusicBeatState
 
                     if (note.sustain == null)
                     {
-                        strum.timer = new FlxTimer().start(conductor.beatLengthMs / 2000, (_) ->
+                        strum.timer = new FlxTimer().start(conductor.beatLengthMs / 1000, (_) ->
                         {
                             if (strum.animation.curAnim.name == "confirm")
                                 strum.play("pressed", true);
@@ -1556,7 +1547,7 @@ class PlayState extends MusicBeatState
         }
         else
         {
-            if (note.direction < strumline.keyCount)
+            if (note.direction < strumline.keyCount && !strumline.hasActiveSustain(note.direction))
             {
                 strumline.strumGlowTimers[note.direction] = event.strumResetTimer;
 

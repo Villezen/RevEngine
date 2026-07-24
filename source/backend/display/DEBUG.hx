@@ -16,7 +16,6 @@ import openfl.text.TextFormat;
 import openfl.text.TextField;
 import openfl.Lib;
 
-import flixel.FlxG;
 import flixel.FlxState;
 import flixel.FlxSubState;
 import flixel.math.FlxPoint;

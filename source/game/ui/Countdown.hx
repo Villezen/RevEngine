@@ -1,13 +1,7 @@
 package game.ui;
 
 import flixel.group.FlxSpriteGroup;
-import backend.assets.FunkinSprite;
-import flixel.FlxG;
 import flixel.util.FlxSignal;
-import flixel.util.FlxTimer;
-import flixel.tweens.FlxTween;
-import flixel.tweens.FlxEase;
-import backend.assets.FunkinSound;
 
 import backend.registries.ui.CountdownRegistry;
 import backend.registries.ui.CountdownRegistry.CountdownData;

@@ -36,6 +36,63 @@
             {"name": "holdDOWN", "offsets": [-1, 0]},
             {"name": "holdUP", "offsets": [0, 0]},
             {"name": "holdRIGHT", "offsets": [0, 0]}
+        ],
+
+        "multikeys":
+        [
+            {"name": "staticPURPLE", "prefix": "staticLeft"},
+            {"name": "pressedPURPLE", "prefix": "pressLeft"},
+            {"name": "confirmPURPLE", "prefix": "confirmLeft"},
+            {"name": "arrowPURPLE", "prefix": "noteLeft"},
+            {"name": "holdPURPLE"},
+
+            {"name": "staticBLUE", "prefix": "staticDown"},
+            {"name": "pressedBLUE", "prefix": "pressDown"},
+            {"name": "confirmBLUE", "prefix": "confirmDown"},
+            {"name": "arrowBLUE", "prefix": "noteDown"},
+            {"name": "holdBLUE"},
+
+            {"name": "staticGREEN", "prefix": "staticUp"},
+            {"name": "pressedGREEN", "prefix": "pressUp"},
+            {"name": "confirmGREEN", "prefix": "confirmUp"},
+            {"name": "arrowGREEN", "prefix": "noteUp"},
+            {"name": "holdGREEN"},
+
+            {"name": "staticRED", "prefix": "staticRight"},
+            {"name": "pressedRED", "prefix": "pressRight"},
+            {"name": "confirmRED", "prefix": "confirmRight"},
+            {"name": "arrowRED", "prefix": "noteRight"},
+            {"name": "holdRED"},
+
+            {"name": "staticWHITE", "prefix": "staticSpace"},
+            {"name": "pressedWHITE", "prefix": "pressSpace"},
+            {"name": "confirmWHITE", "prefix": "confirmSpace"},
+            {"name": "arrowWHITE", "prefix": "noteSpace"},
+            {"name": "holdWHITE"},
+
+            {"name": "staticYELLOW", "prefix": "staticLeft"},
+            {"name": "pressedYELLOW", "prefix": "pressAltLeft"},
+            {"name": "confirmYELLOW", "prefix": "confirmAltLeft"},
+            {"name": "arrowYELLOW", "prefix": "noteAltLeft"},
+            {"name": "holdYELLOW"},
+
+            {"name": "staticVIOLET", "prefix": "staticDown"},
+            {"name": "pressedVIOLET", "prefix": "pressAltDown"},
+            {"name": "confirmVIOLET", "prefix": "confirmAltDown"},
+            {"name": "arrowVIOLET", "prefix": "noteAltDown"},
+            {"name": "holdVIOLET"},
+
+            {"name": "staticDARKRED", "prefix": "staticUp"},
+            {"name": "pressedDARKRED", "prefix": "pressAltUp"},
+            {"name": "confirmDARKRED", "prefix": "confirmAltUp"},
+            {"name": "arrowDARKRED", "prefix": "noteAltUp"},
+            {"name": "holdDARKRED"},
+
+            {"name": "staticDARKBLUE", "prefix": "staticRight"},
+            {"name": "pressedDARKBLUE", "prefix": "pressAltRight"},
+            {"name": "confirmDARKBLUE", "prefix": "confirmAltRight"},
+            {"name": "arrowDARKBLUE", "prefix": "noteAltRight"},
+            {"name": "holdDARKBLUE"}
         ]
     }
 }

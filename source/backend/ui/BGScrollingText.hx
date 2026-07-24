@@ -2,7 +2,6 @@ package backend.ui;
 
 import flixel.math.FlxPoint;
 import flixel.text.FlxText;
-import flixel.util.FlxColor;
 import flixel.util.FlxSort;
 
 @:nullSafety

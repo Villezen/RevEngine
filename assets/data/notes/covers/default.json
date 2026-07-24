@@ -9,21 +9,60 @@
     {
         "normal":
         [
-            {"name": "startLEFT", "prefix": "holdCoverStartPurple", "offsets": [0, 0]},
-            {"name": "loopLEFT", "prefix": "holdCoverPurple", "offsets": [0, 0]},
-            {"name": "endLEFT", "prefix": "holdCoverEndPurple", "offsets": [0, 0]},
+            {"name": "startPURPLE", "prefix": "holdCoverStartPurple", "offsets": [0, 0]},
+            {"name": "loopPURPLE", "prefix": "holdCoverPurple", "offsets": [0, 0]},
+            {"name": "endPURPLE", "prefix": "holdCoverEndPurple", "offsets": [0, 0]},
 
-            {"name": "startDOWN", "prefix": "holdCoverStartBlue", "offsets": [-5, 0]},
-            {"name": "loopDOWN", "prefix": "holdCoverBlue", "offsets": [-5, 0]},
-            {"name": "endDOWN", "prefix": "holdCoverEndBlue", "offsets": [-5, 0]},
+            {"name": "startBLUE", "prefix": "holdCoverStartBlue", "offsets": [-5, 0]},
+            {"name": "loopBLUE", "prefix": "holdCoverBlue", "offsets": [-5, 0]},
+            {"name": "endBLUE", "prefix": "holdCoverEndBlue", "offsets": [-5, 0]},
 
-            {"name": "startUP", "prefix": "holdCoverStartGreen", "offsets": [0, 0]},
-            {"name": "loopUP", "prefix": "holdCoverGreen", "offsets": [0, 0]},
-            {"name": "endUP", "prefix": "holdCoverEndGreen", "offsets": [0, 0]},
+            {"name": "startGREEN", "prefix": "holdCoverStartGreen", "offsets": [0, 0]},
+            {"name": "loopGREEN", "prefix": "holdCoverGreen", "offsets": [0, 0]},
+            {"name": "endGREEN", "prefix": "holdCoverEndGreen", "offsets": [0, 0]},
 
-            {"name": "startRIGHT", "prefix": "holdCoverStartRed", "offsets": [0, 0]},
-            {"name": "loopRIGHT", "prefix": "holdCoverRed", "offsets": [0, 0]},
-            {"name": "endRIGHT", "prefix": "holdCoverEndRed", "offsets": [0, 0]}
+            {"name": "startRED", "prefix": "holdCoverStartRed", "offsets": [0, 0]},
+            {"name": "loopRED", "prefix": "holdCoverRed", "offsets": [0, 0]},
+            {"name": "endRED", "prefix": "holdCoverEndRed", "offsets": [0, 0]}
+        ],
+
+        "multikeys":
+        [
+            {"name": "startPURPLE", "prefix": "holdCoverStartPurple"},
+            {"name": "loopPURPLE", "prefix": "holdCoverPurple"},
+            {"name": "endPURPLE", "prefix": "holdCoverEndPurple"},
+
+            {"name": "startBLUE", "prefix": "holdCoverStartBlue", "offsets": [-5, 0]},
+            {"name": "loopBLUE", "prefix": "holdCoverBlue", "offsets": [-5, 0]},
+            {"name": "endBLUE", "prefix": "holdCoverEndBlue", "offsets": [-5, 0]},
+
+            {"name": "startGREEN", "prefix": "holdCoverStartGreen"},
+            {"name": "loopGREEN", "prefix": "holdCoverGreen"},
+            {"name": "endGREEN", "prefix": "holdCoverEndGreen"},
+
+            {"name": "startRED", "prefix": "holdCoverStartRed"},
+            {"name": "loopRED", "prefix": "holdCoverRed"},
+            {"name": "endRED", "prefix": "holdCoverEndRed"},
+
+            {"name": "startWHITE", "prefix": "holdCoverStartWhite"},
+            {"name": "loopWHITE", "prefix": "holdCoverWhite"},
+            {"name": "endWHITE", "prefix": "holdCoverEndWhite"},
+
+            {"name": "startYELLOW", "prefix": "holdCoverStartYellow"},
+            {"name": "loopYELLOW", "prefix": "holdCoverYellow"},
+            {"name": "endYELLOW", "prefix": "holdCoverEndYellow"},
+
+            {"name": "startVIOLET", "prefix": "holdCoverStartViolet"},
+            {"name": "loopVIOLET", "prefix": "holdCoverViolet"},
+            {"name": "endVIOLET", "prefix": "holdCoverEndViolet"},
+
+            {"name": "startDARKRED", "prefix": "holdCoverStartDarkred"},
+            {"name": "loopDARKRED", "prefix": "holdCoverDarkred"},
+            {"name": "endDARKRED", "prefix": "holdCoverEndDarkred"},
+
+            {"name": "startDARKBLUE", "prefix": "holdCoverStartDarkblue"},
+            {"name": "loopDARKBLUE", "prefix": "holdCoverDarkblue"},
+            {"name": "endDARKBLUE", "prefix": "holdCoverEndDarkblue"}
         ]
     }
 }

@@ -1,7 +1,5 @@
 package game.notes;
 
-import game.handlers.Conductor;
-
 import flixel.group.FlxGroup;
 import flixel.group.FlxSpriteGroup;
 
@@ -13,8 +11,6 @@ import flixel.math.FlxPoint;
 import flixel.util.FlxSort;
 import flixel.util.FlxDestroyUtil;
 import flixel.util.FlxSignal.FlxTypedSignal;
-
-import backend.assets.FunkinSprite;
 
 import backend.registries.ui.NoteSkinRegistry;
 
@@ -94,12 +90,31 @@ class Strumline extends FlxSpriteGroup
      */
     public var skin(default, set):String = "default";
 
+    /**
+     * The skin to actually render with. Skins for example that don't have a multikey variant and should load it will just resort them to the default skin.
+     * @param name The requested skin.
+     * @param keys The strumline's key count.
+     * @return The skin name to use.
+     */
+    function resolveEffectiveSkin(name:String, keys:Int):String
+    {
+        if (name == "default" || !KeyUtil.isMultiKey(keys))
+            return name;
+
+        if (Paths.exists('images/game/notes/styles/$name/strumline-multikey.png') || Paths.exists('images/game/notes/styles/$name/skin-multikey.png'))
+            return name;
+
+        return "default";
+    }
+
     function set_skin(value:String):String
     {
         skin = value;
 
-        _cachedSkinA.name = skin;
-        _cachedSkinB.name = skin;
+        var effectiveSkin:String = resolveEffectiveSkin(skin, keyCount);
+
+        _cachedSkinA.name = effectiveSkin;
+        _cachedSkinB.name = effectiveSkin;
 
         _cachedSkinA.keys = keyCount;
         _cachedSkinB.keys = keyCount;
@@ -107,18 +122,7 @@ class Strumline extends FlxSpriteGroup
         if (strums.length == 0 || inIntro)
             return skin;
 
-        for (strum in strums.members)
-        {
-            if (strum == null) continue;
-
-            if (strum.direction < keyCount)
-            {
-                strum.skin = getSkinParams();
-                invalidateScale(strum);
-                applyScale(strum);
-                strum.y = ((Constants.STRUM_WIDTH - strum.height) / 2) + strums.y;
-            }
-        }
+        reload_strums();
 
         for (note in notes.members)
         {
@@ -255,8 +259,10 @@ class Strumline extends FlxSpriteGroup
         else if (keyCount < 1)
             keyCount = 1;
 
-        _cachedSkinA.name = skin;
-        _cachedSkinB.name = skin;
+        var effectiveSkin:String = resolveEffectiveSkin(skin, keyCount);
+
+        _cachedSkinA.name = effectiveSkin;
+        _cachedSkinB.name = effectiveSkin;
 
         _cachedSkinA.keys = keyCount;
         _cachedSkinB.keys = keyCount;
@@ -289,7 +295,7 @@ class Strumline extends FlxSpriteGroup
         for (note in notes.members)
         {
             if (note == null || !note.alive) continue;
-            
+
             if (note.direction < keyCount)
             {
                 note.parent = strums.members[note.direction];
@@ -535,11 +541,11 @@ class Strumline extends FlxSpriteGroup
             else
                 strum.play("static", true);
 
-            if (strum.data != null) 
+            if (strum.data != null)
             {
-                strum.x = (i * ((strum.data.strumWidth * 0.7) * targetScale)) + strum.data.position[0];
+                strum.x = (i * ((strum.data.strumWidth * 0.7) * targetScale));
                 strum.y = (((strum.data.strumWidth * 0.7) - strum.height) / 2) + strum.data.position[1];
-            } 
+            }
             else 
             {
                 strum.x = (i * (112 * 0.7 * targetScale));
@@ -576,7 +582,7 @@ class Strumline extends FlxSpriteGroup
         }
         
         for (arrow in strums.members)
-            arrow.x += offsetX;
+            arrow.x += offsetX + (arrow.data != null ? arrow.data.position[0] : 0);
     }
 
     /**
@@ -589,6 +595,7 @@ class Strumline extends FlxSpriteGroup
 
         var splashSkin:String = resolveSplashSkin();
         hasSplashes = splashSkin != null;
+
 
         if (!hasSplashes || cpu)
             return;
@@ -621,6 +628,8 @@ class Strumline extends FlxSpriteGroup
     function reload_covers()
     {
         var oldAnims:Array<AnimState> = captureAnimStates(covers.members);
+        var oldActive:Array<Bool> = [for (c in covers.members) c != null && c.isActive()];
+
         clearGroup(covers);
 
         var coverSkin:String = resolveCoverSkin();
@@ -646,6 +655,9 @@ class Strumline extends FlxSpriteGroup
                 cover.playAnimation(old.name, true, false, old.frame);
                 cover.visible = old.visible;
             }
+
+            if (i < oldActive.length && oldActive[i])
+                cover.setActive(true);
 
             covers.add(cover);
         }
@@ -728,17 +740,18 @@ class Strumline extends FlxSpriteGroup
      */
     function resolveCoverSkin():String
     {
-        var style = NoteSkinRegistry.getStyle(skin);
+        var effSkin:String = resolveEffectiveSkin(skin, keyCount);
+        var style = NoteSkinRegistry.getStyle(effSkin);
 
         if (style == null || style.hasCovers == false)
             return null;
 
-        if (skinHasCovers(skin))
-            return skin;
+        if (skinHasCovers(effSkin))
+            return effSkin;
 
         var fallback = (style.fallbackCovers != null && style.fallbackCovers != "") ? style.fallbackCovers : "default";
 
-        if (fallback != skin && skinHasCovers(fallback))
+        if (fallback != effSkin && skinHasCovers(fallback))
             return fallback;
 
         return null;
@@ -750,17 +763,21 @@ class Strumline extends FlxSpriteGroup
      */
     function resolveSplashSkin():String
     {
-        var style = NoteSkinRegistry.getStyle(skin);
+        var effSkin:String = resolveEffectiveSkin(skin, keyCount);
+        var style = NoteSkinRegistry.getStyle(effSkin);
 
         if (style == null || style.hasSplashes == false)
             return null;
 
-        if (skinHasSplashes(skin))
-            return skin;
+        if (skinHasSplashes(effSkin))
+            return effSkin;
+
+        if (KeyUtil.isMultiKey(keyCount))
+            return null;
 
         var fallback = (style.fallbackSplashes != null && style.fallbackSplashes != "") ? style.fallbackSplashes : "default";
 
-        if (fallback != skin && skinHasSplashes(fallback))
+        if (fallback != effSkin && skinHasSplashes(fallback))
             return fallback;
 
         return null;
@@ -781,7 +798,7 @@ class Strumline extends FlxSpriteGroup
     inline function skinHasSplashes(name:String):Bool
     {
         var data = NoteSkinRegistry.getSplash(name);
-        return data != null && hasSkinImages('game/notes/splashes/$name', data.type);
+        return data != null && hasSkinImages('game/notes/splashes/$name', data.type, true);
     }
 
     /**
@@ -790,21 +807,22 @@ class Strumline extends FlxSpriteGroup
      * @param type The skin's `type`.
      * @return Whether at least one required image exists.
      */
-    function hasSkinImages(basePath:String, type:String):Bool
+    function hasSkinImages(basePath:String, type:String, strictMultiKey:Bool = false):Bool
     {
         if (type == "SEPARATE")
         {
-            var isEK:Bool = KeyUtil.isEK(keyCount);
-
             for (i in 0...keyCount)
             {
-                var colDir:String = isEK ? Constants.COLOR_DIRECTIONS[keyCount][i] : Constants.DIRECTIONS[keyCount][i];
+                var colDir:String = Constants.COLOR_DIRECTIONS[keyCount][i];
                 if (Paths.exists('images/$basePath/$colDir.png'))
                     return true;
             }
 
             return false;
         }
+
+        if (strictMultiKey && KeyUtil.isMultiKey(keyCount))
+            return Paths.exists('images/$basePath/skin-multikey.png');
 
         return Paths.exists('images/$basePath/skin.png');
     }
@@ -1202,15 +1220,28 @@ class Strumline extends FlxSpriteGroup
     {
         _hittableNotesCache.resize(0);
 
-        for (note in notes.members) 
+        for (note in notes.members)
         {
-            if (note != null && note.alive && note.canBeHit && !note.hit && note.direction == key) 
-            {
+            if (note != null && note.alive && note.canBeHit && !note.hit && note.direction == key)
                 _hittableNotesCache.push(note);
-            }
         }
-        
+
         return _hittableNotesCache;
+    }
+
+    /**
+     * Whether a sustain on the given direction is currently being held (glowing).
+     * @param direction The note direction to check.
+     */
+    public function hasActiveSustain(direction:Int):Bool
+    {
+        for (sustain in sustains.members)
+        {
+            if (sustain != null && sustain.alive && sustain.direction == direction && sustain.glow && sustain.length > 0)
+                return true;
+        }
+
+        return false;
     }
 
     /**

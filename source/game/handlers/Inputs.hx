@@ -4,7 +4,6 @@ import backend.Controls.DigitalActionDR;
 import flixel.util.FlxSignal.FlxTypedSignal;
 import flixel.input.keyboard.FlxKey;
 import openfl.events.KeyboardEvent;
-import flixel.FlxG;
 
 /**
  * Data structure representing a single input event.

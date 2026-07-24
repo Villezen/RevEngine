@@ -23,11 +23,11 @@ class KeyUtil
     }
 
     /**
-     * Checks if the class should load the "_ek" variant of a skin.
+     * Checks if the class should load the "-multikey" variant of a skin.
      * @param keyCount The key amount.
-     * @return Should it use the "_ek" variant?
+     * @return Should it use the "-multikey" variant?
      */
-    public static function isEK(keys:Int):Bool
+    public static function isMultiKey(keys:Int):Bool
     {
         return (keys > 4 || [3, 1].contains(keys));
     }

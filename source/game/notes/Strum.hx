@@ -3,8 +3,6 @@ package game.notes;
 import backend.registries.ui.NoteSkinRegistry;
 import backend.registries.ui.NoteSkinRegistry.BaseAnimationData;
 
-import flixel.util.FlxTimer;
-
 import backend.utils.KeyUtil;
 
 /**
@@ -12,6 +10,9 @@ import backend.utils.KeyUtil;
  */
 class Strum extends FunkinSprite
 {
+    private var _appliedSkin:String = null;
+    private var _appliedKeys:Int = -1;
+
     /**
      * The parent strumline of the strum.
      */
@@ -34,13 +35,24 @@ class Strum extends FunkinSprite
 
     function set_skin(value:NoteStyle):NoteStyle
     {
-        if (skin == value) return skin;
+        if (value == null)
+        {
+            _appliedSkin = null;
+            _appliedKeys = -1;
+            return skin = null;
+        }
+
+        if (value.name == _appliedSkin && value.keys == _appliedKeys)
+            return skin = value;
 
         FlxTween.cancelTweensOf(this);
         data = NoteSkinRegistry.getStyle(value.name);
 
         value.applyToStrum(this);
         play('static', true);
+
+        _appliedSkin = value.name;
+        _appliedKeys = value.keys;
 
         return skin = value;
     }
@@ -81,8 +93,8 @@ class Strum extends FunkinSprite
 
         if (data != null && parent != null)
         {
-            var anims:Array<BaseAnimationData> = KeyUtil.isEK(parent.keyCount) ? data.animations.extraKeys : data.animations.normal;
-            var colorStr:String = (KeyUtil.isEK(parent.keyCount) ? Constants.COLOR_DIRECTIONS[parent.keyCount][direction] : Constants.DIRECTIONS[parent.keyCount][direction]).toUpperCase();
+            var anims:Array<BaseAnimationData> = KeyUtil.isMultiKey(parent.keyCount) ? data.animations.multikeys : data.animations.normal;
+            var colorStr:String = (KeyUtil.isMultiKey(parent.keyCount) ? Constants.COLOR_DIRECTIONS[parent.keyCount][direction] : Constants.DIRECTIONS[parent.keyCount][direction]).toUpperCase();
 
             for (animEntry in anims)
             {

@@ -1,7 +1,5 @@
 package backend.modding;
 
-import backend.assets.FunkinSprite;
-
 import backend.MusicBeatSubState;
 import flixel.text.FlxText;
 

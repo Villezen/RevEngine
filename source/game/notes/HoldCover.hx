@@ -113,6 +113,16 @@ class HoldCover extends FunkinSprite
         _alphaMult = HIDDEN_ALPHA;
     }
 
+    public function isActive():Bool
+    {
+        return _alphaMult > 0.5;
+    }
+
+    public function setActive(active:Bool):Void
+    {
+        _alphaMult = active ? 1.0 : HIDDEN_ALPHA;
+    }
+
     /**
      * Plays a hold cover animation and applies its respective JSON offsets.
      */
@@ -126,8 +136,8 @@ class HoldCover extends FunkinSprite
         if (data != null && data.animations != null)
         {
             var animArray:Array<Float> = [0, 0];
-            var anims:Array<BaseAnimationData> = KeyUtil.isEK(skin.keys) ? data.animations.extraKeys : data.animations.normal;
-            var colorStr:String = (KeyUtil.isEK(skin.keys) ? Constants.COLOR_DIRECTIONS[skin.keys][direction] : Constants.DIRECTIONS[skin.keys][direction]).toUpperCase();
+            var anims:Array<BaseAnimationData> = KeyUtil.isMultiKey(skin.keys) ? data.animations.multikeys : data.animations.normal;
+            var colorStr:String = Constants.COLOR_DIRECTIONS[skin.keys][direction].toUpperCase();
 
             for (animEntry in anims)
             {
@@ -156,8 +166,11 @@ class HoldCover extends FunkinSprite
 
         if (parent != null)
         {
-            x = (parent.x + (parent.width - width) / 2) + data.position[0];
-            y = (parent.y + (parent.height - height) / 2) + (data.position[1] * downscrollMult);
+            var posScale:Float = KeyUtil.getKeyScaleOffset(skin != null ? skin.keys : 4);
+
+            x = (parent.x + (parent.width - width) / 2) + (data.position[0] * posScale);
+            y = (parent.y + (parent.height - height) / 2) + (data.position[1] * posScale * downscrollMult);
+
 
             alpha = parent.alpha * _alphaMult;
             angle = parent.angle;

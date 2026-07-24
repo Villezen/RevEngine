@@ -2,16 +2,10 @@ package backend.transition;
 
 import flixel.group.FlxSpriteGroup;
 import flixel.group.FlxSpriteGroup.FlxTypedSpriteGroup;
-import flixel.FlxG;
 import flixel.math.FlxMath;
-import flixel.util.FlxTimer;
 import flixel.util.FlxSort;
 import flixel.addons.display.FlxRuntimeShader;
-import flixel.tweens.FlxTween;
-import flixel.tweens.FlxEase;
 import openfl.filters.ShaderFilter;
-import backend.assets.FunkinSound;
-import backend.assets.Paths;
 
 typedef StickerPack =
 {

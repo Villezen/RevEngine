@@ -1,0 +1,24 @@
+{
+    "type": "COMBINED",
+
+    "size": [6.0, 6.0],
+    "position": [0, -20],
+    "antialiasing": false,
+
+    "animations":
+    {
+        "normal":
+        [
+            {"name": "start", "prefix": "loop0000", "fps": 24},
+            {"name": "loop", "prefix": "loop", "fps": 24},
+            {"name": "end", "prefix": "explode", "fps": 24}
+        ],
+
+        "multikeys":
+        [
+            {"name": "start", "prefix": "loop0000", "fps": 24},
+            {"name": "loop", "prefix": "loop", "fps": 24},
+            {"name": "end", "prefix": "explode", "fps": 24}
+        ]
+    }
+}

@@ -21,7 +21,6 @@ import backend.modding.ModSubState;
 
 import backend.assets.Cacher;
 import backend.assets.Cacher.RevAssets;
-import backend.assets.Paths;
 
 import backend.frontends.FrontEndHandler;
 
@@ -46,7 +45,7 @@ class Initialize extends FlxState
         super.create();
 
         Assets.cache = RevAssets.instance;
-        Paths.ensureRevAssets();
+        Paths.ensureAssets();
 
         Cacher.init();
 

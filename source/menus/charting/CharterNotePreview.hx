@@ -1,7 +1,6 @@
 package menus.charting;
 
 import flixel.group.FlxSpriteGroup;
-import flixel.util.FlxColor;
 
 import openfl.geom.Rectangle;
 
@@ -68,8 +67,7 @@ class CharterNotePreview extends FlxSpriteGroup
             for (note in strumline.notes)
             {
                 var dir:Int = note.direction;
-                if (dir < 0) dir = 0;
-                if (dir >= strumline.keys) dir = strumline.keys - 1;
+                if (dir < 0 || dir >= strumline.keys) continue;
 
                 var noteX:Int = (column + dir) * columnWidth;
 

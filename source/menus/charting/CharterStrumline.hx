@@ -5,21 +5,26 @@ import flixel.FlxCamera;
 import flixel.addons.display.FlxRuntimeShader;
 import flixel.graphics.FlxGraphic;
 import flixel.math.FlxRect;
-import flixel.util.FlxColor;
 import flixel.util.FlxDestroyUtil;
 
 import backend.registries.world.CharacterRegistry;
+import backend.utils.KeyUtil;
 
 typedef CharterNoteGraphics =
 {
     var heads:Array<FlxGraphic>;
     var bodies:Array<FlxGraphic>;
     var caps:Array<FlxGraphic>;
+
+    var multiHeads:Map<String, FlxGraphic>;
+    var multiBodies:Map<String, FlxGraphic>;
+    var multiCaps:Map<String, FlxGraphic>;
 }
 
 class CharterStrumline extends FlxBasic
 {
     public static inline final KEY_AMOUNT:Int = 4;
+    static inline final MAX_COLUMNS:Int = 9;
 
     static inline final STATE_NORMAL:Int = 0;
     static inline final STATE_SELECTED:Int = 1;
@@ -41,8 +46,11 @@ class CharterStrumline extends FlxBasic
     public var totalHeight(default, null):Float;
 
     public var columnColors(default, null):Array<FlxColor> = [];
-    public var columnGraphics(default, null):Array<Int> = [];
     public var maxSustain(default, null):Float = 0.0;
+
+    var columnHeads:Array<FlxGraphic> = [];
+    var columnBodies:Array<FlxGraphic> = [];
+    var columnCaps:Array<FlxGraphic> = [];
 
     public var grid(default, null):FunkinSprite;
 
@@ -74,7 +82,7 @@ class CharterStrumline extends FlxBasic
 
         this.width = (gridSize * this.keys) + (gridOutline * 2);
 
-        for (i in 0...KEY_AMOUNT)
+        for (i in 0...MAX_COLUMNS)
         {
             headPools.push([]);
             bodyPools.push([]);
@@ -127,35 +135,72 @@ class CharterStrumline extends FlxBasic
             grid.x = value;
     }
 
-    public function setKeys(value:Int):Void
+    public function setKeys(value:Int, clampNotes:Bool = true):Void
     {
         keys = (value < 1) ? 1 : ((value > 9) ? 9 : value);
         width = (gridSize * keys) + (gridOutline * 2);
 
-        for (note in notes)
+        if (clampNotes)
         {
-            if (note.direction >= keys) note.direction = keys - 1;
-            if (note.direction < 0) note.direction = 0;
+            for (note in notes)
+            {
+                if (note.direction >= keys) note.direction = keys - 1;
+                if (note.direction < 0) note.direction = 0;
+            }
         }
 
         buildColumnTables();
     }
 
+    public function resizeGrid():Void
+    {
+        if (grid == null)
+        {
+            buildGrid(totalHeight);
+            return;
+        }
+
+        grid.setGraphicSize(Std.int(width), Std.int(totalHeight + gridOutline));
+        grid.updateHitbox();
+        grid.x = x;
+
+        var shader:FlxRuntimeShader = Std.downcast(grid.shader, FlxRuntimeShader);
+        if (shader != null)
+            shader.setFloatArray("u_spriteSize", [grid.width, grid.height]);
+    }
+
     function buildColumnTables():Void
     {
         columnColors = [];
-        columnGraphics = [];
+        columnHeads = [];
+        columnBodies = [];
+        columnCaps = [];
 
         var colorNames:Array<String> = Constants.COLOR_DIRECTIONS.exists(keys) ? Constants.COLOR_DIRECTIONS.get(keys) : null;
         var dirNames:Array<String> = Constants.DIRECTIONS.exists(keys) ? Constants.DIRECTIONS.get(keys) : null;
+
+        var multikey:Bool = KeyUtil.isMultiKey(keys);
 
         for (dir in 0...keys)
         {
             var colorName:String = (colorNames != null && dir < colorNames.length) ? colorNames[dir] : null;
             columnColors.push(CharterStrumline.colorFor(colorName));
 
-            var dirName:String = (dirNames != null && dir < dirNames.length) ? dirNames[dir] : null;
-            columnGraphics.push(CharterStrumline.graphicFor(dirName, dir));
+            if (multikey && graphics != null && colorName != null && graphics.multiHeads.exists(colorName))
+            {
+                columnHeads.push(graphics.multiHeads.get(colorName));
+                columnBodies.push(graphics.multiBodies.get(colorName));
+                columnCaps.push(graphics.multiCaps.get(colorName));
+            }
+            else
+            {
+                var dirName:String = (dirNames != null && dir < dirNames.length) ? dirNames[dir] : null;
+                var slot:Int = CharterStrumline.graphicFor(dirName, dir);
+
+                columnHeads.push((graphics != null && slot < graphics.heads.length) ? graphics.heads[slot] : null);
+                columnBodies.push((graphics != null && slot < graphics.bodies.length) ? graphics.bodies[slot] : null);
+                columnCaps.push((graphics != null && slot < graphics.caps.length) ? graphics.caps[slot] : null);
+            }
         }
     }
 
@@ -163,15 +208,15 @@ class CharterStrumline extends FlxBasic
     {
         return switch (name)
         {
-            case "purple" | "A": 0xFFFF22AA;
-            case "blue" | "B": 0xFF00EEFF;
-            case "green" | "C": 0xFF00CC00;
-            case "red" | "D": 0xFFCC1111;
-            case "E": 0xFFEEEEEE;
-            case "F": 0xFFEEEEEE;
-            case "G": 0xFFEEEEEE;
-            case "H": 0xFFEEEEEE;
-            case "I": 0xFFEEEEEE;
+            case "purple": 0xFFC24BC2;
+            case "blue": 0xFF00EEFF;
+            case "green": 0xFF00CC00;
+            case "red": 0xFFF6656B;
+            case "white": 0xFFDDDDDD;
+            case "yellow": 0xFFF5E100;
+            case "violet": 0xFF8B3FE0;
+            case "darkred": 0xFFE33B3B;
+            case "darkblue": 0xFF2634CE;
             default: 0xFFBBBBBB;
         }
     }
@@ -236,7 +281,7 @@ class CharterStrumline extends FlxBasic
     {
         this.playheadY = playheadY;
 
-        for (i in 0...KEY_AMOUNT)
+        for (i in 0...MAX_COLUMNS)
         {
             headCounts[i] = 0;
             bodyCounts[i] = 0;
@@ -265,8 +310,7 @@ class CharterStrumline extends FlxBasic
 
     public function drawNote(dir:Int, time:Float, sustain:Float, pixelsPerMs:Float, selected:Bool, ghost:Bool):Void
     {
-        if (dir < 0) dir = 0;
-        if (dir >= keys) dir = keys - 1;
+        if (dir < 0 || dir >= keys) return;
 
         var noteX:Float = x + gridOutline + (dir * gridSize);
         var noteY:Float = gridOutline + (time * pixelsPerMs);
@@ -276,10 +320,7 @@ class CharterStrumline extends FlxBasic
 
     public function drawNoteAt(noteX:Float, noteY:Float, dir:Int, sustain:Float, pixelsPerMs:Float, selected:Bool, ghost:Bool):Void
     {
-        if (dir < 0) dir = 0;
-        if (dir >= keys) dir = keys - 1;
-
-        var graphic:Int = columnGraphics[dir];
+        if (dir < 0 || dir >= keys) return;
 
         var alpha:Float = ghost ? 0.35 : 1.0;
         var state:Int = ghost ? STATE_GHOST : (selected ? STATE_SELECTED : STATE_NORMAL);
@@ -296,15 +337,15 @@ class CharterStrumline extends FlxBasic
 
             if (bodyHeight > 0)
             {
-                var body:FunkinSprite = acquire(bodyPools[graphic], bodyCounts[graphic]++, graphics.bodies[graphic]);
+                var body:FunkinSprite = acquire(bodyPools[dir], bodyCounts[dir]++, columnBodies[dir]);
                 place(body, sustainX, sustainY, sustainWidth, bodyHeight + 1.0, alpha, state);
             }
 
-            var cap:FunkinSprite = acquire(capPools[graphic], capCounts[graphic]++, graphics.caps[graphic]);
+            var cap:FunkinSprite = acquire(capPools[dir], capCounts[dir]++, columnCaps[dir]);
             place(cap, sustainX, sustainY + bodyHeight, sustainWidth, capHeight, alpha, state);
         }
 
-        var head:FunkinSprite = acquire(headPools[graphic], headCounts[graphic]++, graphics.heads[graphic]);
+        var head:FunkinSprite = acquire(headPools[dir], headCounts[dir]++, columnHeads[dir]);
         place(head, noteX, noteY, gridSize, gridSize, alpha, state);
     }
 
@@ -315,15 +356,20 @@ class CharterStrumline extends FlxBasic
         if (sprite == null)
         {
             sprite = new FunkinSprite();
-
-            if (graphic != null)
-                sprite.loadGraphic(graphic);
-            else
-                sprite.makeGraphic(1, 1, FlxColor.TRANSPARENT);
-
             sprite.camera = gridCamera;
             pool.push(sprite);
         }
+
+        if (graphic != null)
+        {
+            if (sprite.graphic != graphic)
+            {
+                sprite.loadGraphic(graphic);
+                sprite.updateHitbox();
+            }
+        }
+        else if (sprite.graphic == null)
+            sprite.makeGraphic(1, 1, FlxColor.TRANSPARENT);
 
         return sprite;
     }
@@ -349,13 +395,13 @@ class CharterStrumline extends FlxBasic
     {
         if (!visible) return;
 
-        for (graphic in 0...KEY_AMOUNT)
+        for (graphic in 0...MAX_COLUMNS)
             drawSustainPool(bodyPools[graphic], bodyCounts[graphic]);
 
-        for (graphic in 0...KEY_AMOUNT)
+        for (graphic in 0...MAX_COLUMNS)
             drawSustainPool(capPools[graphic], capCounts[graphic]);
 
-        for (graphic in 0...KEY_AMOUNT)
+        for (graphic in 0...MAX_COLUMNS)
         {
             var pool:Array<FunkinSprite> = headPools[graphic];
             var count:Int = headCounts[graphic];
@@ -484,12 +530,15 @@ class CharterStrumline extends FlxBasic
         if (!containsX(worldX) || stepLengthMs <= 0) return null;
 
         var pixelsPerMs:Float = gridSize / stepLengthMs;
-        var i:Int = firstVisibleIndex(((worldY - gridOutline) / gridSize) * stepLengthMs);
+        var clickTime:Float = ((worldY - gridOutline) / gridSize) * stepLengthMs;
+        var i:Int = firstVisibleIndex(clickTime - stepLengthMs);
 
         while (i < notes.length)
         {
             var note:CharterNote = notes[i];
             i++;
+
+            if (note.direction >= keys) continue;
 
             var noteY:Float = gridOutline + (note.time * pixelsPerMs);
             if (noteY > worldY) break;
@@ -526,6 +575,7 @@ class CharterStrumline extends FlxBasic
             i++;
 
             if (note.time > endTime) break;
+            if (note.direction >= keys) continue;
 
             var noteX:Float = x + gridOutline + (note.direction * gridSize) + inset;
             var noteY:Float = gridOutline + (note.time * pixelsPerMs) + inset;

@@ -8,19 +8,25 @@ import backend.utils.KeyUtil;
  */
 class Note extends FunkinSprite
 {
+    private var _appliedSkin:String = null;
+    private var _appliedKeys:Int = -1;
+
     /**
      * The skin applied to the note.
      */
     public var skin(default, set):NoteStyle;
+
     function set_skin(value:NoteStyle):NoteStyle
     {
-        if (skin == value) return skin;
-
         if (value == null)
         {
-            skin = null;
-            return null;
+            _appliedSkin = null;
+            _appliedKeys = -1;
+            return skin = null;
         }
+
+        if (value.name == _appliedSkin && value.keys == _appliedKeys)
+            return skin = value;
 
         skinOffsetX = 0;
         skinOffsetY = 0;
@@ -31,10 +37,10 @@ class Note extends FunkinSprite
         value.applyToNote(this);
 
         var keyCount = parent.parent.keyCount;
-        var isExtraKeys = KeyUtil.isEK(keyCount);
+        var isMultiKey = KeyUtil.isMultiKey(keyCount);
 
-        var anims:Array<BaseAnimationData> = isExtraKeys ? parent.data.animations.extraKeys : parent.data.animations.normal;
-        var colorStr:String = (isExtraKeys ? Constants.COLOR_DIRECTIONS[keyCount][parent.direction] : Constants.DIRECTIONS[keyCount][parent.direction]).toUpperCase();
+        var anims:Array<BaseAnimationData> = isMultiKey ? parent.data.animations.multikeys : parent.data.animations.normal;
+        var colorStr:String = (isMultiKey ? Constants.COLOR_DIRECTIONS[keyCount][parent.direction] : Constants.DIRECTIONS[keyCount][parent.direction]).toUpperCase();
         var bindColorStr:String = Constants.DIRECTIONS_KEYBIND[keyCount][parent.direction].toUpperCase();
 
         var targetAnimName:String = 'arrow' + colorStr;
@@ -56,6 +62,9 @@ class Note extends FunkinSprite
 
         updateHitbox();
         sync();
+
+        _appliedSkin = value.name;
+        _appliedKeys = value.keys;
 
         return skin = value;
     }

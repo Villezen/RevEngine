@@ -5,7 +5,6 @@ import haxe.io.Path;
 import json2object.JsonParser;
 
 import backend.converters.Converter;
-import backend.assets.Paths;
 
 import backend.utils.RegistryUtil;
 

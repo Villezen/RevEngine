@@ -1,7 +1,5 @@
 package backend.ui;
 
-import backend.assets.FunkinSprite;
-
 import flixel.graphics.frames.FlxAtlasFrames;
 import flixel.text.FlxBitmapText;
 import flixel.group.FlxSpriteGroup;
@@ -405,15 +403,16 @@ class Dropdown extends FlxSpriteGroup implements IUiEntry
             targetScroll = 0;
         }
 
-        var arrowHovered = FlxG.mouse.overlaps(arrowHitbox);
-        arrow.color = arrowHovered ? 0xFFCCCCCC : 0xFFFFFFFF;
+        var boxHovered = FlxG.mouse.overlaps(baseHitbox);
+        
+        arrow.color = boxHovered ? 0xFFCCCCCC : 0xFFFFFFFF;
         arrow.flipY = isDropped ? true : false;
 
         if (FlxG.mouse.justPressed)
         {
             if (backend.ui.UiManager.hasFocus(this))
             {
-                if (arrowHovered)
+                if (boxHovered)
                 {
                     if (isDropped) hideList();
                     else showList();

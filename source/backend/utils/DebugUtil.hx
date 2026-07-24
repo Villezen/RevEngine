@@ -3,8 +3,6 @@ package backend.utils;
 import flixel.FlxState;
 import flixel.FlxSubState;
 
-import backend.Manager;
-
 #if windows
 import backend.platform.windows.WinAPI;
 #end

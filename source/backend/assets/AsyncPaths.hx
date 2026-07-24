@@ -5,7 +5,6 @@ import sys.FileSystem;
 import sys.io.File;
 import haxe.MainLoop;
 
-import flixel.FlxG;
 import flixel.graphics.FlxGraphic;
 import backend.utils.ThreadUtil;
 
@@ -131,7 +130,7 @@ class AsyncPaths
                 }
                 else if (snd != null)
                 {
-                    Paths.ensureRevAssets().setSound(cacheKey, snd);
+                    Paths.ensureAssets().setSound(cacheKey, snd);
                     markSound(cacheKey, permanent, preload);
 
                     if (audioBuffer != null)

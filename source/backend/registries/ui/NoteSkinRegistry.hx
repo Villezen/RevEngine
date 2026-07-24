@@ -53,13 +53,14 @@ typedef HoldCoverData =
 typedef BaseAnimations =
 {
     @:optional var normal:Array<BaseAnimationData>;
-    @:optional var extraKeys:Array<BaseAnimationData>;
+    @:optional var multikeys:Array<BaseAnimationData>;
 }
 
 typedef BaseAnimationData =
 {
     @:optional var name:String;
     @:optional var prefix:String;
+    @:optional var frames:Array<Int>;
     @:optional var fps:Null<Int>;
     @:optional var offsets:Array<Float>;
 }
@@ -120,36 +121,45 @@ class NoteSkinRegistry
     public static function reloadStyle(name:String):Void
     {
         var rawData:String = "{}";
+
         #if sys
         if (Paths.exists('$PATH_STYLES/$name.json'))
-            rawData = Paths.data('$name.json', PATH_STYLES);
+            rawData = Paths.data('$name.json', PATH_STYLES, false, true);
         #end
+
         styleParser.fromJson(rawData, '$PATH_STYLES/$name.json');
         RegistryUtil.reportErrors('$PATH_STYLES/$name.json', styleParser.errors);
+
         styleList.set(name, validateStyleData(styleParser.value));
     }
 
     public static function reloadSplash(name:String):Void
     {
         var rawData:String = "{}";
+
         #if sys
         if (Paths.exists('$PATH_SPLASHES/$name.json'))
-            rawData = Paths.data('$name.json', PATH_SPLASHES);
+            rawData = Paths.data('$name.json', PATH_SPLASHES, false, true);
         #end
+
         splashParser.fromJson(rawData, '$PATH_SPLASHES/$name.json');
         RegistryUtil.reportErrors('$PATH_SPLASHES/$name.json', splashParser.errors);
+
         splashList.set(name, validateSplashData(splashParser.value));
     }
 
     public static function reloadCover(name:String):Void
     {
         var rawData:String = "{}";
+
         #if sys
         if (Paths.exists('$PATH_COVERS/$name.json'))
-            rawData = Paths.data('$name.json', PATH_COVERS);
+            rawData = Paths.data('$name.json', PATH_COVERS, false, true);
         #end
+
         coverParser.fromJson(rawData, '$PATH_COVERS/$name.json');
         RegistryUtil.reportErrors('$PATH_COVERS/$name.json', coverParser.errors);
+
         coverList.set(name, validateCoverData(coverParser.value));
     }
 
@@ -157,7 +167,7 @@ class NoteSkinRegistry
     {
         if (anim == null) anim = {};
         if (anim.normal == null) anim.normal = [];
-        if (anim.extraKeys == null) anim.extraKeys = [];
+        if (anim.multikeys == null) anim.multikeys = [];
 
         var validateDataList = function(list:Array<BaseAnimationData>)
         {
@@ -176,7 +186,7 @@ class NoteSkinRegistry
         };
 
         validateDataList(anim.normal);
-        validateDataList(anim.extraKeys);
+        validateDataList(anim.multikeys);
         
         return anim;
     }

@@ -4,7 +4,6 @@ import haxe.io.Path;
 import sys.FileSystem;
 import sys.io.File;
 
-import flixel.FlxG;
 import flixel.graphics.FlxGraphic;
 import flixel.graphics.frames.FlxAtlasFrames;
 import flixel.graphics.frames.FlxBitmapFont;
@@ -104,7 +103,7 @@ class Paths
         var ext = extension != "" ? '.$extension' : "";
         var cacheKey = absolute ? '$file$ext' : 'assets/$folder/$file$ext';
 
-        var rev = ensureRevAssets();
+        var rev = ensureAssets();
 
         if (rev.hasBitmapData(cacheKey))
         {
@@ -174,7 +173,7 @@ class Paths
 
             if (snd != null)
             {
-                ensureRevAssets().setSound(cacheKey, snd);
+                ensureAssets().setSound(cacheKey, snd);
                 Cacher.instance.stampFile(cacheKey, realPath);
             }
         }
@@ -213,11 +212,11 @@ class Paths
         return null;
     }
 
-    public static function data(file:String, ?folder:String = "data", ?absolute:Bool = false):String
+    public static function data(file:String, ?folder:String = "data", ?absolute:Bool = false, ?bypassCache:Bool = false):String
     {
         var cacheKey = absolute ? file : 'assets/$folder/$file';
 
-        if (!Path.isAbsolute(cacheKey) && Assets.exists(cacheKey))
+        if (!bypassCache && !Path.isAbsolute(cacheKey) && Assets.exists(cacheKey))
             return Assets.getText(cacheKey);
 
         var realPath = getPath(cacheKey);
@@ -288,18 +287,12 @@ class Paths
         return audio(file, 'audio/music', extension, absolute, permanent, true);
     }
 
-    /**
-     * Vache ID for a song audio track (Inst, Voices, Voices-char, etc.).
-     */
     public static function songTrackKey(song:String, track:String):String
     {
         return 'assets/songs/$song/$track.ogg';
     }
 
-    /**
-     * Keeps the assets pinned to the RevAssets singleton.
-     */
-    public static function ensureRevAssets():RevAssets
+    public static function ensureAssets():RevAssets
     {
         return RevAssets.ensureActive();
     }
@@ -516,7 +509,7 @@ class Paths
     {
         if (cacheKey == null) return null;
 
-        var rev = ensureRevAssets();
+        var rev = ensureAssets();
         var snd = rev.promoteSoundLoose(cacheKey);
 
         if (snd != null)

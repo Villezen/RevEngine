@@ -1,6 +1,5 @@
 package backend.ui;
 
-import backend.assets.FunkinSprite;
 import backend.utils.MathUtil;
 
 import flixel.FlxSprite;

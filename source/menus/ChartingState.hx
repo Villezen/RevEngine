@@ -33,7 +33,6 @@ import flixel.math.FlxRect;
 import flixel.text.FlxBitmapText;
 
 import game.PlayState;
-import game.handlers.Conductor;
 
 import haxe.io.Path;
 
@@ -47,6 +46,7 @@ import menus.charting.CharterNotePreview;
 import menus.charting.CharterStrumline;
 import menus.charting.CharterStrumline.CharterNoteGraphics;
 import menus.charting.CharterStrumlineBox;
+import menus.charting.CharterStrumlineOutline;
 
 import openfl.net.FileReference;
 
@@ -114,6 +114,7 @@ class ChartingState extends MusicBeatState
     var noteGraphics:CharterNoteGraphics;
 
     var strumlineBoxes:Array<CharterStrumlineBox> = [];
+    var strumlineOutline:CharterStrumlineOutline;
 
     var noteData:Array<Array<CharterNote>> = [];
 
@@ -532,13 +533,20 @@ class ChartingState extends MusicBeatState
 
     function cacheNoteGraphics():Void
     {
-        noteGraphics = {heads: [], bodies: [], caps: []};
+        noteGraphics = {heads: [], bodies: [], caps: [], multiHeads: new Map(), multiBodies: new Map(), multiCaps: new Map()};
 
         for (i in 0...CharterStrumline.KEY_AMOUNT)
         {
             noteGraphics.heads.push(resolveGraphic('menus/charter/notes/normal/$i'));
             noteGraphics.bodies.push(resolveGraphic('menus/charter/notes/normal/sustains/${i}_tail'));
             noteGraphics.caps.push(resolveGraphic('menus/charter/notes/normal/sustains/${i}_end'));
+        }
+
+        for (color in ['purple', 'blue', 'green', 'red', 'white', 'yellow', 'violet', 'darkred', 'darkblue'])
+        {
+            noteGraphics.multiHeads.set(color, resolveGraphic('menus/charter/notes/multikey/$color'));
+            noteGraphics.multiBodies.set(color, resolveGraphic('menus/charter/notes/multikey/sustains/${color}_tail'));
+            noteGraphics.multiCaps.set(color, resolveGraphic('menus/charter/notes/multikey/sustains/${color}_end'));
         }
     }
 
@@ -572,6 +580,8 @@ class ChartingState extends MusicBeatState
         }
 
         strumlineBoxes = [];
+
+        if (strumlineOutline != null) { remove(strumlineOutline); strumlineOutline.destroy(); strumlineOutline = null; }
 
         if (conductorLine != null) { remove(conductorLine); conductorLine.destroy(); }
         if (gridBox != null) { remove(gridBox); gridBox.destroy(); }
@@ -649,6 +659,9 @@ class ChartingState extends MusicBeatState
             strumlineBoxes.push(box);
         }
 
+        strumlineOutline = new CharterStrumlineOutline(camGrid);
+        add(strumlineOutline);
+
         buildEventLane();
         buildPreview();
     }
@@ -688,6 +701,159 @@ class ChartingState extends MusicBeatState
             box.interactable = canInteract && !overWindow;
             box.follow(naturalY, camGrid.viewTop, topMargin);
         }
+
+        if (strumlineOutline != null)
+        {
+            var index:Int = focusedStrumlineIndex();
+
+            if (index >= 0 && index < strumlines.length)
+            {
+                var originY:Float = Math.max(naturalY, camGrid.viewTop + topMargin);
+                var strumline = strumlines[index];
+
+                strumlineOutline.setTarget(strumline.x, originY, strumline.width, CharterStrumlineBox.HEIGHT);
+            }
+            else
+                strumlineOutline.clearTarget();
+        }
+    }
+
+    function focusedStrumlineIndex():Int
+    {
+        var target:Int = activeCameraTarget();
+        if (target < 0) return -1;
+
+        return strumlineIndexForId(target);
+    }
+
+    function strumlineIndexForId(id:Int):Int
+    {
+        if (chart == null) return -1;
+
+        for (i in 0...chart.strumlines.length)
+            if ((chart.strumlines[i].id ?? 0) == id) return i;
+
+        return -1;
+    }
+
+    function updateKeyPreview():Void
+    {
+        if (chart == null || strumlines.length == 0) return;
+
+        var time:Float = conductor.songPosition;
+
+        var effective:Array<Int> = [];
+        var bestTime:Array<Float> = [];
+
+        for (i in 0...chart.strumlines.length)
+        {
+            effective.push(chart.strumlines[i].keys ?? 4);
+            bestTime.push(Math.NEGATIVE_INFINITY);
+        }
+
+        for (event in eventData)
+        {
+            if (event.name != "Change Key Amount") continue;
+            if (event.time > time) continue;
+            if (event.variables == null || event.variables.length < 2) continue;
+
+            var target:Null<Int> = Std.parseInt(event.variables[0]);
+            var keys:Null<Int> = Std.parseInt(event.variables[1]);
+            if (target == null || keys == null) continue;
+
+            var index:Int = strumlineIndexForId(target);
+            if (index < 0) continue;
+
+            if (event.time >= bestTime[index])
+            {
+                bestTime[index] = event.time;
+                effective[index] = keys;
+            }
+        }
+
+        var refreshLayout:Bool = false;
+
+        for (i in 0...strumlines.length)
+        {
+            if (i >= effective.length) break;
+
+            var target:Int = Std.int(FlxMath.bound(effective[i], 1, 9));
+            if (strumlines[i].keys == target) continue;
+
+            strumlines[i].setKeys(target, false);
+            strumlines[i].resizeGrid();
+
+            if (i < strumlineBoxes.length) strumlineBoxes[i].refresh();
+
+            refreshLayout = true;
+        }
+
+        if (refreshLayout) refreshStrumlineLayout();
+    }
+
+    function refreshStrumlineLayout():Void
+    {
+        var currentX:Float = 0;
+        allowedXOffset = 0;
+
+        for (strumline in strumlines)
+        {
+            strumline.setX(currentX);
+            allowedXOffset += Std.int(GRID_SIZE * strumline.keys);
+            currentX += strumline.width + STRUMLINE_GAP;
+        }
+
+        totalWidth = currentX;
+
+        var lineWidth:Float = Math.max(0, totalWidth - STRUMLINE_GAP);
+
+        if (conductorLine != null)
+        {
+            conductorLine.setGraphicSize(Std.int(lineWidth), 5);
+            conductorLine.updateHitbox();
+            conductorLine.offset.y = conductorLine.height;
+        }
+    }
+
+    function activeCameraTarget():Int
+    {
+        var time:Float = conductor.songPosition;
+
+        var target:Int = -1;
+        var bestTime:Float = Math.NEGATIVE_INFINITY;
+
+        var firstTarget:Int = -1;
+        var firstTime:Float = Math.POSITIVE_INFINITY;
+
+        for (event in eventData)
+        {
+            if (event.name != "Camera Movement") continue;
+
+            var value:Int = parseCameraTarget(event);
+            if (value < 0) continue;
+
+            if (event.time < firstTime)
+            {
+                firstTime = event.time;
+                firstTarget = value;
+            }
+
+            if (event.time <= time && event.time >= bestTime)
+            {
+                bestTime = event.time;
+                target = value;
+            }
+        }
+
+        return (target >= 0) ? target : firstTarget;
+    }
+
+    inline function parseCameraTarget(event:CharterEvent):Int
+    {
+        if (event.variables == null || event.variables.length == 0) return -1;
+
+        var value:Null<Int> = Std.parseInt(event.variables[0]);
+        return (value == null) ? -1 : value;
     }
 
     function windowBlockingInput():Bool
@@ -1039,6 +1205,8 @@ class ChartingState extends MusicBeatState
 
         updatePlayback(elapsed);
         updateHitsounds();
+
+        updateKeyPreview();
 
         updateCamera(elapsed);
         updateStrumlineBoxes();
@@ -2622,6 +2790,23 @@ class ChartingState extends MusicBeatState
         return names;
     }
 
+    function listNoteskins():Array<String>
+    {
+        var names:Array<String> = [];
+
+        for (file in Paths.readDirectory("data/notes/styles"))
+        {
+            if (Path.extension(file) != "json") continue;
+            names.push(Path.withoutExtension(file));
+        }
+
+        names.sort(function(a, b) return (a < b) ? -1 : (a > b) ? 1 : 0);
+
+        if (names.length == 0) names.push("default");
+
+        return names;
+    }
+
     function openEditWindow(index:Int):Void
     {
         if (chart == null || index < 0 || index >= chart.strumlines.length) return;
@@ -2632,7 +2817,7 @@ class ChartingState extends MusicBeatState
         var entry:ChartStrumline = chart.strumlines[index];
 
         var w:Int = 340;
-        var h:Int = 452;
+        var h:Int = 498;
 
         var labelX:Int = 20;
         var ctrlX:Int = 150;
@@ -2660,18 +2845,22 @@ class ChartingState extends MusicBeatState
         var visibleBox = new Checkbox({position: [ctrlX, rowY(5)], size: [30, 30], callback: null});
         visibleBox.value = (entry.visible != false);
 
+        var skinDropdown = new Dropdown({position: [ctrlX, rowY(6) + 2], size: [ctrlW, 30],
+            items: [for (name in listNoteskins()) {name: name, callback: null}], callback: null});
+
         var posValues:Array<Int> = (entry.position != null && entry.position.length >= 2) ? entry.position : [0, 0];
 
-        var posXInput = new InputBox({position: [ctrlX, rowY(6)], size: [80, ctrlH], type: "NUMBER", callback: null});
+        var posXInput = new InputBox({position: [ctrlX, rowY(7)], size: [80, ctrlH], type: "NUMBER", callback: null});
         posXInput.setText(Std.string(posValues[0]));
 
-        var posYInput = new InputBox({position: [ctrlX + 88, rowY(6)], size: [80, ctrlH], type: "NUMBER", callback: null});
+        var posYInput = new InputBox({position: [ctrlX + 88, rowY(7)], size: [80, ctrlH], type: "NUMBER", callback: null});
         posYInput.setText(Std.string(posValues[1]));
 
-        var idInput = new InputBox({position: [ctrlX, rowY(7)], size: [100, ctrlH], type: "INTEGER", callback: null});
+        var idInput = new InputBox({position: [ctrlX, rowY(8)], size: [100, ctrlH], type: "INTEGER", callback: null});
         idInput.setText(Std.string(entry.id ?? 0));
 
         characterDropdown.selectItem(entry.character ?? "bf");
+        skinDropdown.selectItem(entry.skin ?? "default");
 
         var saveButton = new Button({position: [w - 186, h - 50], size: [86, 36], text: "Save", callback: function()
         {
@@ -2694,6 +2883,7 @@ class ChartingState extends MusicBeatState
             entry.id = newId;
             entry.playable = playableBox.value;
             entry.character = characterDropdown.selectedItem;
+            entry.skin = skinDropdown.selectedItem;
             entry.keys = newKeys;
             entry.speed = speedStepper.currentValue;
             entry.scale = scaleStepper.currentValue;
@@ -2729,8 +2919,9 @@ class ChartingState extends MusicBeatState
             editLabel("Speed", labelX, labelY(3)),
             editLabel("Scale", labelX, labelY(4)),
             editLabel("Visible", labelX, labelY(5)),
-            editLabel("Position", labelX, labelY(6)),
-            editLabel("ID", labelX, labelY(7)),
+            editLabel("Skin", labelX, labelY(6)),
+            editLabel("Position", labelX, labelY(7)),
+            editLabel("ID", labelX, labelY(8)),
 
             playableBox,
             keysStepper,
@@ -2742,7 +2933,7 @@ class ChartingState extends MusicBeatState
             idInput,
             saveButton,
             deleteButton,
-
+            skinDropdown,
             characterDropdown
         ];
 
@@ -2971,6 +3162,15 @@ class ChartingState extends MusicBeatState
                 input.setText(value);
                 return input;
 
+            case "Noteskin":
+                var names:Array<String> = listNoteskins();
+
+                var dropdown = new Dropdown({position: [0, 0], size: [eventFieldWidth, 30],
+                    items: [for (name in names) {name: name, callback: null}], callback: null});
+
+                dropdown.selectItem((value != null && names.indexOf(value) != -1) ? value : names[0]);
+                return dropdown;
+
             default:
                 var input = new InputBox({position: [0, 0], size: [eventFieldWidth, 32], type: "ANY", callback: null});
                 input.setText(value);
@@ -2982,6 +3182,7 @@ class ChartingState extends MusicBeatState
     {
         if (Std.isOfType(widget, InputBox)) return (cast widget:InputBox).value;
         if (Std.isOfType(widget, Checkbox)) return (cast widget:Checkbox).value ? "true" : "false";
+        if (Std.isOfType(widget, Dropdown)) return (cast widget:Dropdown).selectedItem;
 
         return "";
     }

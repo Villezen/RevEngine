@@ -1,6 +1,5 @@
 package backend;
 
-import flixel.FlxG;
 import flixel.FlxState;
 import flixel.FlxSubState;
 import backend.modding.ModState;
@@ -9,7 +8,6 @@ import backend.modding.PolymodManager;
 import backend.modding.handlers.TransitionHandler;
 import backend.transition.TransitionLoader;
 import backend.transition.TransitionState;
-import backend.registries.misc.ConfigRegistry;
 
 class Manager
 {

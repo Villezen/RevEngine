@@ -5,7 +5,6 @@ import flixel.FlxBasic;
 import flixel.util.FlxStringUtil;
 import openfl.media.Sound;
 import backend.assets.Cacher;
-import backend.assets.FunkinSound;
 
 /**
  * A class used to handle song playback and synchronization.

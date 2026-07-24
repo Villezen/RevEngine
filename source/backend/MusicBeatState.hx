@@ -10,6 +10,7 @@ import backend.modding.PolymodManager;
 import backend.registries.song.ChartRegistry;
 import backend.registries.song.MetaRegistry;
 import backend.registries.misc.PlayerRegistry;
+import backend.registries.ui.NoteSkinRegistry;
 
 import backend.transition.TransitionLoader;
 import backend.transition.TransitionState;
@@ -165,6 +166,7 @@ class MusicBeatState extends FlxState implements IEventHandler
         ChartRegistry.reloadAll();
         MetaRegistry.reloadAll();
         PlayerRegistry.reloadAll();
+        NoteSkinRegistry.reloadAll();
 
         Manager.resetState();
 

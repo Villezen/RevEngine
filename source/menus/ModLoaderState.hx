@@ -4,11 +4,6 @@ import backend.MusicBeatState;
 import backend.modding.PolymodManager;
 import backend.utils.MathUtil;
 
-import backend.registries.misc.ConfigRegistry;
-
-import backend.assets.FunkinSprite;
-import backend.assets.FunkinSound;
-
 import flixel.FlxCamera;
 import flixel.group.FlxSpriteGroup;
 import flixel.text.FlxBitmapText;

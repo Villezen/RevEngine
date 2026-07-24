@@ -10,7 +10,6 @@ import polymod.fs.SysFileSystem;
 import polymod.hscript._internal.Expr.CType;
 
 import backend.modding.handlers.*;
-import backend.assets.Paths;
 
 import thx.semver.Version;
 import thx.semver.VersionRule;
@@ -335,7 +334,7 @@ class PolymodManager
         for (handler in handlers)
             handler.load();
 
-        Paths.ensureRevAssets();
+        Paths.ensureAssets();
     }
 
     /**

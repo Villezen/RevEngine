@@ -1,0 +1,29 @@
+{
+    "type": "COMBINED",
+
+    "size": [4.0, 4.0],
+    "alpha": 1.0,
+    "antialiasing": false,
+
+    "animations":
+    {
+        "normal":
+        [
+            {"name": "1LEFT", "prefix": "purple1", "fps": 33},
+            {"name": "2LEFT", "prefix": "purple2", "fps": 33},
+            {"name": "3LEFT", "prefix": "purple3", "fps": 33},
+
+            {"name": "1DOWN", "prefix": "blue1", "fps": 33},
+            {"name": "2DOWN", "prefix": "blue2", "fps": 33},
+            {"name": "3DOWN", "prefix": "blue3", "fps": 33},
+
+            {"name": "1UP", "prefix": "green1", "fps": 33},
+            {"name": "2UP", "prefix": "green2", "fps": 33},
+            {"name": "3UP", "prefix": "green3", "fps": 33},
+
+            {"name": "1RIGHT", "prefix": "orange1", "fps": 33},
+            {"name": "2RIGHT", "prefix": "orange2", "fps": 33},
+            {"name": "3RIGHT", "prefix": "orange3", "fps": 33}
+        ]
+    }
+}

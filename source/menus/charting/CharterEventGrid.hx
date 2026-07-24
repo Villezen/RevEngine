@@ -4,7 +4,6 @@ import flixel.FlxBasic;
 import flixel.FlxCamera;
 import flixel.addons.display.FlxRuntimeShader;
 import flixel.graphics.FlxGraphic;
-import flixel.util.FlxColor;
 import flixel.util.FlxDestroyUtil;
 
 class CharterEventGrid extends FlxBasic
