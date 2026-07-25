@@ -18,6 +18,8 @@ import backend.assets.AtlasText;
 import backend.assets.FunkinBitmapText;
 import backend.assets.FunkinSound;
 import backend.assets.FunkinSprite;
+import backend.assets.FunkinModel;
+import backend.assets.FunkinViewport;
 import backend.assets.Paths;
 
 import game.handlers.Conductor;

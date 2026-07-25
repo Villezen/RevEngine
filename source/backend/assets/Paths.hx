@@ -228,6 +228,22 @@ class Paths
         return "";
     }
 
+    public static function bytes(file:String, ?folder:String = "data", ?absolute:Bool = false):haxe.io.Bytes
+    {
+        var cacheKey = absolute ? file : 'assets/$folder/$file';
+
+        if (!Path.isAbsolute(cacheKey) && Assets.exists(cacheKey))
+            return Assets.getBytes(cacheKey);
+
+        var realPath = getPath(cacheKey);
+
+        if (FileSystem.exists(realPath))
+            return File.getBytes(realPath);
+
+        trace('Bytes not found: $cacheKey', "WARNING");
+        return null;
+    }
+
     public static function font(file:String, ?absolute:Bool = false, ?permanent:Bool = false):String
     {
         if (file == null || file == "")

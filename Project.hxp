@@ -57,6 +57,9 @@ class Project extends HXProject
 		window.hardware = true;
 		window.vsync = false;
 
+		window.depthBuffer = true;
+		window.stencilBuffer = true;
+
         window.orientation = Orientation.LANDSCAPE;
 		window.fullscreen = false;
 		window.resizable = true;
@@ -84,6 +87,8 @@ class Project extends HXProject
         haxelibs.push(new Haxelib("polymod"));
 
         haxelibs.push(new Haxelib("json2object"));
+
+        haxelibs.push(new Haxelib("away3d"));
     }
 
     function set_defines()
@@ -115,6 +120,8 @@ class Project extends HXProject
 		haxedefs.set("message.reporting", "pretty");
 		haxedefs.set("no-deprecation-warnings", "");
 		haxedefs.set("hscriptPos", "");
+
+		defines.set("disable-version-check", "1");
 
         /**
          * Polymod Definables.
