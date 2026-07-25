@@ -1,5 +1,5 @@
 <p align="center"> 
-  <img src="https://raw.githubusercontent.com/Villezen/RevEngine/refs/heads/main/art/logo.png">
+  <img src="https://drive.usercontent.google.com/download?id=17fYVHBMxZOxEqfiAyEmsnBstZiCNy2Qf">
 </p>
 
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/Villezen/RevEngine/total?style=for-the-badge)
