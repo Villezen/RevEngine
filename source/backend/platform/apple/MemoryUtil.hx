@@ -4,7 +4,7 @@ package backend.platform.apple;
 /**
  * A utility class to get information about the mem usage.
  */
-@:build(backend.utils.LinkerMacro.xml('project/Build.xml'))
+@:build(backend.macros.LinkerMacro.xml('project/Build.xml'))
 @:include('MemoryUtil.hpp')
 @:unreflective
 extern class MemoryUtil

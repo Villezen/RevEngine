@@ -1,10 +1,5 @@
 package backend.registries.ui;
 
-import haxe.io.Path;
-import json2object.JsonParser;
-
-import backend.utils.RegistryUtil;
-
 typedef RatingsData =
 {
     @:optional var position:Array<Int>;
@@ -44,7 +39,7 @@ typedef ComboData =
     @:optional var num9:RatingSpriteEntry;
 }
 
-typedef RatingSpriteEntry = 
+typedef RatingSpriteEntry =
 {
     @:optional var offset:Array<Int>;
     @:optional var scale:Array<Float>;
@@ -56,52 +51,19 @@ typedef RatingSpriteEntry =
     @:optional var timeMult:Null<Float>;
 }
 
-typedef RatingPointEntry = 
+typedef RatingPointEntry =
 {
     @:optional var x:Array<Int>;
     @:optional var y:Array<Int>;
 }
 
+@:folder("data/ratings")
+@:build(backend.macros.RegistryMacro.build())
 class RatingsRegistry
 {
     public static var list:Map<String, RatingsData> = new Map();
-    private static var parser:JsonParser<RatingsData> = new JsonParser<RatingsData>();
 
-    public static function init():Void
-    {
-        #if sys
-        for (file in Paths.readDirectory('data/ratings'))
-        {
-            if (Path.extension(file) == "json")
-                reload(Path.withoutExtension(file));
-        }
-        #end
-    }
-
-    public static inline function get(name:String):RatingsData
-    {
-        if (!list.exists(name))
-            reload(name);
-
-        return list.get(name);
-    }
-
-    public static function reload(name:String):Void
-    {
-        var rawData:String = "{}";
-
-        #if sys
-        if (Paths.exists('data/ratings/$name.json'))
-            rawData = Paths.data('$name.json', 'data/ratings');
-        #end
-
-        parser.fromJson(rawData, 'data/ratings/$name.json');
-        RegistryUtil.reportErrors('data/ratings/$name.json', parser.errors);
-
-        list.set(name, validateData(parser.value));
-    }
-
-    private static function validateData(data:RatingsData):RatingsData
+    private static function validate(name:String, data:RatingsData):RatingsData
     {
         if (data == null) data = {};
 
@@ -146,7 +108,7 @@ class RatingsRegistry
         if (entry.scale == null || entry.scale.length < 2) entry.scale = [0.65, 0.65];
 
         if (entry.velocity == null)
-            entry.velocity = {x: [-10, 0], y: [-140, -175]}; 
+            entry.velocity = {x: [-10, 0], y: [-140, -175]};
         else
         {
             if (entry.velocity.x == null || entry.velocity.x.length < 2) entry.velocity.x = [-10, 0];
@@ -161,7 +123,7 @@ class RatingsRegistry
             if (entry.acceleration.y == null || entry.acceleration.y.length < 2) entry.acceleration.y = [550, 550];
         }
 
-        if (entry.ease == null) entry.ease = "linear"; 
+        if (entry.ease == null) entry.ease = "linear";
         if (entry.timeMult == null) entry.timeMult = 1.0;
 
         return entry;
@@ -175,7 +137,7 @@ class RatingsRegistry
         if (entry.scale == null || entry.scale.length < 2) entry.scale = [0.45, 0.45];
 
         if (entry.velocity == null)
-            entry.velocity = {x: [-5, 5], y: [-130, -150]}; 
+            entry.velocity = {x: [-5, 5], y: [-130, -150]};
         else
         {
             if (entry.velocity.x == null || entry.velocity.x.length < 2) entry.velocity.x = [-5, 5];
@@ -190,15 +152,9 @@ class RatingsRegistry
             if (entry.acceleration.y == null || entry.acceleration.y.length < 2) entry.acceleration.y = [250, 300];
         }
 
-        if (entry.ease == null) entry.ease = "linear"; 
+        if (entry.ease == null) entry.ease = "linear";
         if (entry.timeMult == null) entry.timeMult = 1.0;
 
         return entry;
-    }
-
-    public static function reloadAll():Void
-    {
-        list.clear();
-        init();
     }
 }

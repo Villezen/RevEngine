@@ -10,6 +10,8 @@ import flixel.text.FlxText;
 import flixel.util.FlxAxes;
 import flixel.util.FlxDestroyUtil;
 
+import backend.utils.EaseUtil;
+
 import backend.MusicBeatSubState;
 import backend.registries.ui.DialogueRegistry;
 import backend.registries.ui.DialogueRegistry.DialogueSkinData;
@@ -975,10 +977,7 @@ class DialogueSubState extends MusicBeatSubState
 
     function resolveEase(name:String):Float->Float
     {
-        var fn:Dynamic = (name == null) ? null : Reflect.field(FlxEase, name);
-        if (fn == null)
-            return FlxEase.linear;
-        return fn;
+        return EaseUtil.get(name);
     }
 
     inline function copyEffects(e:DialogueEffects):DialogueEffects

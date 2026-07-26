@@ -1,4 +1,4 @@
-package backend.utils;
+package backend.macros;
 
 /**
  * This class provides a macro to include an XML build file in the metadata of a Haxe class.

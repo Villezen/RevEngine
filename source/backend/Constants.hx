@@ -47,11 +47,6 @@ class Constants
     public static final CONFIG_VERSION:Version = '1.0.0';
 
     /**
-     * The version of the highscore's saving system. Change this when the way saving highscores works to prevent crashes so they get reset fully.
-     */
-    public static final HIGHSCORE_VERSION:Version = '2.0.0';
-
-    /**
      * The folder that stores each mod.
      */
     public static final MOD_FOLDER:String = "mods";
@@ -290,16 +285,6 @@ class Constants
      * The difficulty charts fall back to when none is specified.
      */
     public static final DEFAULT_DIFFICULTY:String = "normal";
-
-    /**
-     * The default player character freeplay starts on.
-     */
-    public static final DEFAULT_CHARACTER:String = "bf";
-
-    /**
-     * PlayState's default parameters, utilized as a fallback.
-     */
-    public static final DEFAULT_PLAYSTATE_PARAMS:PlayStateParams = {song: 'test', difficulty: 'normal'}
 
     /**
      * By how much the game camera shall bop by default.

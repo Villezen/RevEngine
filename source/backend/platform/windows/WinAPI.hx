@@ -4,7 +4,7 @@ package backend.platform.windows;
 /**
  * This class provides handling for Windows API-related functions.
  */
-@:build(backend.utils.LinkerMacro.xml('project/Build.xml'))
+@:build(backend.macros.LinkerMacro.xml('project/Build.xml'))
 @:include('winapi.hpp')
 extern class WinAPI
 {

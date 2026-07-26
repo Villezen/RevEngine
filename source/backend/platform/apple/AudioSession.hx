@@ -4,7 +4,7 @@ package backend.platform.apple;
 /**
  * A utility class to manage the audio session on apple devices.
  */
-@:build(backend.utils.LinkerMacro.xml('project/Build.xml'))
+@:build(backend.macros.LinkerMacro.xml('project/Build.xml'))
 @:include('AudioSession.hpp')
 @:unreflective
 extern class AudioSession

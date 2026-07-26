@@ -8,6 +8,8 @@ import backend.registries.ui.RatingsRegistry;
 import backend.registries.ui.RatingsRegistry.RatingsData;
 import backend.registries.ui.RatingsRegistry.RatingSpriteEntry;
 
+import backend.utils.EaseUtil;
+
 class Ratings extends FlxSpriteGroup
 {
     public var data:RatingsData;
@@ -102,7 +104,7 @@ class Ratings extends FlxSpriteGroup
         rating.acceleration.x = FlxG.random.int(ratingData.acceleration.x[0], ratingData.acceleration.x[1]);
         rating.acceleration.y = FlxG.random.int(ratingData.acceleration.y[0], ratingData.acceleration.y[1]);
 
-        var ratingEase = ratingData.ease != "stepped" ? Reflect.field(FlxEase, ratingData.ease) : function(t:Float):Float return {Math.floor(t * 2) / 2;}
+        var ratingEase = ratingData.ease != "stepped" ? EaseUtil.get(ratingData.ease) : function(t:Float):Float return {Math.floor(t * 2) / 2;}
 
         FlxTween.tween(rating, {alpha: 0}, 0.2 * ratingData.timeMult, {onComplete: function(tween:FlxTween)
         {
@@ -139,7 +141,7 @@ class Ratings extends FlxSpriteGroup
             numScore.velocity.y = -FlxG.random.int(130, 150);
             numScore.velocity.x = FlxG.random.float(-5, 5);
 
-            var comboEase = comboData.ease != "stepped" ? Reflect.field(FlxEase, comboData.ease) : function(t:Float):Float return {Math.floor(t * 2) / 2;}
+            var comboEase = comboData.ease != "stepped" ? EaseUtil.get(comboData.ease) : function(t:Float):Float return {Math.floor(t * 2) / 2;}
 
             FlxTween.tween(numScore, {alpha: 0}, 0.2, {onComplete: function(tween:FlxTween)
             {

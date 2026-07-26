@@ -1,4 +1,4 @@
-package backend;
+package backend.config;
 
 import flixel.input.keyboard.FlxKey;
 import flixel.util.FlxSave;
@@ -8,10 +8,18 @@ import backend.Highscore.ScoreRecord;
 /**
  * A class containing every customizable setting you can configure in-game.
  */
+@:build(backend.macros.ConfigMacro.build())
 class Configs
 {
-    public static var configSave:FlxSave;
-    public static var highscoreSave:FlxSave;
+    /**
+     * The save file holding every config.
+     */
+    @:noSave public static var configSave:FlxSave;
+
+    /**
+     * Extra settings defined at runtime, mainly by mods, keyed by name.
+     */
+    @:noSave public static var store:Map<String, Dynamic> = [];
 
     /**
      * [MODDING]
@@ -48,25 +56,25 @@ class Configs
     ];
 
     public static var NOTE_BINDS_1K:Array<Dynamic> =
-    [ 
+    [
         [FlxKey.SPACE, FlxKey.NONE]
     ];
 
     public static var NOTE_BINDS_2K:Array<Dynamic> =
-    [ 
+    [
         [FlxKey.D, FlxKey.NONE],
         [FlxKey.K, FlxKey.NONE]
     ];
 
     public static var NOTE_BINDS_3K:Array<Dynamic> =
-    [ 
+    [
         [FlxKey.D, FlxKey.NONE],
         [FlxKey.SPACE, FlxKey.NONE],
         [FlxKey.K, FlxKey.NONE]
     ];
 
     public static var NOTE_BINDS_4K:Array<Dynamic> =
-    [ 
+    [
         [FlxKey.D, FlxKey.LEFT],
         [FlxKey.F, FlxKey.DOWN],
         [FlxKey.J, FlxKey.UP],
@@ -145,59 +153,37 @@ class Configs
     public static var FAVORITE_SONGS:Array<String> = [];
 
     /**
-     * Private function that loads each config.
+     * Reads a defined value from the store.
+     * @param key The name the value was stored under.
+     * @param fallback The value returned when the key is missing.
+     * @return The stored value, or `fallback` if it was never set.
      */
-    private static function _load()
+    public static function get(key:String, ?fallback:Dynamic = null):Dynamic
     {
-        if (configSave.data.ACTIVE_MOD != null) ACTIVE_MOD = configSave.data.ACTIVE_MOD;
+        if (store.exists(key))
+            return store.get(key);
 
-        if (configSave.data.BACK_BIND != null) BACK_BIND = configSave.data.BACK_BIND;
-        if (configSave.data.ACCEPT_BIND != null) ACCEPT_BIND = configSave.data.ACCEPT_BIND;
-        if (configSave.data.UI_BINDS != null) UI_BINDS = configSave.data.UI_BINDS;
-
-        if (configSave.data.NOTE_BINDS_1K != null) NOTE_BINDS_1K = configSave.data.NOTE_BINDS_1K;
-        if (configSave.data.NOTE_BINDS_2K != null) NOTE_BINDS_2K = configSave.data.NOTE_BINDS_2K;
-        if (configSave.data.NOTE_BINDS_3K != null) NOTE_BINDS_3K = configSave.data.NOTE_BINDS_3K;
-        if (configSave.data.NOTE_BINDS_4K != null) NOTE_BINDS_4K = configSave.data.NOTE_BINDS_4K;
-        if (configSave.data.NOTE_BINDS_5K != null) NOTE_BINDS_5K = configSave.data.NOTE_BINDS_5K;
-        if (configSave.data.NOTE_BINDS_6K != null) NOTE_BINDS_6K = configSave.data.NOTE_BINDS_6K;
-        if (configSave.data.NOTE_BINDS_7K != null) NOTE_BINDS_7K = configSave.data.NOTE_BINDS_7K;
-        if (configSave.data.NOTE_BINDS_8K != null) NOTE_BINDS_8K = configSave.data.NOTE_BINDS_8K;
-        if (configSave.data.NOTE_BINDS_9K != null) NOTE_BINDS_9K = configSave.data.NOTE_BINDS_9K;
-
-        if (highscoreSave.data.HIGHSCORES != null) HIGHSCORES = highscoreSave.data.HIGHSCORES;
-        
-        if (configSave.data.DOWNSCROLL != null) DOWNSCROLL = configSave.data.DOWNSCROLL;
-
-        if (configSave.data.FAVORITE_SONGS != null) FAVORITE_SONGS = configSave.data.FAVORITE_SONGS;
+        return fallback;
     }
 
     /**
-     * Private function that saves each config.
+     * Writes a defined value into the store.
+     * @param key The name to store the value under.
+     * @param value The value to persist on the next save.
      */
-    private static function _save()
+    public static function set(key:String, value:Dynamic):Void
     {
-        configSave.data.ACTIVE_MOD = ACTIVE_MOD;
+        store.set(key, value);
+    }
 
-        configSave.data.BACK_BIND = BACK_BIND;
-        configSave.data.ACCEPT_BIND = ACCEPT_BIND;
-        configSave.data.UI_BINDS = UI_BINDS;
-
-        configSave.data.NOTE_BINDS_1K = NOTE_BINDS_1K;
-        configSave.data.NOTE_BINDS_2K = NOTE_BINDS_2K;
-        configSave.data.NOTE_BINDS_3K = NOTE_BINDS_3K;
-        configSave.data.NOTE_BINDS_4K = NOTE_BINDS_4K;
-        configSave.data.NOTE_BINDS_5K = NOTE_BINDS_5K;
-        configSave.data.NOTE_BINDS_6K = NOTE_BINDS_6K;
-        configSave.data.NOTE_BINDS_7K = NOTE_BINDS_7K;
-        configSave.data.NOTE_BINDS_8K = NOTE_BINDS_8K;
-        configSave.data.NOTE_BINDS_9K = NOTE_BINDS_9K;
-
-        highscoreSave.data.HIGHSCORES = HIGHSCORES;
-
-        configSave.data.DOWNSCROLL = DOWNSCROLL;
-
-        configSave.data.FAVORITE_SONGS = FAVORITE_SONGS;
+    /**
+     * Checks whether a defined value exists in the store.
+     * @param key The name to look up.
+     * @return Whether a value is present for that key.
+     */
+    public static function has(key:String):Bool
+    {
+        return store.exists(key);
     }
 
     /**
@@ -210,10 +196,8 @@ class Configs
 
         configSave.bind('Configs', "RevEngine Configs [v" + Constants.CONFIG_VERSION + ']');
 
-        if (highscoreSave == null)
-            highscoreSave = new FlxSave();
-
-        highscoreSave.bind('Highscores', "RevEngine Highscores [v" + Constants.HIGHSCORE_VERSION + ']');
+        if (configSave.data.store != null)
+            store = configSave.data.store;
 
         _load();
     }
@@ -225,7 +209,7 @@ class Configs
     {
         _save();
 
+        configSave.data.store = store;
         configSave.flush();
-        highscoreSave.flush();
     }
 }

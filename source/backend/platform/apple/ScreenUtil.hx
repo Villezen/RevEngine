@@ -4,7 +4,7 @@ package backend.platform.apple;
 /**
  * A utility class to get screen related informations on apple devices.
  */
-@:build(backend.utils.LinkerMacro.xml('project/Build.xml'))
+@:build(backend.macros.LinkerMacro.xml('project/Build.xml'))
 @:include('ScreenUtil.hpp')
 @:unreflective
 extern class ScreenUtil

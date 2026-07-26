@@ -10,9 +10,10 @@ import flixel.tweens.FlxTween;
 import flixel.tweens.FlxEase;
 
 import backend.Manager;
-import backend.Configs;
 import backend.Controls;
 import backend.Constants;
+
+import backend.config.Configs;
 
 import backend.assets.AtlasText;
 import backend.assets.FunkinBitmapText;

@@ -76,9 +76,9 @@ class PolymodManager
         Polymod.addDefaultImport(backend.Manager);
         Polymod.addDefaultImport(backend.MusicBeatState);
         Polymod.addDefaultImport(backend.MusicBeatSubState);
-        
-        Polymod.addDefaultImport(backend.Configs);
         Polymod.addDefaultImport(backend.Constants);
+
+        Polymod.addDefaultImport(backend.config.Configs);
 
         Polymod.addDefaultImport(backend.assets.Paths);
         Polymod.addDefaultImport(backend.assets.Cacher);

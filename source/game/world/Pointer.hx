@@ -1,11 +1,10 @@
 package game.world;
 
 import backend.utils.MathUtil;
+import backend.utils.EaseUtil;
 
 import flixel.FlxObject;
-
 import flixel.math.FlxPoint;
-
 import flixel.util.FlxSignal.FlxTypedSignal;
 
 typedef TweenParams = 
@@ -129,7 +128,7 @@ class Pointer extends FlxObject
                 params = {time: 1.0, ease: "expoOut", delay: 0.0};
 
             tween?.cancel();
-            tween = FlxTween.tween(globalPoint, {x: newXVal, y: newYVal}, params.time / speed, {ease: Reflect.field(FlxEase, params.ease), startDelay: params.delay});
+            tween = FlxTween.tween(globalPoint, {x: newXVal, y: newYVal}, params.time / speed, {ease: EaseUtil.get(params.ease), startDelay: params.delay});
         }
         else
         {
