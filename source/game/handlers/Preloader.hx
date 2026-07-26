@@ -28,6 +28,8 @@ class Preloader
     {
         Sys.println('');
 
+        Paths.clearBytesCache();
+
         var requestedAssets:Map<String, Bool> = [];
         var tasks:Array<Void->Void> = [];
 
@@ -153,6 +155,43 @@ class Preloader
                     }
                 }
             }
+        };
+
+        var queueModel = function(_name:String)
+        {
+            if (_name == null || _name == "") return;
+
+            if (Paths.exists('models/$_name.glb'))
+            {
+                var _path:String = 'models/$_name.glb';
+
+                addToQueue(_path, function()
+                {
+                    AsyncPaths.bytes('assets/$_path', "", true, function(b)
+                    {
+                        checkDone('(Model) Preloaded: $_name.glb');
+                    });
+                });
+            }
+            else if (Paths.exists('models/$_name.obj'))
+            {
+                var _tex:String = 'models/$_name.png';
+
+                if (Paths.exists(_tex))
+                {
+                    addToQueue(_tex, function()
+                    {
+                        AsyncPaths.image('assets/$_tex', "", "", true, false, true, function(g)
+                        {
+                            checkDone('(Model) Preloaded texture: $_name.png');
+                        });
+                    });
+                }
+                else
+                    trace('Model "$_name" has no preloadable texture, skipping.', "WARNING");
+            }
+            else
+                trace('Could not find model to preload: models/$_name', "WARNING");
         };
 
         if (data.general.characters)
@@ -359,6 +398,9 @@ class Preloader
                     trace('Unknown extra preload type "$_type" for "$_extraPath", skipping.', "WARNING");
             }
         }
+
+        for (_model in data.models)
+            queueModel(_model);
 
         if (Constants.PRELOAD_ASSETS.length > 0)
         {

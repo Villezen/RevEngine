@@ -3,7 +3,9 @@ package backend.assets;
 import haxe.io.Path;
 import sys.FileSystem;
 import sys.io.File;
+
 import haxe.MainLoop;
+import haxe.io.Bytes;
 
 import flixel.graphics.FlxGraphic;
 import backend.utils.ThreadUtil;
@@ -233,6 +235,31 @@ class AsyncPaths
 
             MainLoop.runInMainThread(() -> {
                 if (onComplete != null) onComplete(raw);
+            });
+        });
+    }
+
+    public static function bytes(file:String, ?folder:String = "data", ?absolute:Bool = false, ?onComplete:Bytes->Void):Void
+    {
+        var cacheKey = absolute ? file : 'assets/$folder/$file';
+        var realPath = Paths.getPath(cacheKey);
+
+        ThreadUtil.execAsync(() ->
+        {
+            var raw:Bytes = null;
+
+            if (!Path.isAbsolute(cacheKey) && Assets.exists(cacheKey))
+                raw = Assets.getBytes(cacheKey);
+            else if (FileSystem.exists(realPath))
+                raw = File.getBytes(realPath);
+
+            MainLoop.runInMainThread(() ->
+            {
+                if (raw != null)
+                    Paths.cacheBytes(cacheKey, raw);
+
+                if (onComplete != null)
+                    onComplete(raw);
             });
         });
     }

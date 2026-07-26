@@ -12,6 +12,7 @@ typedef PreloaderData =
 {
     @:optional var general:GeneralPreloadData;
     @:optional var extras:Array<ExtraPreloadData>;
+    @:optional var models:Array<String>;
 }
 
 /**
@@ -97,6 +98,8 @@ class PreloaderRegistry
             if (entry.type == null) entry.type = "";
             if (entry.path == null) entry.path = "";
         }
+
+        if (data.models == null) data.models = [];
 
         return data;
     }

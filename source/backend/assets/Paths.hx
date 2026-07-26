@@ -1,6 +1,8 @@
 package backend.assets;
 
 import haxe.io.Path;
+import haxe.io.Bytes;
+
 import sys.FileSystem;
 import sys.io.File;
 
@@ -29,6 +31,8 @@ import backend.assets.Cacher.RevAssets;
 
 class Paths
 {
+    private static var _bytesCache:Map<String, Bytes> = new Map();
+
     public static function getPath(cacheKey:String):String
     {
         if (Path.isAbsolute(cacheKey)) return cacheKey;
@@ -228,9 +232,28 @@ class Paths
         return "";
     }
 
-    public static function bytes(file:String, ?folder:String = "data", ?absolute:Bool = false):haxe.io.Bytes
+    public static function cacheBytes(cacheKey:String, data:Bytes):Void
+    {
+        if (cacheKey == null || data == null) return;
+        _bytesCache.set(cacheKey, data);
+    }
+
+    public static function clearBytesCache():Void
+    {
+        _bytesCache.clear();
+    }
+
+    public static function bytes(file:String, ?folder:String = "data", ?absolute:Bool = false):Bytes
     {
         var cacheKey = absolute ? file : 'assets/$folder/$file';
+
+        if (_bytesCache.exists(cacheKey))
+        {
+            var cached = _bytesCache.get(cacheKey);
+            _bytesCache.remove(cacheKey);
+            
+            return cached;
+        }
 
         if (!Path.isAbsolute(cacheKey) && Assets.exists(cacheKey))
             return Assets.getBytes(cacheKey);

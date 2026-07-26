@@ -13,7 +13,6 @@ import away3d.animators.nodes.SkeletonClipNode;
 import away3d.containers.ObjectContainer3D;
 import away3d.core.base.Geometry;
 import away3d.core.base.SubGeometry;
-import away3d.core.base.SkinnedSubGeometry;
 import away3d.core.math.Quaternion;
 import away3d.entities.Mesh;
 import away3d.materials.ColorMaterial;
@@ -348,31 +347,16 @@ class GLTFParser
         var vertCount = Std.int(positions.length / 3);
         
         var isSkinned = (skinIndex == _activeSkinIndex && Reflect.hasField(attrs, "JOINTS_0") && Reflect.hasField(attrs, "WEIGHTS_0"));
-        var subGeom:ISubGeometry;
+        var boundJoint = -1;
 
-        if (isSkinned) 
+        if (isSkinned)
         {
             var joints = readFloats(Std.int(attrs.JOINTS_0));
             var weights = readFloats(Std.int(attrs.WEIGHTS_0));
-            var skinnedSub = new SkinnedSubGeometry(4);
-            
-            var jIndices = new Vector<Float>();
-            var jWeights = new Vector<Float>();
-
-            for (i in 0...(vertCount * 4)) 
-            {
-                jIndices.push(joints[i]);
-                jWeights.push(weights[i]);
-            }
-            
-            skinnedSub.updateJointIndexData(jIndices);
-            skinnedSub.updateJointWeightsData(jWeights);
-            subGeom = skinnedSub;
-        } 
-        else 
-        {
-            subGeom = new SubGeometry();
+            boundJoint = dominantJoint(joints, weights, vertCount);
         }
+
+        var subGeom = new SubGeometry();
 
         var verts = new Vector<Float>();
         var normVec = normals != null ? new Vector<Float>() : null;
@@ -421,19 +405,49 @@ class GLTFParser
 
         var material = resolveMaterial(Reflect.hasField(prim, "material") ? Std.int(prim.material) : -1);
         var mesh = new Mesh(geom, material);
-        
-        if (isSkinned && _skeletonAnimator != null) 
-        {
-            mesh.animator = _skeletonAnimator;
 
-            _outSkinnedMeshes.push(mesh);
-            root.addChild(mesh); 
-        } 
-        else 
+        if (boundJoint >= 0 && boundJoint < _jointNodes.length && boundJoint < _ibm.length)
         {
-            _nodeContainers[nodeIndex].addChild(mesh);
-            _outMeshes.push(mesh);
+            mesh.transform = _ibm[boundJoint].clone();
+            _nodeContainers[_jointNodes[boundJoint]].addChild(mesh);
         }
+        else
+            _nodeContainers[nodeIndex].addChild(mesh);
+
+        _outMeshes.push(mesh);
+    }
+
+    function dominantJoint(joints:Array<Float>, weights:Array<Float>, vertCount:Int):Int
+    {
+        var totals = new Map<Int, Float>();
+
+        for (i in 0...vertCount)
+        {
+            for (k in 0...4)
+            {
+                var w = weights[i * 4 + k];
+
+                if (w <= 0)
+                    continue;
+
+                var j = Std.int(joints[i * 4 + k]);
+                totals.set(j, (totals.exists(j) ? totals.get(j) : 0.0) + w);
+            }
+        }
+
+        var best = -1;
+        var bestWeight = -1.0;
+
+        for (j => w in totals)
+        {
+            if (w > bestWeight)
+            {
+                bestWeight = w;
+                best = j;
+            }
+        }
+
+        return best;
     }
 
     function getLocalMatrix(node:Dynamic):Matrix3D 
