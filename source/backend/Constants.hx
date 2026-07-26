@@ -128,19 +128,24 @@ class Constants
 
     /**
      * Map containing each judgement and the data associated with it.
-     * 
+     *
      * [0] is % of health gained/lost
-     * [1] is % of score gained/lost
-     * [2] is % of hitNotes registered
+     * [1] is % of hitNotes registered
      */
     public static final JUDGEMENT_MAP:Map<NoteJudgement, Array<Float>> =
     [
-        NoteJudgement.SICK => [1.5, 300, 1.0],
-        NoteJudgement.GOOD => [0.75, 100, 0.65],
-        NoteJudgement.BAD => [0.0, 10, 0.2],
-        NoteJudgement.SHIT => [-1.0, 5, 0.03],
-        NoteJudgement.NONE => [0.0, 0, 0.0]
+        NoteJudgement.SICK => [1.5, 1.0],
+        NoteJudgement.GOOD => [0.75, 0.65],
+        NoteJudgement.BAD => [0.0, 0.2],
+        NoteJudgement.SHIT => [-1.0, 0.03],
+        NoteJudgement.NONE => [0.0, 0.0]
     ];
+
+    public static final SCORE_MAX:Float = 500;
+    public static final SCORE_MIN:Float = 10;
+    public static final SCORE_PERFECT_THRESHOLD:Float = 5.0;
+    public static final SCORE_SIGMOID_OFFSET:Float = 54.99;
+    public static final SCORE_SIGMOID_SLOPE:Float = 0.08;
 
     /**
      * Map containing each rating's millisecond hit window.

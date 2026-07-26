@@ -3,6 +3,7 @@ package game;
 import game.notes.Note;
 
 import backend.utils.MathUtil;
+import backend.utils.ScoringUtil;
 
 /**
  * An enum of every possible timing-based rating a player can recieve from hitting a note.
@@ -29,12 +30,7 @@ class PlayMetrics
     /**
      * The cumulative score earned by the player.
      */
-    public var score(default, set):Int = 0;
-
-    function set_score(value:Int):Int
-    {
-        return score = value;
-    }
+    public var score:Float = 0;
 
     /**
      * Total amount of notes missed.
@@ -146,7 +142,7 @@ class PlayMetrics
      * Processes a successful note hit.
      * @param rating The `NoteJudgement` received for the hit.
      */
-    public function judgeRating(rating:NoteJudgement)
+    public function judgeRating(rating:NoteJudgement, msTiming:Float)
     {
         var map = Constants.JUDGEMENT_MAP.get(rating);
         lastRating = rating;
@@ -165,9 +161,9 @@ class PlayMetrics
             default:
         }
 
-		score += Std.int(map[1]);
+		score += ScoringUtil.scoreNote(msTiming);
 		health += map[0] / 100.0 * 2;
-        hitNotes += map[2];
+        hitNotes += map[1];
     }
 
     /**
@@ -175,7 +171,7 @@ class PlayMetrics
      */
     public function hold(elapsed:Float)
     {
-        score += Std.int(Constants.SUSTAIN_SCORE_GAIN_PER_SEC * elapsed);
+        score += Constants.SUSTAIN_SCORE_GAIN_PER_SEC * elapsed;
         health += Constants.SUSTAIN_HEALTH_GAIN_PER_SEC * elapsed;
     }
 

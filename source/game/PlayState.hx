@@ -891,7 +891,7 @@ class PlayState extends MusicBeatState
             totalNotes: metrics.totalNotes
         };
 
-        Highscore.saveScore(name, difficulty, variation, {score: metrics.score, tallies: tallies});
+        Highscore.saveScore(name, difficulty, variation, {score: Std.int(metrics.score), tallies: tallies});
     }
 
     /**
@@ -942,13 +942,16 @@ class PlayState extends MusicBeatState
      */
     dynamic function updateScoreText():Void
     {
-        if (scoreText == null || metrics == null || metrics.score == _lastDisplayedScore) 
-        {
+        if (scoreText == null || metrics == null)
             return;
-        }
 
-        _lastDisplayedScore = metrics.score;
-        scoreText.text = "Score: " + Std.string(FlxStringUtil.formatMoney(metrics.score, false, true));
+        var displayScore:Int = Std.int(metrics.score);
+
+        if (displayScore == _lastDisplayedScore)
+            return;
+
+        _lastDisplayedScore = displayScore;
+        scoreText.text = "Score: " + Std.string(FlxStringUtil.formatMoney(displayScore, false, true));
     }
 
     /**
@@ -957,9 +960,7 @@ class PlayState extends MusicBeatState
     dynamic function lerpCamerasZoom(elapsed:Float):Void
     {
         if (!camerasCanLerp)
-        {
             return;
-        }
 
         var decay:Float = 0.85;
         var speed:Float = (elapsed * 60) * camerasZoomLerpSpeed;
@@ -1508,10 +1509,11 @@ class PlayState extends MusicBeatState
 
         if (note.mustHit)
         {
-            var rating:NoteJudgement = metrics.calculateRating(note.time - conductor.songPosition);
-            
+            var msTiming:Float = note.time - conductor.songPosition;
+            var rating:NoteJudgement = metrics.calculateRating(msTiming);
+
             if (event.showRating)
-                metrics.judgeRating(rating);
+                metrics.judgeRating(rating, msTiming);
 
             metrics.calculateAccuracy();
 
