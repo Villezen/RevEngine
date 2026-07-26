@@ -903,7 +903,6 @@ class PlayState extends MusicBeatState
 
         _lastConductorPos = conductor.songPosition;
 
-        // Handle instrumental resync
         if (updateConductor)
         {
             var newPosition:Float = conductor.songPosition + elapsed * 1000;
@@ -923,13 +922,9 @@ class PlayState extends MusicBeatState
             conductor.update(newPosition);
         }
 
-        // Process the player's inputs.
         processInputs(elapsed);
-
-        // Lerps the cameras zoom back to their original values.
         lerpCamerasZoom(elapsed);
 
-        // Smoothen the health bar.
         _healthLerp = FlxMath.lerp(_healthLerp, metrics.health, 0.15);
 
         updateScoreText();
@@ -979,16 +974,11 @@ class PlayState extends MusicBeatState
      */
     function manageDebugKeybinds(devMode:Bool):Void
     {
-        // Access the chart editor.
         if (FlxG.keys.justPressed.SEVEN)
-        {
             Manager.switchState(new menus.ChartingState(name, difficulty, variation));
-        }
 
-        // Only add the more sensitive keybinds after this.
         if (!devMode) return;
 
-        // Quickly go back to the main menu.
         if (FlxG.keys.justPressed.ESCAPE && songStarted)
         {
             updateConductor = false;
@@ -999,7 +989,6 @@ class PlayState extends MusicBeatState
             Manager.switchState(new menus.MainMenuState(), "stickers");
         }
 
-        // Quickly switches the scroll direction of the notes.
         if (FlxG.keys.justPressed.TAB)
         {
             Configs.DOWNSCROLL = !Configs.DOWNSCROLL;
@@ -1014,15 +1003,10 @@ class PlayState extends MusicBeatState
             }
         }
 
-        // Makes the game fast forward.
         if (_canSkip)
-        {
             update_timeSkipping(FlxG.keys.pressed.TWO || FlxG.keys.pressed.ONE, (FlxG.keys.pressed.TWO ? 3.0 : 0.5));
-        }
         else if (!_canSkip && FlxG.timeScale != 1.0)
-        {
             setTimeScale(1.0);
-        }
     }
 
     /**

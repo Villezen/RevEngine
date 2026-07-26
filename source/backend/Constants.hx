@@ -141,10 +141,29 @@ class Constants
         NoteJudgement.NONE => [0.0, 0.0]
     ];
 
+    /**
+     * Maximum score that can be gained on a note hit.
+     */
     public static final SCORE_MAX:Float = 500;
+
+    /**
+     * Minimum score that can be gained on a note hit.
+     */
     public static final SCORE_MIN:Float = 10;
+
+    /**
+     * How close a hit's timing must be, in milliseconds, to always gain the maximum score.
+     */
     public static final SCORE_PERFECT_THRESHOLD:Float = 5.0;
+    
+    /**
+     * Controls where along the timing the score starts dropping off.
+     */
     public static final SCORE_SIGMOID_OFFSET:Float = 54.99;
+
+    /**
+     * Controls how sharply the score drops off as the timing gets worse.
+     */
     public static final SCORE_SIGMOID_SLOPE:Float = 0.08;
 
     /**
