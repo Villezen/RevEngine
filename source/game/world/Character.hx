@@ -735,7 +735,7 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
         loopingIdle = false;
         stunned = false;
 
-        play('sing${dir}-miss', true);
+        play('sing${dir}miss', true);
         moveCamera(dir, dynCamIntensity.x / 2, dynCamIntensity.y / 2);
 
         resetTimer = 0;

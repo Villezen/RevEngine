@@ -34,19 +34,19 @@
             "prefix": "Right"
         },
         {
-            "name": "singLEFT-miss",
+            "name": "singLEFTmiss",
             "prefix": "Left Miss"
         },
         {
-            "name": "singDOWN-miss",
+            "name": "singDOWNmiss",
             "prefix": "Down Miss"
         },
         {
-            "name": "singUP-miss",
+            "name": "singUPmiss",
             "prefix": "Up Miss"
         },
         {
-            "name": "singRIGHT-miss",
+            "name": "singRIGHTmiss",
             "prefix": "Right Miss"
         },
         {
