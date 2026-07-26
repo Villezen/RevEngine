@@ -41,6 +41,18 @@ class FunkinModel extends FlxBasic implements ITaggable
 	public var viewport(default, null):FunkinViewport;
 	public var loaded(default, null):Bool = false;
 
+	public var x(get, set):Float;
+	public var y(get, set):Float;
+	public var z(get, set):Float;
+
+	public var rotationX(get, set):Float;
+	public var rotationY(get, set):Float;
+	public var rotationZ(get, set):Float;
+
+	public var scaleX(get, set):Float;
+	public var scaleY(get, set):Float;
+	public var scaleZ(get, set):Float;
+
 	public var modelPath(default, null):String;
 	public var modelParams:ModelParams;
 
@@ -313,6 +325,33 @@ class FunkinModel extends FlxBasic implements ITaggable
 		object3D.y = y;
 		object3D.z = z;
 	}
+
+	function get_x():Float return object3D.x;
+	function set_x(value:Float):Float return object3D.x = value;
+
+	function get_y():Float return object3D.y;
+	function set_y(value:Float):Float return object3D.y = value;
+
+	function get_z():Float return object3D.z;
+	function set_z(value:Float):Float return object3D.z = value;
+
+	function get_rotationX():Float return object3D.rotationX;
+	function set_rotationX(value:Float):Float return object3D.rotationX = value;
+
+	function get_rotationY():Float return object3D.rotationY;
+	function set_rotationY(value:Float):Float return object3D.rotationY = value;
+
+	function get_rotationZ():Float return object3D.rotationZ;
+	function set_rotationZ(value:Float):Float return object3D.rotationZ = value;
+
+	function get_scaleX():Float return object3D.scaleX;
+	function set_scaleX(value:Float):Float return object3D.scaleX = value;
+
+	function get_scaleY():Float return object3D.scaleY;
+	function set_scaleY(value:Float):Float return object3D.scaleY = value;
+
+	function get_scaleZ():Float return object3D.scaleZ;
+	function set_scaleZ(value:Float):Float return object3D.scaleZ = value;
 
 	function clearModel():Void
 	{

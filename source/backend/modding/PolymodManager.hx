@@ -82,7 +82,11 @@ class PolymodManager
 
         Polymod.addDefaultImport(backend.assets.Paths);
         Polymod.addDefaultImport(backend.assets.Cacher);
+
         Polymod.addDefaultImport(backend.assets.FunkinSprite);
+        Polymod.addDefaultImport(backend.assets.FunkinSound);
+        Polymod.addDefaultImport(backend.assets.FunkinModel);
+        Polymod.addDefaultImport(backend.assets.FunkinViewport);
 
         Polymod.addDefaultImport(backend.modding.PolymodManager);
         Polymod.addDefaultImport(backend.modding.ModState);
@@ -156,7 +160,6 @@ class PolymodManager
         Polymod.addDefaultImport(flixel.addons.text.FlxTypeText);
 
         Polymod.addDefaultImport(flixel.sound.FlxSound);
-        Polymod.addDefaultImport(backend.assets.FunkinSound);
 
         Polymod.addDefaultImport(flixel.math.FlxMath);
         Polymod.addDefaultImport(flixel.math.FlxRect);

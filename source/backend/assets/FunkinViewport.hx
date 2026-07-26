@@ -10,6 +10,7 @@ import away3d.materials.lightpickers.StaticLightPicker;
 import openfl.geom.Vector3D;
 
 import flixel.FlxBasic;
+import flixel.FlxCamera;
 
 typedef ViewportParams =
 {
@@ -34,6 +35,12 @@ class FunkinViewport extends FlxBasic
 	public var lightPicker:StaticLightPicker;
 	public var models(default, null):Array<FunkinModel> = [];
 
+	public var followCamera:FlxCamera;
+	public var offsetX:Float = 0;
+	public var offsetY:Float = 0;
+	public var offsetZ:Float = 0;
+
+	var _lens:PerspectiveLens;
 	var _autoSize:Bool = false;
 
 	public function new(?params:ViewportParams)
@@ -48,7 +55,8 @@ class FunkinViewport extends FlxBasic
 
 		scene = new Scene3D();
 
-		camera3D = new Camera3D(new PerspectiveLens(params.fov));
+		_lens = new PerspectiveLens(params.fov);
+		camera3D = new Camera3D(_lens);
 		camera3D.z = -1000;
 		camera3D.lookAt(new Vector3D(0, 0, 0));
 
@@ -135,11 +143,27 @@ class FunkinViewport extends FlxBasic
 		return model;
 	}
 
+	public function updateFollow():Void
+	{
+		if (followCamera == null)
+			return;
+
+		camera3D.z = offsetZ;
+
+		var focalDist = Math.abs(offsetZ);
+		var worldPerPixel = 2 * focalDist * Math.tan(_lens.fieldOfView * Math.PI / 360) / view.height;
+		var scale = worldPerPixel * followCamera.zoom;
+
+		camera3D.x = offsetX + followCamera.scroll.x * scale;
+		camera3D.y = offsetY - followCamera.scroll.y * scale;
+	}
+
 	public function render():Void
 	{
 		if (!exists || models.length == 0 || view == null || view.stage3DProxy == null)
 			return;
 
+		updateFollow();
 		view.render();
 	}
 
@@ -183,6 +207,8 @@ class FunkinViewport extends FlxBasic
 		camera3D = null;
 		light = null;
 		lightPicker = null;
+		followCamera = null;
+		_lens = null;
 
 		super.destroy();
 	}

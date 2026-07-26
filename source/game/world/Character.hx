@@ -702,16 +702,18 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
         var dir = Constants.SING_DIRECTIONS[parent.keyCount][sustain.direction];
         var animName = 'sing${dir}';
 
+        var curName:String = null;
+
         if (renderType == ATLAS)
         {
-            if (atlasSpr.anim.curAnim != null && atlasSpr.anim.curAnim.name == animName)
-                return;
+            if (atlasSpr.anim.curAnim != null)
+                curName = atlasSpr.anim.curAnim.name;
         }
-        else if (renderType == SPARROW)
-        {
-            if (animation.curAnim != null && animation.curAnim.name == animName)
-                return;
-        }
+        else if (animation.curAnim != null)
+            curName = animation.curAnim.name;
+
+        if (curName != null && curName.startsWith('sing') && curName.indexOf('-') < 0)
+            return;
 
         isSinging = true;
         allowBopOnBeat = false;
