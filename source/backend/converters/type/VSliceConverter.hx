@@ -37,22 +37,7 @@ typedef VSliceNoteEntry =
 
 class VSliceConverter implements IConverterEntry
 {
-    public static var instance(get, never):VSliceConverter;
-
-    static function get_instance():VSliceConverter
-    {
-        if (_instance == null)
-            _instance = new VSliceConverter();
-        return _instance;
-    }
-
-    static var _instance:VSliceConverter;
     static final DIFFICULTY_KEYS:Array<String> = ["hard", "normal", "easy", "default"];
-
-    public var song:String = "";
-    public var difficulty:String = null;
-
-    public function new() {}
 
     public function detect(data:Dynamic):Bool
     {
@@ -332,11 +317,6 @@ class VSliceConverter implements IConverterEntry
             notes: {easy: [], normal: [], hard: []},
             generatedBy: "RevEngine V-Slice Converter - v" + Constants.VERSION_STRING
         };
-    }
-
-    public function write(data:Dynamic):String
-    {
-        return Json.stringify(data, null, "\t");
     }
 
     private static function sortNotes(notes:Array<ChartNote>):Void

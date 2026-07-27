@@ -1,7 +1,5 @@
 package backend.converters.type;
 
-import haxe.Json;
-
 import backend.registries.song.ChartRegistry.ChartData;
 import backend.registries.song.ChartRegistry.ChartStrumline;
 import backend.registries.song.ChartRegistry.ChartNote;
@@ -48,22 +46,7 @@ private typedef ResolvedSections =
 
 class LegacyConverter implements IConverterEntry
 {
-    public static var instance(get, never):LegacyConverter;
-
-    static function get_instance():LegacyConverter
-    {
-        if (_instance == null)
-            _instance = new LegacyConverter();
-        return _instance;
-    }
-
-    static var _instance:LegacyConverter;
     static final DIFFICULTY_KEYS:Array<String> = ["normal", "hard", "easy"];
-
-    public var song:String = "";
-    public var difficulty:String = null;
-
-    public function new() {}
 
     private function getSongData(data:Dynamic):LegacySongData
     {
@@ -426,6 +409,7 @@ class LegacyConverter implements IConverterEntry
                     if (isPlayer) dir += 4;
 
                     var legacyNote:Array<Dynamic> = [note.time ?? 0.0, dir, (note.length == null || note.length < 0) ? 0.0 : note.length];
+                    
                     if (note.kind != null && note.kind != "default")
                         legacyNote.push(note.kind);
 
@@ -470,11 +454,6 @@ class LegacyConverter implements IConverterEntry
                 notes: []
             }
         };
-    }
-
-    public function write(data:Dynamic):String
-    {
-        return Json.stringify(data, null, "\t");
     }
 
     private static function sortNotes(notes:Array<ChartNote>):Void

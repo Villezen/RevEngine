@@ -6,6 +6,7 @@ import backend.registries.song.EventRegistry.EventData;
 /**
  * Interface for the chart format converter.
  */
+@:autoBuild(backend.macros.ConverterMacro.build())
 interface IConverterEntry
 {
     /**
