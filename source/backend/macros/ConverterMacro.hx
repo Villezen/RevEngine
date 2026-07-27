@@ -4,8 +4,6 @@ package backend.macros;
 import haxe.macro.Context;
 import haxe.macro.Expr;
 
-import haxe.Json;
-
 class ConverterMacro
 {
     public static function build():Array<Field>
@@ -111,7 +109,7 @@ class ConverterMacro
                 {
                     args: [{name: "data", type: (macro:Dynamic)}],
                     ret: (macro:String),
-                    expr: macro return Json.stringify(data, null, "\t")
+                    expr: macro return haxe.Json.stringify(data, null, "\t")
                 }),
                 pos: pos
             });

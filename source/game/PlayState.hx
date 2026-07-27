@@ -406,11 +406,6 @@ class PlayState extends MusicBeatState
     private var _hudZoomCameras:Array<FlxCamera> = [];
 
     /**
-     * Last score value written to the score text, so the display string is only rebuilt when it changes.
-     */
-    private var _lastDisplayedScore:Int = -1;
-
-    /**
      * Set when the window regains focus.
      */
     private var _reanchorConductor:Bool = false;
@@ -739,14 +734,16 @@ class PlayState extends MusicBeatState
             add(healthBar);
 
             scoreText = new FlxBitmapText(0, 0, 'Score: 0', Paths.getAngelFont("vcr/low"));
-            scoreText.x = healthBar.x + healthBar.width - 190;
-            scoreText.y = healthBar.y + 30;
-            scoreText.alignment = RIGHT;
+            scoreText.y = healthBar.y + 40;
+            scoreText.alignment = CENTER;
             scoreText.borderStyle = OUTLINE;
             scoreText.borderColor = FlxColor.BLACK;
+            scoreText.borderSize = 1.2;
             scoreText.letterSpacing = -1;
             scoreText.camera = camHUD;
             scoreText.antialiasing = true;
+            scoreText.scale.set(1.05, 1.05);
+            scoreText.updateHitbox();
             add(scoreText);
 
             syncHUD();
@@ -940,13 +937,8 @@ class PlayState extends MusicBeatState
         if (scoreText == null || metrics == null)
             return;
 
-        var displayScore:Int = Std.int(metrics.score);
-
-        if (displayScore == _lastDisplayedScore)
-            return;
-
-        _lastDisplayedScore = displayScore;
-        scoreText.text = "Score: " + Std.string(FlxStringUtil.formatMoney(displayScore, false, true));
+        scoreText.text = "Score: " + Std.string(FlxStringUtil.formatMoney(Std.int(metrics.score), false, true)) + " | Misses: " + Std.int(metrics.misses) + " | Accuracy: " + FlxMath.roundDecimal(metrics.accuracy, 2) + "% | P+";
+        scoreText.screenCenter(X);
     }
 
     /**
@@ -1704,6 +1696,6 @@ class PlayState extends MusicBeatState
             healthBar.y = Configs.DOWNSCROLL ? healthBar.camera.height * 0.1 : healthBar.camera.height * 0.9;
 
         if (scoreText != null && healthBar != null)
-            scoreText.y = healthBar.y + 30;
+            scoreText.y = healthBar.y + 40;
     }
 }
