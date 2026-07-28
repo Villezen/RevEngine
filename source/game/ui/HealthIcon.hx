@@ -85,6 +85,8 @@ class HealthIcon extends FunkinSprite
     public var canUpdateOffsets:Bool = true;
     public var canBounce:Bool = true;
 
+    public var dipFactor:Float = 0.45;
+
     public var originalScale(default, set):FlxPoint = FlxPoint.get(1.0, 1.0);
 
     function set_originalScale(value:FlxPoint):FlxPoint
@@ -279,12 +281,12 @@ class HealthIcon extends FunkinSprite
                 this.x = trackerX - (this.width / 2) + data.position[0];
         }
 
-        this.y = bar.y - (this.height / 2) + data.position[1];
-        
+        this.y = bar.y - ((frameHeight * (scale.y * (1 - dipFactor) + originalScale.y * dipFactor)) / 2) + data.position[1];
+
         this.updateHitbox();
     }
 
-    public function bounce(?intensity:Float = 0.2, ?updateHitbox:Bool = true):Void
+    public dynamic function bounce(?intensity:Float = 0.15, ?updateHitbox:Bool = true):Void
     {
         if (!canBounce || iconType == CENTER) return;
 
@@ -304,8 +306,8 @@ class HealthIcon extends FunkinSprite
 
         this.updatePosition();
 
-        bopTween = FlxTween.num(bounceWidth, targetWidth, Math.min(Conductor.instance.stepLengthMs * 0.002, 0.175), {onComplete: function(twn:FlxTween) bopTween = null}, function(value:Float) {
-            
+        bopTween = FlxTween.num(bounceWidth, targetWidth, Math.min(Conductor.instance.stepLengthMs * 0.004, 0.175), {ease: FlxEase.cubeOut, onComplete: function(twn:FlxTween) bopTween = null}, function(value:Float)
+        {
             var ratio = (value - targetWidth) / (bounceWidth - targetWidth);
             var curHeight = targetHeight + ((bounceHeight - targetHeight) * ratio);
 

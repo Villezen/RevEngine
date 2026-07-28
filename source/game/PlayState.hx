@@ -743,7 +743,7 @@ class PlayState extends MusicBeatState
             add(healthBar);
 
             scoreText = new FlxBitmapText(0, 0, 'Score: 0', Paths.getAngelFont("vcr/low"));
-            scoreText.y = healthBar.y + 40;
+            scoreText.y = healthBar.y + 45;
             scoreText.alignment = CENTER;
             scoreText.borderStyle = OUTLINE;
             scoreText.borderColor = FlxColor.BLACK;
@@ -1183,17 +1183,25 @@ class PlayState extends MusicBeatState
         characters?.clear();
         song?.stop();
 
-        var objects:Array<Dynamic> = [song, chart, meta, metrics, eventsHandler, playerStrums, enemyStrums, stage, pointer];
-        for (obj in objects)
-        {
-            obj = null;
-        }
-
         CharacterHandler.clear();
 
         instance = null;
 
         super.destroy();
+
+        song = null;
+
+        chart = null;
+        meta = null;
+        metrics = null;
+
+        eventsHandler = null;
+
+        playerStrums = null;
+        enemyStrums = null;
+        
+        stage = null;
+        pointer = null;
     }
 
     /**
@@ -1741,6 +1749,6 @@ class PlayState extends MusicBeatState
             healthBar.y = Configs.DOWNSCROLL ? healthBar.camera.height * 0.1 : healthBar.camera.height * 0.9;
 
         if (scoreText != null && healthBar != null)
-            scoreText.y = healthBar.y + 40;
+            scoreText.y = healthBar.y + 45;
     }
 }

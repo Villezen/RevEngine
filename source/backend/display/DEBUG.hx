@@ -2,9 +2,6 @@ package backend.display;
 
 import haxe.ds.Vector;
 
-import backend.MusicBeatState;
-import backend.MusicBeatSubState;
-
 import backend.utils.MathUtil;
 import backend.utils.MemoryUtil;
 import backend.utils.GitHubUtil;
@@ -20,6 +17,8 @@ import flixel.FlxState;
 import flixel.FlxSubState;
 import flixel.math.FlxPoint;
 import flixel.FlxBasic;
+import flixel.math.FlxMath;
+import flixel.util.FlxStringUtil;
 import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.group.FlxSpriteGroup.FlxTypedSpriteGroup;
 
@@ -56,7 +55,27 @@ class DEBUG extends Sprite
 
     public var textBox:Shape;
     public var infoBox:Shape;
-    public var infoText:TextField;
+
+    public var engineTitle:TextField;
+    public var engineBody:TextField;
+
+    public var sysTitle:TextField;
+    public var sysBody:TextField;
+
+    public var condTitle:TextField;
+    public var posText:TextField;
+    public var stepText:TextField;
+    public var beatText:TextField;
+    public var measureText:TextField;
+
+    public var stateTitle:TextField;
+    public var stateBody:TextField;
+
+    private var _infoFields:Array<TextField> = [];
+
+    private var _titleFormat:TextFormat;
+    private var _bodyFormat:TextFormat;
+
     public var framerateText:TextField;
     public var memoryText:TextField;
     public var framerateGraph:GRAPH;
@@ -72,7 +91,6 @@ class DEBUG extends Sprite
     private var frameHead:Int = 0;
     private var frameCount:Int = 0;
 
-    private var fpsTextTimer:Float = 0;
     private var graphTimer:Float = 0;
     private var lastDrawnFPS:Int = -1;
     private var lastGcMEM:Float = -1;
@@ -83,7 +101,8 @@ class DEBUG extends Sprite
     public var gpuName:String = "Fetching...";
     public var githubCommit:String = "Fetching...";
     
-    private var staticInfoString:String = "";
+    private var engineInfoString:String = "";
+    private var systemInfoString:String = "";
     private var statsTimer:Float = 0;
     private var cachedSprites:CachedSpriteData = {total: 0, visible: 0, drawn: 0};
 
@@ -92,17 +111,12 @@ class DEBUG extends Sprite
     private var cachedStateName:String = "";
     private var cachedSubStateName:String = "";
 
-    private var lastStep:Int = -1;
-    private var lastBeat:Int = -1;
-    private var lastMeasure:Int = -1;
-
     private var targetInfoWidth:Float = 0;
     private var targetInfoHeight:Float = 0;
     private var targetFrameWidth:Float = 0;
-    private var targetFrameHeight:Float = 15; 
+    private var targetFrameHeight:Float = 15;
     private var targetMemWidth:Float = 0;
     private var targetMemHeight:Float = 15;
-    private var forceInfoUpdate:Bool = true;
 
     public function new()
     {
@@ -122,16 +136,26 @@ class DEBUG extends Sprite
         infoBox.alpha = 0.4;
         addChild(infoBox);
 
-        infoText = new TextField();
-        infoText.x = 10;
-        infoText.y = 6;
-        infoText.selectable = false;
-        infoText.mouseEnabled = false;
-        infoText.autoSize = openfl.text.TextFieldAutoSize.LEFT; 
-        infoText.defaultTextFormat = new TextFormat('Monsterrat', 10, 0xFFFFFF);
-        infoText.text = "Loading info...";
-        addChild(infoText);
+        _titleFormat = new TextFormat('Monsterrat', 13, 0xFF7FDBFF, true);
+        _bodyFormat = new TextFormat('Monsterrat', 10, 0xFFFFFF);
+
+        engineTitle = makeInfoField(_titleFormat, "Engine Info");
+        engineBody = makeInfoField(_bodyFormat, "Loading info...");
+
+        sysTitle = makeInfoField(_titleFormat, "System Info");
+        sysBody = makeInfoField(_bodyFormat, "Loading info...");
+
+        condTitle = makeInfoField(_titleFormat, "Conductor Info");
+        posText = makeInfoField(_bodyFormat, "Position: 0ms");
+        stepText = makeInfoField(_bodyFormat, "Step: 0");
+        beatText = makeInfoField(_bodyFormat, "Beat: 0");
+        measureText = makeInfoField(_bodyFormat, "Measure: 0");
         
+        stateTitle = makeInfoField(_titleFormat, "State Info");
+        stateBody = makeInfoField(_bodyFormat, "State:");
+
+        _infoFields = [engineTitle, engineBody, sysTitle, sysBody, condTitle, posText, stepText, beatText, measureText, stateTitle, stateBody];
+
         framerateText = new TextField();
         framerateText.x = 10;
         framerateText.y = 6;
@@ -295,11 +319,12 @@ class DEBUG extends Sprite
 
     private function updateStaticInfo():Void
     {
-        staticInfoString = 'RevEngine v${Constants.VERSION_STRING} (API: v${Constants.API_VERSION})\n' 
-                         + 'Commit: $githubCommit (${Constants.REPOSITORY_OWNER}/${Constants.REPOSITORY_NAME}:${Constants.REPOSITORY_BRANCH})\n\n'
-                         + 'OS: ${osName}\n' 
-                         + 'CPU: ${cpuName}\n' 
-                         + 'GPU: ${gpuName}\n\n';
+        engineInfoString = 'RevEngine v${Constants.VERSION_STRING} (API: v${Constants.API_VERSION})\n'
+                         + 'Commit: $githubCommit (${Constants.REPOSITORY_OWNER}/${Constants.REPOSITORY_NAME}:${Constants.REPOSITORY_BRANCH})';
+
+        systemInfoString = 'OS: ${osName}\n'
+                         + 'CPU: ${cpuName}\n'
+                         + 'GPU: ${gpuName}';
     }
 
     @:noCompletion
@@ -326,12 +351,7 @@ class DEBUG extends Sprite
         updateDisplay(deltaTime);
         updateInfo(deltaTime);
 
-        fpsTextTimer += deltaTime;
-        if (fpsTextTimer >= 250)
-        {
-            fpsTextTimer = 0;
-            updateFramerateText();
-        }
+        updateFramerateText();
 
         graphTimer += deltaTime;
         if (graphTimer >= 100)
@@ -351,14 +371,12 @@ class DEBUG extends Sprite
             if (currentDisplayType != HIDDEN)
                 updateMemory();
 
-            if (infoTextToggle) 
+            if (infoTextToggle)
             {
                 cachedSprites.total = 0;
                 cachedSprites.visible = 0;
                 cachedSprites.drawn = 0;
                 getSpriteCounts(FlxG.state, cachedSprites);
-                
-                forceInfoUpdate = true;
             }
 
             statsTimer = 0;
@@ -462,6 +480,23 @@ class DEBUG extends Sprite
         memoryText.width = targetMemWidth;
     }
 
+    private function makeInfoField(format:TextFormat, initial:String):TextField
+    {
+        var field:TextField = new TextField();
+
+        field.selectable = false;
+        field.mouseEnabled = false;
+
+        field.autoSize = openfl.text.TextFieldAutoSize.LEFT;
+        field.defaultTextFormat = format;
+        field.text = initial;
+        field.alpha = 0;
+
+        addChild(field);
+
+        return field;
+    }
+
     public function updateInfo(dt:Float)
     {
         if (FlxG.keys.justPressed.F2)
@@ -471,78 +506,108 @@ class DEBUG extends Sprite
 
         if (infoTextToggle && FlxG.state != null)
         {
-            var currentStep:Int = 0;
-            var currentBeat:Int = 0;
-            var currentMeasure:Int = 0;
-
-            var conductor:Conductor = null;
-
-            if (FlxG.state.subState is MusicBeatSubState)
-                conductor = cast(FlxG.state.subState, MusicBeatSubState).conductor;
-            else if (FlxG.state is MusicBeatState)
-                conductor = cast(FlxG.state, MusicBeatState).conductor;
-
-            if (conductor != null)
-            {
-                currentStep = Std.int(conductor.currentStepTime);
-                currentBeat = Std.int(conductor.currentBeatTime);
-                currentMeasure = Std.int(conductor.currentMeasureTime);
-            }
-
-            if (FlxG.state != cachedState)
-            {
-                cachedState = FlxG.state;
-                cachedStateName = Type.getClassName(Type.getClass(cachedState));
-                forceInfoUpdate = true;
-            }
-
-            if (FlxG.state.subState != cachedSubState)
-            {
-                cachedSubState = FlxG.state.subState;
-                cachedSubStateName = cachedSubState != null ? Type.getClassName(Type.getClass(cachedSubState)) : "";
-                forceInfoUpdate = true;
-            }
-
-            if (currentStep != lastStep || currentBeat != lastBeat || currentMeasure != lastMeasure || forceInfoUpdate)
-            {
-                lastStep = currentStep;
-                lastBeat = currentBeat;
-                lastMeasure = currentMeasure;
-                forceInfoUpdate = false;
-
-                var stateStr:String = cachedStateName;
-                if (cachedSubState != null)
-                {
-                    stateStr += ' ($cachedSubStateName)';
-                }
-
-                infoText.text = staticInfoString
-                              + 'State: ${stateStr}\n'
-                              + 'Step: ${currentStep}\n'
-                              + 'Beat: ${currentBeat}\n'
-                              + 'Measure: ${currentMeasure}\n\n'
-                              + 'Total Sprites: ${cachedSprites.total}\n'
-                              + 'Total Visible Sprites: ${cachedSprites.visible}\n'
-                              + 'Total Drawn Sprites: ${cachedSprites.drawn}';
-                
-                targetInfoWidth = infoText.textWidth;
-                targetInfoHeight = infoText.textHeight;
-                infoText.width = targetInfoWidth + 10;
-            }
+            updateInfoContent();
+            layoutInfoSections();
         }
 
         infoBox.alpha = MathUtil.smoothLerpPrecision(infoBox.alpha, infoTextToggle ? 0.4 : 0, elapsed, 0.1);
-        infoText.alpha = MathUtil.smoothLerpPrecision(infoText.alpha, infoTextToggle ? 0.8 : 0, elapsed, 0.1);
+
+        var textAlpha:Float = infoTextToggle ? 0.85 : 0;
+        for (field in _infoFields)
+            field.alpha = MathUtil.smoothLerpPrecision(field.alpha, textAlpha, elapsed, 0.1);
 
         if (!infoTextToggle && infoBox.alpha <= 0.01)
             return;
 
-        infoText.y = textBox.y + textBox.height + 5;
-        infoBox.x = infoText.x;
-        infoBox.y = infoText.y;
-        
-        infoBox.width = MathUtil.smoothLerpPrecision(infoBox.width, targetInfoWidth + 7, elapsed, 0.1);
-        infoBox.height = MathUtil.smoothLerpPrecision(infoBox.height, targetInfoHeight + 5, elapsed, 0.1);
+        infoBox.x = 10;
+        infoBox.y = textBox.y + textBox.height + 2;
+
+        infoBox.width = MathUtil.smoothLerpPrecision(infoBox.width, targetInfoWidth + 12, elapsed, 0.1);
+        infoBox.height = MathUtil.smoothLerpPrecision(infoBox.height, targetInfoHeight, elapsed, 0.1);
+    }
+
+    private function updateInfoContent():Void
+    {
+        applyText(engineBody, engineInfoString);
+        applyText(sysBody, systemInfoString);
+
+        var conductor:Conductor = Conductor.instance;
+        if (conductor != null)
+        {
+            applyText(posText, 'Position: ${Std.int(conductor.songPosition)}ms (${FlxStringUtil.formatTime(Std.int(conductor.songPosition / 1000))})');
+            applyText(stepText, 'Step: ${conductor.currentStep} [${FlxMath.roundDecimal(conductor.currentStepTime, 2)}]');
+            applyText(beatText, 'Beat: ${conductor.currentBeat} [${FlxMath.roundDecimal(conductor.currentBeatTime, 2)}]');
+            applyText(measureText, 'Measure: ${conductor.currentMeasure} [${FlxMath.roundDecimal(conductor.currentMeasureTime, 2)}]');
+        }
+        else
+        {
+            applyText(posText, 'Position: --');
+            applyText(stepText, 'Step: --');
+            applyText(beatText, 'Beat: --');
+            applyText(measureText, 'Measure: --');
+        }
+
+        if (FlxG.state != cachedState)
+        {
+            cachedState = FlxG.state;
+            cachedStateName = Type.getClassName(Type.getClass(cachedState));
+        }
+
+        if (FlxG.state.subState != cachedSubState)
+        {
+            cachedSubState = FlxG.state.subState;
+            cachedSubStateName = cachedSubState != null ? Type.getClassName(Type.getClass(cachedSubState)) : "";
+        }
+
+        var stateStr:String = cachedStateName;
+        if (cachedSubState != null)
+            stateStr += ' ($cachedSubStateName)';
+
+        applyText(stateBody, 'State: ${stateStr}\n'
+                           + 'Total Sprites: ${cachedSprites.total}\n'
+                           + 'Visible Sprites: ${cachedSprites.visible}\n'
+                           + 'Drawn Sprites: ${cachedSprites.drawn}');
+    }
+
+    private function layoutInfoSections():Void
+    {
+        var x:Float = 10;
+
+        var padTop:Float = 3;
+        var padBottom:Float = 3;
+
+        var boxTop:Float = textBox.y + textBox.height + 2;
+
+        var y:Float = boxTop + padTop - 2;
+
+        var maxWidth:Float = 0;
+
+        var first:Bool = true;
+
+        for (field in _infoFields)
+        {
+            if (!first && (field == engineTitle || field == sysTitle || field == condTitle || field == stateTitle))
+                y += 5;
+
+            field.x = x;
+            field.y = y;
+
+            y += field.textHeight;
+
+            first = false;
+
+            if (field.textWidth > maxWidth)
+                maxWidth = field.textWidth;
+        }
+
+        targetInfoWidth = maxWidth;
+        targetInfoHeight = (y + padBottom) - boxTop;
+    }
+
+    private inline function applyText(field:TextField, value:String):Void
+    {
+        if (field.text != value)
+            field.text = value;
     }
 
     public function updateDisplay(dt:Float):Void

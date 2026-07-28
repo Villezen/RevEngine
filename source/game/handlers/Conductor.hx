@@ -115,6 +115,10 @@ class Conductor
         // Make sure we cancel all the tweens in this instance before we destroy it.
         reset();
 
+        onStepHit.removeAll();
+        onBeatHit.removeAll();
+        onMeasureHit.removeAll();
+
         // Destroy this instance.
         instance = null;
 	}

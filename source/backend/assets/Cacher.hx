@@ -15,14 +15,24 @@ import backend.utils.MemoryUtil;
 import lime.utils.Assets as LimeAssets;
 #end
 
+typedef CacheSnapshot =
+{
+    var graphics:Map<String, Bool>;
+    var sounds:Map<String, Bool>;
+    var streams:Array<Sound>;
+    var generation:Int;
+}
+
 class Cacher
 {
     public static var instance(get, never):Cacher;
     private static var _instance:Cacher;
+
     private static function get_instance():Cacher
     {
         if (_instance == null)
             _instance = new Cacher();
+
         return _instance;
     }
 
@@ -40,7 +50,8 @@ class Cacher
     public var activeStreams:Array<Sound> = [];
     private var streamGeneration:Map<Sound, Int> = new Map();
 
-    private static inline var PERMANENT_GENERATION:Int = -1;
+    private var _snapshotStack:Array<CacheSnapshot> = [];
+
     public var generation(default, null):Int = 0;
     
     public function new()
@@ -85,7 +96,7 @@ class Cacher
         if (!activeStreams.contains(snd))
             activeStreams.push(snd);
 
-        streamGeneration.set(snd, permanent ? PERMANENT_GENERATION : generation);
+        streamGeneration.set(snd, permanent ? -1 : generation);
     }
 
     public function isStream(snd:Sound):Bool
@@ -101,14 +112,8 @@ class Cacher
         try snd.close() catch (e:Dynamic) {}
     }
 
-    /**
-     * Backing-file stamps for disk-loaded cached assets.
-     */
     private var fileStamps:Map<String, {path:String, mtime:Float, size:Int}> = new Map();
 
-    /**
-     * Records the backing file's modification time and size for a disk-loaded cached asset.
-     */
     public function stampFile(id:String, path:String):Void
     {
         if (id == null || path == null) return;
@@ -121,9 +126,6 @@ class Cacher
         catch (e:Dynamic) {}
     }
 
-    /**
-     * Whether the file backing a cached asset has been changed on disk.
-     */
     public function isFileStale(id:String):Bool
     {
         var stamp = fileStamps.get(id);
@@ -140,9 +142,6 @@ class Cacher
         }
     }
 
-    /**
-     * Closes and removes a cached sound so the next request reloads it from disk.
-     */
     public function evictSound(id:String):Void
     {
         if (id == null) return;
@@ -164,9 +163,7 @@ class Cacher
             @:privateAccess
             {
                 if (snd.__buffer != null && snd.__buffer.__srcVorbisFile != null)
-                {
                     try snd.__buffer.__srcVorbisFile.clear() catch (e:Dynamic) {}
-                }
             }
             #end
 
@@ -174,15 +171,12 @@ class Cacher
         }
     }
 
-    /**
-     * Evicts a cached graphic when its backing file changed on disk, so the caller can reload its new version.
-     * @return Whether the graphic was evicted.
-     */
     public function refreshStaleGraphic(key:String):Bool
     {
         if (!isFileStale(key)) return false;
 
         var graphic = usedGraphics.get(key);
+
         if (graphic == null) graphic = agedGraphics.get(key);
         if (graphic == null) graphic = FlxG.bitmap.get(key);
 
@@ -191,12 +185,10 @@ class Cacher
 
         trace('Cached graphic "$key" changed on disk, refreshing...', "INFO");
         evictGraphic(key);
+
         return true;
     }
 
-    /**
-     * Destroys and removes a cached graphic so the next request reloads it from disk.
-     */
     public function evictGraphic(key:String):Void
     {
         if (key == null) return;
@@ -216,9 +208,6 @@ class Cacher
         if (rev != null) rev.removeBitmapData(key);
     }
 
-    /**
-     * Removes a cached font so the next request reloads it from disk.
-     */
     public function evictFont(id:String):Void
     {
         if (id == null) return;
@@ -302,6 +291,7 @@ class Cacher
             }
 
             var surviving = preloadedIds.get(id) - 1;
+
             if (surviving <= 0)
                 deadPreloads.push(id);
             else
@@ -358,6 +348,7 @@ class Cacher
             for (id => snd in rev.sound2)
             {
                 if (snd == null) continue;
+                
                 if (isProtectedId(id) || playing.contains(snd))
                 {
                     rev.sound.set(id, snd);
@@ -372,6 +363,7 @@ class Cacher
                 LimeAssets.cache.audio.remove(id);
                 #end
             }
+
             rev.sound2 = [];
 
             for (id => bmp in rev.bitmapData2)
@@ -392,6 +384,7 @@ class Cacher
                 LimeAssets.cache.image.remove(id);
                 #end
             }
+            
             rev.bitmapData2 = [];
         }
 
@@ -407,8 +400,8 @@ class Cacher
             }
 
             var gen:Null<Int> = streamGeneration.get(snd);
-            var expired = (gen == null || (gen != PERMANENT_GENERATION && gen < generation)) && !playing.contains(snd);
-            
+            var expired = (gen == null || (gen != -1 && gen < generation)) && !playing.contains(snd);
+
             if (expired)
             {
                 try snd.close() catch (e:Dynamic) {}
@@ -419,16 +412,126 @@ class Cacher
             i--;
         }
     }
+
+    private function detectPlayingSounds():Array<Sound>
+    {
+        var playing:Array<Sound> = [];
+
+        @:privateAccess
+        {
+            for (snd in FlxG.sound.list)
+            {
+                if (snd != null && snd.playing && snd._sound != null)
+                    playing.push(snd._sound);
+            }
+
+            if (FlxG.sound.music != null && FlxG.sound.music.playing && FlxG.sound.music._sound != null)
+                playing.push(FlxG.sound.music._sound);
+        }
+
+        return playing;
+    }
+
+    public function pushSnapshot():Void
+    {
+        var graphics:Map<String, Bool> = [];
+
+        for (key in usedGraphics.keys())
+            graphics.set(key, true);
+
+        var sounds:Map<String, Bool> = [];
+        var rev = revCache();
+
+        if (rev != null)
+        {
+            for (id in rev.sound.keys())
+                sounds.set(id, true);
+        }
+
+        _snapshotStack.push({graphics: graphics, sounds: sounds, streams: activeStreams.copy(), generation: generation});
+    }
+
+    public function popSnapshot():Void
+    {
+        if (_snapshotStack.length == 0) return;
+
+        var snapshot = _snapshotStack.pop();
+
+        if (snapshot.generation != generation) return;
+
+        var rev = revCache();
+        var playing = detectPlayingSounds();
+
+        var deadGraphics:Array<String> = [];
+        for (key in usedGraphics.keys())
+        {
+            if (snapshot.graphics.exists(key) || isProtectedId(key)) continue;
+
+            var graphic = usedGraphics.get(key);
+            if (graphic != null && graphic.useCount > 0) continue;
+
+            deadGraphics.push(key);
+        }
+
+        for (key in deadGraphics)
+            evictGraphic(key);
+
+        if (rev != null)
+        {
+            var deadSounds:Array<String> = [];
+            for (id in rev.sound.keys())
+            {
+                if (snapshot.sounds.exists(id) || isProtectedId(id)) continue;
+
+                var snd = rev.sound.get(id);
+                if (snd == null || playing.contains(snd)) continue;
+
+                deadSounds.push(id);
+            }
+
+            for (id in deadSounds)
+            {
+                var snd = rev.sound.get(id);
+
+                if (snd != null)
+                    try snd.close() catch (e:Dynamic) {}
+
+                rev.removeSound(id);
+                fileStamps.remove(id);
+            }
+        }
+
+        var i = activeStreams.length - 1;
+        while (i >= 0)
+        {
+            var snd = activeStreams[i];
+
+            if (snd != null && snapshot.streams.indexOf(snd) == -1 && !playing.contains(snd) && streamGeneration.get(snd) != -1)
+            {
+                try snd.close() catch (e:Dynamic) {}
+
+                streamGeneration.remove(snd);
+                activeStreams.splice(i, 1);
+            }
+
+            i--;
+        }
+
+        if (!(FlxG.state is game.PlayState))
+            MemoryUtil.freeUnusedMemory();
+    }
 }
 
 class RevAssets implements IAssetCache
 {
     public static var instance(get, never):RevAssets;
     private static var _instance:RevAssets;
+
     private static function get_instance():RevAssets
     {
         if (_instance == null)
             _instance = new RevAssets();
+
         return _instance;
     }
 
@@ -474,25 +577,30 @@ class RevAssets implements IAssetCache
     {
         for (id => snd in sound)
             sound2.set(id, snd);
+
         sound = [];
 
         for (id => bmp in bitmapData)
             bitmapData2.set(id, bmp);
+
         bitmapData = [];
     }
 
     public function promoteSound(id:String):Sound
     {
         var snd = sound.get(id);
+
         if (snd != null)
             return snd;
 
         snd = sound2.get(id);
+
         if (snd != null)
         {
             sound2.remove(id);
             sound.set(id, snd);
         }
+
         return snd;
     }
 
@@ -624,24 +732,32 @@ class RevAssets implements IAssetCache
             sound = [];
             bitmapData = [];
             font = [];
+
             sound2 = [];
             bitmapData2 = [];
+
             return;
         }
 
         for (map in [sound, sound2])
         {
             var toRemove = [for (id in map.keys()) if (id.startsWith(prefix)) id];
-            for (id in toRemove) map.remove(id);
+
+            for (id in toRemove)
+                map.remove(id);
         }
 
         for (map in [bitmapData, bitmapData2])
         {
             var toRemove = [for (id in map.keys()) if (id.startsWith(prefix)) id];
-            for (id in toRemove) map.remove(id);
+
+            for (id in toRemove)
+                map.remove(id);
         }
 
         var fontsToRemove = [for (id in font.keys()) if (id.startsWith(prefix)) id];
-        for (id in fontsToRemove) font.remove(id);
+
+        for (id in fontsToRemove)
+            font.remove(id);
     }
 }

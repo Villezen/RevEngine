@@ -6,6 +6,8 @@ import flixel.FlxState;
 import backend.modding.PolymodManager;
 import backend.modding.ModSubState;
 
+import backend.assets.Cacher;
+
 import backend.utils.DebugUtil;
 
 class MusicBeatSubState extends FlxSubState
@@ -82,8 +84,16 @@ class MusicBeatSubState extends FlxSubState
      */
     public var elapsedTime:Float;
 
+    /**
+     * Whether this substate opened a cache snapshot, so it only closes one it actually opened.
+     */
+    private var _snapshotPushed:Bool = false;
+
     public override function create()
-    {
+    { 
+        Cacher.instance.pushSnapshot();
+        _snapshotPushed = true;
+
         super.create();
 
 		conductor.onStepHit.add(stepHit);
@@ -96,14 +106,25 @@ class MusicBeatSubState extends FlxSubState
      */
     override public function destroy():Void
     {
-        //conductor.destroy(false);
-
         FlxG.timeScale = 1.0;
+
+        if (Conductor.instance != null)
+        {
+            Conductor.instance.onStepHit.remove(stepHit);
+            Conductor.instance.onBeatHit.remove(beatHit);
+            Conductor.instance.onMeasureHit.remove(measureHit);
+        }
 
         if (ModSubState.tracker != null && ModSubState.tracker.exists(this))
             ModSubState.tracker.remove(this);
 
         super.destroy();
+
+        if (_snapshotPushed)
+        {
+            _snapshotPushed = false;
+            Cacher.instance.popSnapshot();
+        }
     }
 
     override function update(elapsed:Float)

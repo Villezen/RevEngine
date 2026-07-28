@@ -2642,14 +2642,14 @@ class ChartingState extends MusicBeatState
     {
         if (conductorWindow == null || !conductorWindow.windowVisible) return;
 
-        setConductorValue(0, round1(conductor.songPosition) + " ms");
+        setConductorValue(0, FlxMath.roundDecimal(conductor.songPosition, 1) + " ms");
         setConductorValue(1, formatClock(conductor.songPosition));
-        setConductorValue(2, conductor.currentStep + "  (" + round2(conductor.currentStepTime) + ")");
-        setConductorValue(3, conductor.currentBeat + "  (" + round2(conductor.currentBeatTime) + ")");
-        setConductorValue(4, conductor.currentMeasure + "  (" + round2(conductor.currentMeasureTime) + ")");
-        setConductorValue(5, "" + round2(conductor.bpm));
-        setConductorValue(6, round2(conductor.stepLengthMs) + " ms");
-        setConductorValue(7, round2(conductor.beatLengthMs) + " ms");
+        setConductorValue(2, conductor.currentStep + "  (" + FlxMath.roundDecimal(conductor.currentStepTime, 2) + ")");
+        setConductorValue(3, conductor.currentBeat + "  (" + FlxMath.roundDecimal(conductor.currentBeatTime, 2) + ")");
+        setConductorValue(4, conductor.currentMeasure + "  (" + FlxMath.roundDecimal(conductor.currentMeasureTime, 2) + ")");
+        setConductorValue(5, "" + FlxMath.roundDecimal(conductor.bpm, 2));
+        setConductorValue(6, FlxMath.roundDecimal(conductor.stepLengthMs, 2) + " ms");
+        setConductorValue(7, FlxMath.roundDecimal(conductor.beatLengthMs, 2) + " ms");
         setConductorValue(8, playing ? "Playing" : "Paused");
     }
 
@@ -2657,16 +2657,6 @@ class ChartingState extends MusicBeatState
     {
         if (index < conductorValues.length)
             conductorValues[index].text = text;
-    }
-
-    inline function round1(value:Float):Float
-    {
-        return Math.round(value * 10) / 10;
-    }
-
-    inline function round2(value:Float):Float
-    {
-        return Math.round(value * 100) / 100;
     }
 
     function formatClock(ms:Float):String

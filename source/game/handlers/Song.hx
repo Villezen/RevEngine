@@ -244,6 +244,8 @@ class Song extends FlxBasic
      */
     override public function destroy()
     {
+        Conductor.instance?.onStepHit.remove(stepHit);
+
         FlxG.signals.focusLost.remove(onFocusLost);
         FlxG.signals.focusGained.remove(onFocusGained);
 
