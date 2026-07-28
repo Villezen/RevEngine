@@ -12,7 +12,7 @@ import game.notes.Note;
 /**
  * A module that can be attached to a song that runs the given scripted functions if the player's on a specific song.
  */
-class SongModule implements IScriptedClass
+class SongModule implements IModule
 {
     /**
      * A unique identifier of the module. Used so a module can be accessed by another module.

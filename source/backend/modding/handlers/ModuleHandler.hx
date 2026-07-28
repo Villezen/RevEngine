@@ -1,7 +1,5 @@
 package backend.modding.handlers;
 
-import backend.utils.SortUtil;
-
 import backend.modding.modules.Module;
 import backend.modding.modules.ScriptedModule;
 import backend.modding.modules.PlayStateModule;
@@ -9,6 +7,8 @@ import backend.modding.modules.ScriptedPlayStateModule;
 
 import backend.modding.events.ScriptEvent;
 import backend.modding.events.ScriptEventDispatcher;
+
+import backend.utils.ModuleUtil;
 
 import game.PlayState;
 
@@ -28,15 +28,23 @@ class ModuleHandler
     static var sortList:Array<String> = [];
 
     /**
+     * Whether modules are being loaded, so per-module priority changes don't get sorted every time a single change happens.
+     */
+    static var loading:Bool = false;
+
+    /**
      * Loads every module found in the mod's directory.
      */
     public static function load():Void
     {
         clear();
 
+        loading = true;
+
         loadScripts(ScriptedModule);
         loadScripts(ScriptedPlayStateModule);
 
+        loading = false;
         reorder();
     }
 
@@ -70,23 +78,12 @@ class ModuleHandler
      * Clears every module from the map and calls their respective `DESTROY` functions.
      */
     public static function clear():Void
-	{
-        if (list != null)
-        {
-            var event = new ScriptEvent(DESTROY, false);
-
-            for (key => value in list)
-            {
-                ScriptEventDispatcher.call(value, event);
-            }
-
-            list.clear();
-            list = [];
-        }
+    {
+        ModuleUtil.clear(list, sortList);
     }
 
     /**
-     * Calls a dedicated `ScriptEvent` to the Module.
+     * Calls a dedicated `ScriptEvent` to every loaded module, in priority order.
      * @param event The script event.
      */
     public static function call(event:ScriptEvent):Void
@@ -102,7 +99,7 @@ class ModuleHandler
             if ((module is PlayStateModule))
             {
                 if (!inPlayState) continue;
-                
+
                 cast(module, PlayStateModule).game = PlayState.instance;
             }
 
@@ -111,37 +108,13 @@ class ModuleHandler
     }
 
     /**
-     * Sorts every module so they're positioned by priority. If two modules have the same priority value, they get sorted alphabetically.
+     * Sorts every module by priority. Skipped during a bulk load, which reorders once at the end.
      */
     public static function reorder():Void
     {
-        sortList = list.keys().array().copy();
-        sortList.sort(sortByPriority);
+        if (loading) return;
+        ModuleUtil.sort(list, sortList);
     }
-
-    /**
-     * Sorts two modules by priority.
-     * @param module1 The first module to be sorted.
-     * @param module2 The second module to be sorted.
-     * @return Which module should advance.
-     */
-    static function sortByPriority(module1:String, module2:String):Int
-	{
-        var a:Null<Module> = get(module1);
-        var b:Null<Module> = get(module2);
-        
-        if (a == null || b == null)
-            return 0;
-	
-        if (a.priority != b.priority)
-		{
-			return a.priority - b.priority;
-		}
-		else
-		{
-			return SortUtil.alphabetically(module1, module2);
-		}
-	}
 
     /**
      * Calls `CREATE` on every loaded module.

@@ -21,6 +21,17 @@ class Ratings extends FlxSpriteGroup
         skin = value;
         data = RatingsRegistry.get(value);
 
+        _comboEntries = [];
+
+        if (data != null && data.combo != null)
+        {
+            _comboEntries =
+            [
+                data.combo.num0, data.combo.num1, data.combo.num2, data.combo.num3, data.combo.num4,
+                data.combo.num5, data.combo.num6, data.combo.num7, data.combo.num8, data.combo.num9
+            ];
+        }
+
         return skin;
     }
 
@@ -29,6 +40,11 @@ class Ratings extends FlxSpriteGroup
      */
     private var _digits:Array<Int> = [];
 
+    /**
+     * Cached combo digit sprites to avoid using Reflect functions.
+     */
+    private var _comboEntries:Array<RatingSpriteEntry> = [];
+
     public function new(skin:String)
     {
         super();
@@ -36,17 +52,13 @@ class Ratings extends FlxSpriteGroup
         this.skin = skin;
     }
 
-
-    /**
-     * Recycles a rating sprite from the pool or makes a new one.
-     */
-    private function recyclePopup():FunkinSprite
+    private function recyclePopup():RatingPopup
     {
-        var spr:FunkinSprite = cast group.getFirstDead();
+        var spr:RatingPopup = cast group.getFirstDead();
 
         if (spr == null)
         {
-            spr = new FunkinSprite();
+            spr = new RatingPopup();
             add(spr);
         }
         else
@@ -56,8 +68,6 @@ class Ratings extends FlxSpriteGroup
             group.members.remove(spr);
             group.members.push(spr);
         }
-
-        FlxTween.cancelTweensOf(spr);
 
         spr.alpha = 1;
         spr.velocity.set(0, 0);
@@ -92,7 +102,8 @@ class Ratings extends FlxSpriteGroup
 
         this.setPosition(0, 0);
 
-        var rating:FunkinSprite = recyclePopup();
+        var rating:RatingPopup = recyclePopup();
+
         rating.loadGraphic(Paths.image('game/ui/ratings/$skin/$ratingStr'));
         rating.scale.set(ratingData.scale[0], ratingData.scale[1]);
         rating.updateHitbox();
@@ -104,12 +115,8 @@ class Ratings extends FlxSpriteGroup
         rating.acceleration.x = FlxG.random.int(ratingData.acceleration.x[0], ratingData.acceleration.x[1]);
         rating.acceleration.y = FlxG.random.int(ratingData.acceleration.y[0], ratingData.acceleration.y[1]);
 
-        var ratingEase = ratingData.ease != "stepped" ? EaseUtil.get(ratingData.ease) : function(t:Float):Float return {Math.floor(t * 2) / 2;}
-
-        FlxTween.tween(rating, {alpha: 0}, 0.2 * ratingData.timeMult, {onComplete: function(tween:FlxTween)
-        {
-            rating.kill();
-        }, startDelay: (Conductor.instance.stepLengthMs * 4) * 0.001, ease: ratingEase});
+        var ratingEase = ratingData.ease != "stepped" ? EaseUtil.get(ratingData.ease) : steppedEase;
+        rating.beginFade((Conductor.instance.stepLengthMs * 4) * 0.001, 0.2 * ratingData.timeMult, ratingEase);
     }
 
     public function popCombo(combo:Int):Void
@@ -128,10 +135,13 @@ class Ratings extends FlxSpriteGroup
         var digitIterator:Int = 1;
         for (digit in _digits)
         {
-            var comboData:RatingSpriteEntry = Reflect.field(data.combo, 'num$digit');
+            if (digit >= _comboEntries.length) return;
+
+            var comboData:RatingSpriteEntry = _comboEntries[digit];
             if (comboData == null) return;
 
-            var numScore:FunkinSprite = recyclePopup();
+            var numScore:RatingPopup = recyclePopup();
+
             numScore.loadGraphic(Paths.image('game/ui/ratings/$skin/combo/$digit'));
             numScore.scale.set(comboData.scale[0], comboData.scale[1]);
             numScore.updateHitbox();
@@ -141,21 +151,86 @@ class Ratings extends FlxSpriteGroup
             numScore.velocity.y = -FlxG.random.int(130, 150);
             numScore.velocity.x = FlxG.random.float(-5, 5);
 
-            var comboEase = comboData.ease != "stepped" ? EaseUtil.get(comboData.ease) : function(t:Float):Float return {Math.floor(t * 2) / 2;}
+            var comboEase = comboData.ease != "stepped" ? EaseUtil.get(comboData.ease) : steppedEase;
 
-            FlxTween.tween(numScore, {alpha: 0}, 0.2, {onComplete: function(tween:FlxTween)
-            {
-                numScore.kill();
-            }, startDelay: (Conductor.instance.stepLengthMs * 4) * 0.002, ease: comboEase});
+            numScore.beginFade((Conductor.instance.stepLengthMs * 4) * 0.002, 0.2, comboEase);
 
             digitIterator++;
         }
     }
 
+    static function steppedEase(t:Float):Float
+    {
+        return Math.floor(t * 2) / 2;
+    }
+
     override function destroy()
     {
         _digits = null;
+        _comboEntries = null;
 
         super.destroy();
+    }
+}
+
+/**
+ * A recycleable rating/combo popup sprite.
+ */
+class RatingPopup extends FunkinSprite
+{
+    var _fadeDelay:Float = 0;
+    var _fadeDuration:Float = 0;
+    var _fadeElapsed:Float = 0;
+
+    var _startAlpha:Float = 1;
+    var _ease:Float->Float = null;
+    var _fading:Bool = false;
+
+    public function new()
+    {
+        super();
+    }
+
+    public function beginFade(delay:Float, duration:Float, ease:Float->Float):Void
+    {
+        _fadeDelay = delay;
+        _fadeDuration = duration;
+        _fadeElapsed = 0;
+
+        _startAlpha = alpha;
+        _ease = ease;
+        _fading = true;
+    }
+
+    override public function update(elapsed:Float):Void
+    {
+        super.update(elapsed);
+
+        if (!_fading) return;
+
+        if (_fadeDelay > 0)
+        {
+            _fadeDelay -= elapsed;
+            return;
+        }
+
+        _fadeElapsed += elapsed;
+
+        var t:Float = _fadeDuration <= 0 ? 1 : Math.min(_fadeElapsed / _fadeDuration, 1);
+        var eased:Float = _ease != null ? _ease(t) : t;
+
+        alpha = _startAlpha * (1 - eased);
+
+        if (t >= 1)
+        {
+            _fading = false;
+            kill();
+        }
+    }
+
+    override public function kill():Void
+    {
+        _fading = false;
+        super.kill();
     }
 }

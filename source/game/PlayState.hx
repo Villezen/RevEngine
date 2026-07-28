@@ -39,6 +39,7 @@ import backend.registries.ui.NoteSkinRegistry;
 import backend.registries.ui.DialogueRegistry;
 
 import backend.modding.events.ScriptEvent;
+import backend.modding.events.ScriptEventType;
 import backend.modding.events.ScriptEventDispatcher;
 
 import backend.transition.TransitionLoader;
@@ -438,6 +439,16 @@ class PlayState extends MusicBeatState
      * Transition-finish listener, kept so destroy() can invalidate it if this state dies before the transition completes.
      */
     private var _onTransitionFinish:Void->Void;
+
+    /**
+     * Reused note script event so hits don't allocate a fresh event each time.
+     */
+    private var _noteEvent:NoteHitScriptEvent;
+
+    /**
+     * Reused hold script event so sustains don't allocate a fresh event each time.
+     */
+    private var _sustainEvent:SustainHitScriptEvent;
 
     public function new(?params:PlayStateParams)
     {
@@ -1505,9 +1516,35 @@ class PlayState extends MusicBeatState
         song.changePlayerVolume(volume, _strumlineCharacters.get(note.strumline.id));
     }
 
+    /**
+     * Returns the reused note-hit event, re-initialized to the given values.
+     */
+    private function getNoteEvent(type:ScriptEventType, note:Note):NoteHitScriptEvent
+    {
+        if (_noteEvent == null)
+            _noteEvent = new NoteHitScriptEvent(type, note, 150, true, true, true);
+        else
+            _noteEvent.reset(type, note, 150, true, true, true);
+
+        return _noteEvent;
+    }
+
+    /**
+     * Returns the reused sustain-hit event, re-initialized to the given values.
+     */
+    private function getSustainEvent(type:ScriptEventType, sustain:SustainNote):SustainHitScriptEvent
+    {
+        if (_sustainEvent == null)
+            _sustainEvent = new SustainHitScriptEvent(type, sustain, true, true);
+        else
+            _sustainEvent.reset(type, sustain, true, true);
+
+        return _sustainEvent;
+    }
+
     public function noteHit(note:Note)
     {
-        var event = new NoteHitScriptEvent(NOTE_HIT, note, 150, true, true, true);
+        var event = getNoteEvent(NOTE_HIT, note);
         dispatchEvent(event);
 
         if (event.cancelled)
@@ -1515,23 +1552,19 @@ class PlayState extends MusicBeatState
 
         if (note.mustHit)
         {
-            var playerEvent = new NoteHitScriptEvent(PLAYER_HIT, note, 150, true, true, true);
-            dispatchEvent(playerEvent);
+            event = getNoteEvent(PLAYER_HIT, note);
+            dispatchEvent(event);
 
-            if (playerEvent.cancelled)
+            if (event.cancelled)
                 return;
-
-            event = playerEvent;
         }
         else
         {
-            var opponentEvent = new NoteHitScriptEvent(OPPONENT_HIT, note, 150, true, true, true);
-            dispatchEvent(opponentEvent);
+            event = getNoteEvent(OPPONENT_HIT, note);
+            dispatchEvent(event);
 
-            if (opponentEvent.cancelled)
+            if (event.cancelled)
                 return;
-
-            event = opponentEvent;
         }
 
         var strumline = note.strumline;
@@ -1592,7 +1625,7 @@ class PlayState extends MusicBeatState
 
     public function sustainHit(sustain:SustainNote)
     {
-        var event = new SustainHitScriptEvent(NOTE_HOLD, sustain, true, true);
+        var event = getSustainEvent(NOTE_HOLD, sustain);
         dispatchEvent(event);
 
         if (event.cancelled)
@@ -1600,23 +1633,19 @@ class PlayState extends MusicBeatState
 
         if (sustain.mustHit)
         {
-            var playerEvent = new SustainHitScriptEvent(PLAYER_HOLD, sustain, true, true);
-            dispatchEvent(playerEvent);
+            event = getSustainEvent(PLAYER_HOLD, sustain);
+            dispatchEvent(event);
 
-            if (playerEvent.cancelled)
+            if (event.cancelled)
                 return;
-
-            event = playerEvent;
         }
         else
         {
-            var opponentEvent = new SustainHitScriptEvent(OPPONENT_HOLD, sustain, true, true);
-            dispatchEvent(opponentEvent);
+            event = getSustainEvent(OPPONENT_HOLD, sustain);
+            dispatchEvent(event);
 
-            if (opponentEvent.cancelled)
+            if (event.cancelled)
                 return;
-
-            event = opponentEvent;
         }
 
         var strumline = sustain.strumline;
@@ -1658,7 +1687,7 @@ class PlayState extends MusicBeatState
 
     public function noteMiss(note:Note)
     {
-        var event = new NoteHitScriptEvent(PLAYER_MISS, note, 150, true, true, true);
+        var event = getNoteEvent(PLAYER_MISS, note);
         dispatchEvent(event);
 
         if (event.cancelled)

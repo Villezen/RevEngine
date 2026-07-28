@@ -12,7 +12,7 @@ import game.notes.Note;
 /**
  * A simple script module. Used to define functions that are gonna be accessible in scripts alongside their respective `ScriptEvent`s.
  */
-class Module implements IScriptedClass
+class Module implements IModule
 {
     /**
      * A unique identifier of the module. Used so a module can be accessed by another module.

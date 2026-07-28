@@ -3,6 +3,7 @@ package game.world;
 import sys.FileSystem;
 
 import backend.modding.events.ScriptEvent;
+import backend.modding.events.ScriptEventType;
 import backend.modding.IScriptedClass;
 
 import backend.modding.handlers.CharacterHandler;
@@ -187,6 +188,21 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
      * This character's current conductor instance.
      */
     public var conductor:Conductor = null;
+
+    /**
+     * Reused update event so it doesn't get allocated each time.
+     */
+    private var _updateEvent:UpdateScriptEvent;
+
+    /**
+     * Reused hit event so itt doesn't get allocated each time.
+     */
+    private var _hitEvent:NoteHitScriptEvent;
+
+    /**
+     * Reused hold event so it doesn't get allocated each time.
+     */
+    private var _holdEvent:SustainHitScriptEvent;
 
     public function new(id:String)
     {
@@ -668,9 +684,35 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
             loopingIdle = true;
     }
 
+    /**
+     * Returns the reused hit event, re-initialized to the given values.
+     */
+    private function getHitEvent(type:ScriptEventType, note:Note):NoteHitScriptEvent
+    {
+        if (_hitEvent == null)
+            _hitEvent = new NoteHitScriptEvent(type, note, 150, true, true, true);
+        else
+            _hitEvent.reset(type, note, 150, true, true, true);
+
+        return _hitEvent;
+    }
+
+    /**
+     * Returns the reused hold event, re-initialized for the given sustain.
+     */
+    private function getHoldEvent(sustain:SustainNote):SustainHitScriptEvent
+    {
+        if (_holdEvent == null)
+            _holdEvent = new SustainHitScriptEvent(HOLD, sustain, true, true);
+        else
+            _holdEvent.reset(HOLD, sustain, true, true);
+
+        return _holdEvent;
+    }
+
     public function hit(note:Note)
     {
-        var event = new NoteHitScriptEvent(HIT, note, 150, true, true, true);
+        var event = getHitEvent(HIT, note);
         dispatchEvent(event);
 
         if (event.cancelled)
@@ -689,9 +731,9 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
         resetTimer = 0;
     }
 
-    public function hold(sustain:SustainNote) 
+    public function hold(sustain:SustainNote)
     {
-        var event = new SustainHitScriptEvent(HOLD, sustain, true, true);
+        var event = getHoldEvent(sustain);
         dispatchEvent(event);
 
         if (event.cancelled)
@@ -726,7 +768,7 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
 
     public function miss(note:Note)
     {
-        dispatchEvent(new NoteHitScriptEvent(MISS, note, 150, true, true, true));
+        dispatchEvent(getHitEvent(MISS, note));
 
         var dir = Constants.SING_DIRECTIONS[parent.keyCount][note.direction];
 
@@ -766,7 +808,12 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
 
         super.update(elapsed);
 
-        dispatchEvent(new UpdateScriptEvent(elapsed));
+        if (_updateEvent == null)
+            _updateEvent = new UpdateScriptEvent(elapsed);
+        else
+            _updateEvent.reset(elapsed);
+
+        dispatchEvent(_updateEvent);
     }
 
     /**

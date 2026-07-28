@@ -1,12 +1,12 @@
 package backend.modding.handlers;
 
-import backend.utils.SortUtil;
-
 import backend.modding.songs.SongEventModule;
 import backend.modding.songs.ScriptedSongEventModule;
 
 import backend.modding.events.ScriptEvent;
 import backend.modding.events.ScriptEventDispatcher;
+
+import backend.utils.ModuleUtil;
 
 import backend.registries.song.EventObjectRegistry;
 
@@ -26,11 +26,18 @@ class SongEventModuleHandler
     static var sortList:Array<String> = [];
 
     /**
+     * Whether modules are being loaded, so per-module priority changes don't get sorted every time a single change happens.
+     */
+    static var loading:Bool = false;
+
+    /**
      * Loads every module found in the mod's directory.
      */
     public static function load():Void
     {
         clear();
+
+        loading = true;
 
         var scriptClass:Dynamic = ScriptedSongEventModule;
         var moduleClasses:Array<String> = scriptClass.listScriptClasses();
@@ -44,6 +51,8 @@ class SongEventModuleHandler
                 list.set(module.eventId, module);
             }
         }
+
+        loading = false;
         reorder();
     }
 
@@ -97,19 +106,8 @@ class SongEventModuleHandler
      * Clears every module from the map and calls their respective `DESTROY` functions.
      */
     public static function clear():Void
-	{
-        if (list != null)
-        {
-            var event = new ScriptEvent(DESTROY, false);
-
-            for (key => value in list)
-            {
-                ScriptEventDispatcher.call(value, event);
-            }
-
-            list.clear();
-            list = [];
-        }
+    {
+        ModuleUtil.clear(list, sortList);
     }
 
     /**
@@ -128,49 +126,17 @@ class SongEventModuleHandler
      */
     public static function callAll(event:ScriptEvent):Void
     {
-        for (moduleID in sortList)
-        {
-            var module:SongEventModule = list.get(moduleID);
-
-            if (module != null && module.active)
-            {
-                ScriptEventDispatcher.call(module, event);
-            }
-        }
+        ModuleUtil.dispatchAll(list, sortList, event);
     }
 
     /**
-     * Sorts every module so they're positioned by priority. If two modules have the same priority value, they get sorted alphabetically.
+     * Sorts every module by priority. Skipped during loading, which reorders once at the end.
      */
     public static function reorder():Void
     {
-        sortList = list.keys().array().copy();
-        sortList.sort(sortByPriority);
+        if (loading) return;
+        ModuleUtil.sort(list, sortList);
     }
-
-    /**
-     * Sorts two modules by priority.
-     * @param module1 The first module to be sorted.
-     * @param module2 The second module to be sorted.
-     * @return Which module should advance.
-     */
-    static function sortByPriority(module1:String, module2:String):Int
-	{
-        var a:Null<SongEventModule> = get(module1);
-        var b:Null<SongEventModule> = get(module2);
-
-        if (a == null || b == null)
-            return 0;
-
-        if (a.priority != b.priority)
-		{
-			return a.priority - b.priority;
-		}
-		else
-		{
-			return SortUtil.alphabetically(module1, module2);
-		}
-	}
 
     /**
      * Iterates through each of the currently loaded song event modules to call a function for each.

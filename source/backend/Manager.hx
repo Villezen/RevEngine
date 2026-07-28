@@ -30,7 +30,7 @@ class Manager
             return;
         }
 
-        PolymodManager.reloadMods();
+        PolymodManager.refreshModules();
         ConfigRegistry.load();
 
         var sourceName:String = currentScriptedState != null ? currentScriptedState : Type.getClassName(Type.getClass(FlxG.state)).split(".").pop();
@@ -103,7 +103,7 @@ class Manager
         if (FlxG.state == null) return;
         if (!(substate is String) && !(substate is FlxSubState)) return;
 
-        PolymodManager.reloadMods();
+        PolymodManager.refreshModules();
         ConfigRegistry.load();
 
         var substateName:String = (substate is String) ? cast substate : Type.getClassName(Type.getClass(substate)).split(".").pop();

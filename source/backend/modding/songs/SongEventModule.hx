@@ -12,7 +12,7 @@ import game.notes.Note;
 /**
  * A module that gets attached to a song event defined in `data/events` and runs its `execute` function whenever the defined event gets executed.
  */
-class SongEventModule implements IScriptedClass
+class SongEventModule implements IModule
 {
     /**
      * A unique identifier of the module. Used so a module can be accessed by another module.

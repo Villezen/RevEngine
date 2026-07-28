@@ -35,6 +35,11 @@ class Stage extends FlxBasic implements IScriptedClass
      */
     public var sprites:Map<String, FunkinSprite> = [];
 
+    /**
+     * Reused update event so it doesn't get allocated each time.
+     */
+    private var _updateEvent:UpdateScriptEvent;
+
     public function new(id:String)
     {
         super();
@@ -77,8 +82,13 @@ class Stage extends FlxBasic implements IScriptedClass
 
     override public function update(elapsed:Float)
     {
-        dispatchEvent(new UpdateScriptEvent(elapsed));
-        
+        if (_updateEvent == null)
+            _updateEvent = new UpdateScriptEvent(elapsed);
+        else
+            _updateEvent.reset(elapsed);
+
+        dispatchEvent(_updateEvent);
+
         super.update(elapsed);
     }
 

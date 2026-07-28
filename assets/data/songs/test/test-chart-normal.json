@@ -6,7 +6,7 @@
 			"character": "bf-test",
 
 			"skin": "default",
-			"position": [-364,53],
+			"position": [-320,53],
 			"scale": 1,
 			"visible": true,
 
@@ -283,7 +283,7 @@
 			"character": "bf",
 
 			"skin": "default",
-			"position": [265,53],
+			"position": [320,53],
 			"scale": 1,
 			"visible": true,
 

@@ -1,7 +1,6 @@
 package backend.modding.events;
 
 import backend.modding.IScriptedClass;
-import backend.modding.modules.Module;
 
 /**
  * Handles all the event dispatching called from other states.
@@ -29,14 +28,8 @@ class ScriptEventDispatcher
                 return;
 
             case STATE_CREATE:
-            {
-                if (Std.isOfType(target, Module))
-                {
-                    var t:Module = cast(target, Module);
-                    t.onStateCreate(event);
-                }
+                target.onStateCreate(event);
                 return;
-            }
 
             case POST_CREATE:
                 target.onCreatePost(event);

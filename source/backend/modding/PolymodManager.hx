@@ -59,6 +59,8 @@ class PolymodManager
 
         if (Configs.ACTIVE_MOD != "")
             enableMod(Configs.ACTIVE_MOD);
+        else
+            reloadMods();
     }
 
     /**
@@ -334,6 +336,17 @@ class PolymodManager
 
         registerLooseScripts();
 
+        for (handler in handlers)
+            handler.load();
+
+        Paths.ensureAssets();
+    }
+
+    /**
+     * Refreshes the modules for the current state from the already registered scripts.
+     */
+    public static function refreshModules()
+    {
         for (handler in handlers)
             handler.load();
 

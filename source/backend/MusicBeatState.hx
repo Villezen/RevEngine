@@ -3,6 +3,7 @@ package backend;
 import backend.modding.handlers.ModuleHandler;
 import backend.modding.IScriptedClass.IEventHandler;
 import backend.modding.events.ScriptEvent;
+import backend.modding.events.ScriptEventType;
 import backend.modding.ModState;
 import backend.modding.classes.ScriptedState;
 import backend.modding.PolymodManager;
@@ -85,6 +86,11 @@ class MusicBeatState extends FlxState implements IEventHandler
      * Reused event instance cause allocating a fresh one every frame feeds the memory for no reason.
      */
     private var _updateEvent:UpdateScriptEvent;
+
+    /**
+     * Reused conductor event so step/beat/measure hits don't allocate a fresh event each time.
+     */
+    private var _conductorEvent:ConductorScriptEvent;
 
     /**
      * Initializes the state and connects to Conductor signals.
@@ -209,7 +215,7 @@ class MusicBeatState extends FlxState implements IEventHandler
      */
     public function stepHit(step:Float):Void
     {
-        dispatchEvent(new ConductorScriptEvent(STEP_HIT, step, currentBeat, currentMeasure));
+        dispatchEvent(getConductorEvent(STEP_HIT, step, currentBeat, currentMeasure));
     }
 
     /**
@@ -218,7 +224,7 @@ class MusicBeatState extends FlxState implements IEventHandler
      */
 	public function beatHit(beat:Float):Void
     {
-        dispatchEvent(new ConductorScriptEvent(BEAT_HIT, currentStep, beat, currentMeasure));
+        dispatchEvent(getConductorEvent(BEAT_HIT, currentStep, beat, currentMeasure));
     }
 
     /**
@@ -227,6 +233,19 @@ class MusicBeatState extends FlxState implements IEventHandler
      */
 	public function measureHit(measure:Float):Void
     {
-        dispatchEvent(new ConductorScriptEvent(MEASURE_HIT, currentStep, currentBeat, measure));
+        dispatchEvent(getConductorEvent(MEASURE_HIT, currentStep, currentBeat, measure));
+    }
+
+    /**
+     * Returns the reused conductor event, re-initialized to the given values.
+     */
+    private function getConductorEvent(type:ScriptEventType, step:Float, beat:Float, measure:Float):ConductorScriptEvent
+    {
+        if (_conductorEvent == null)
+            _conductorEvent = new ConductorScriptEvent(type, step, beat, measure);
+        else
+            _conductorEvent.reset(type, step, beat, measure);
+
+        return _conductorEvent;
     }
 }

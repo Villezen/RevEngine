@@ -43,6 +43,18 @@ class ScriptEvent
     }
 
     /**
+     * Re-initializes the base fields so a recycled event can be reused.
+     */
+    function resetBase(type:ScriptEventType, cancelable:Bool):Void
+    {
+        this.type = type;
+        this.cancelable = cancelable;
+
+        cancelled = false;
+        shouldPropagate = true;
+    }
+
+    /**
      * Cancels the called script.
      */
     public function cancel()
@@ -81,6 +93,15 @@ class UpdateScriptEvent extends ScriptEvent
         this.elapsed = elapsed;
     }
 
+    /**
+     * Re-initializes this event so a single instance can be reused each frame instead of reallocated.
+     */
+    public function reset(elapsed:Float):Void
+    {
+        resetBase(UPDATE, false);
+        this.elapsed = elapsed;
+    }
+
     public override function toString()
     {
         return 'Update Script Event (elapsed: $elapsed)';
@@ -101,6 +122,20 @@ class NoteHitScriptEvent extends ScriptEvent
     public function new(type:ScriptEventType, note:Note, strumResetTimer:Int, strumGlow:Bool, showRating:Bool, showSplashes:Bool):Void
     {
         super(type, true);
+
+        this.note = note;
+        this.strumGlow = strumGlow;
+        this.showRating = showRating;
+        this.strumResetTimer = strumResetTimer;
+        this.showSplashes = showSplashes;
+    }
+
+    /**
+     * Re-initializes this event so a single instance can be reused across note hits instead of reallocated.
+     */
+    public function reset(type:ScriptEventType, note:Note, strumResetTimer:Int, strumGlow:Bool, showRating:Bool, showSplashes:Bool):Void
+    {
+        resetBase(type, true);
 
         this.note = note;
         this.strumGlow = strumGlow;
@@ -133,6 +168,18 @@ class SustainHitScriptEvent extends ScriptEvent
         this.showCover = showCover;
     }
 
+    /**
+     * Re-initializes this event so a single instance can be reused across sustain frames instead of reallocated.
+     */
+    public function reset(type:ScriptEventType, sustain:SustainNote, strumGlow:Bool, showCover:Bool):Void
+    {
+        resetBase(type, true);
+
+        this.sustain = sustain;
+        this.strumGlow = strumGlow;
+        this.showCover = showCover;
+    }
+
     public override function toString()
     {
         return 'Sustain Hit Script Event (sustain: $sustain, strumGlow: $strumGlow, showCover: $showCover)';
@@ -156,7 +203,19 @@ class ConductorScriptEvent extends ScriptEvent
         this.beat = beat;
         this.measure = measure;
     }
-    
+
+    /**
+     * Re-initializes this event so a single instance can be reused across step/beat/measure hits instead of reallocated.
+     */
+    public function reset(type:ScriptEventType, step:Float, beat:Float, measure:Float):Void
+    {
+        resetBase(type, true);
+
+        this.step = step;
+        this.beat = beat;
+        this.measure = measure;
+    }
+
     override function toString():String
     {
         return 'Conductor Script Event (type: $type, step: $step, beat: $beat, measure: $measure)';

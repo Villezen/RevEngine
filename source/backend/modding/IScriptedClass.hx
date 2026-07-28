@@ -37,6 +37,15 @@ interface IScriptedClass
 }
 
 /**
+ * A scripted module managed by a module handler.
+ */
+interface IModule extends IScriptedClass
+{
+    public var priority(default, set):Int;
+    public var active(default, null):Bool;
+}
+
+/**
  * An interface containing event functions.
  */
 interface IEventHandler

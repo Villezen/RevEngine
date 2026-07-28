@@ -267,7 +267,7 @@ class HealthIcon extends FunkinSprite
     {
         if (!canUpdatePosition || bar == null) return;
 
-        var hPercent:Float = 1 - (Reflect.field(bar.parent, bar.parentVariable) / 2);
+        var hPercent:Float = 1 - (bar.percent / 100);
         var trackerX:Float = bar.x + (bar.width * hPercent);
         var iconOffset:Float = Math.abs(trackerBarOffset);
 

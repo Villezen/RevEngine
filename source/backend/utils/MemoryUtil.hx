@@ -150,7 +150,7 @@ final class MemoryUtil
     static function collectOnly():Void
     {
         #if cpp
-        cpp.vm.Gc.run(!(FlxG.state is game.PlayState));
+        cpp.vm.Gc.run(true);
 
         _pressureBaseline = getGCUsage();
         _pressureTimer = 0.0;
@@ -158,7 +158,9 @@ final class MemoryUtil
     }
 
     public static inline final PRESSURE_LIMIT:Float = 16 * 1024 * 1024;
+    
     public static inline final IDLE_PRESSURE_LIMIT:Float = 8 * 1024 * 1024;
+    public static inline final PLAYSTATE_PRESSURE_LIMIT:Float = 32 * 1024 * 1024;
 
     public static inline final MAX_MEMORY_GROWTH:Float = 120;
     public static inline final MIN_MEMORY_GROWTH:Float = 2 * 1024 * 1024;
@@ -286,7 +288,7 @@ final class MemoryUtil
 
         if (FlxG.state is game.PlayState)
         {
-            if (growth >= PRESSURE_LIMIT)
+            if (growth >= PLAYSTATE_PRESSURE_LIMIT)
                 collectOnly();
 
             return;
