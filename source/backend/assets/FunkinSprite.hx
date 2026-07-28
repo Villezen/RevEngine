@@ -5,53 +5,203 @@ import animate.FlxAnimate;
 import flixel.FlxSprite;
 import flixel.system.FlxAssets.FlxGraphicAsset;
 
+import openfl.display.BitmapData;
+
 import backend.utils.tools.TagTools.ITaggable;
 
+/**
+ * How the sprite draws itself.
+ * ATLAS = An animate atlas, export from Adobe Animate.
+ * SPARROW = A spritesheet with an xml bundled with it.
+ * TEXTURE = An image cut into frames of the same size.
+ * MODEL = A 3D model drawn into the sprite's bitmap.
+ */
 enum RenderType
 {
     ATLAS;
     SPARROW;
     TEXTURE;
+    MODEL;
 }
 
+/**
+ * Params used when loading a sprite.
+ */
 typedef SpriteParams =
 {
+    /**
+     * The folder the file sits in. Defaults to images.
+     */
     var ?folder:String;
+
+    /**
+     * The file extension. Defaults to png.
+     */
     var ?extension:String;
+
+    /**
+     * Whether the path points somewhere outside the game's assets.
+     */
     var ?absolute:Bool;
+
+    /**
+     * Whether the graphic stays in the cache instead of being cleared on a state switch.
+     */
     var ?permanent:Bool;
+
+    /**
+     * Whether the graphic is cached into the GPU.
+     */
     var ?gpuLoaded:Bool;
+
+    /**
+     * The size of one frame, for images cut into frames of the same size.
+     */
     var ?frameWidth:Int;
     var ?frameHeight:Int;
 }
 
+/**
+ * Params used when adding an animation.
+ */
 typedef SpriteAddAnimParams =
 {
+    /**
+     * The name of the frames in the spritesheet. Defaults to the animation's own name.
+     */
     var ?prefix:String;
+
+    /**
+     * How far the sprite shifts while this animation plays.
+     */
     var ?offsets:Array<Int>;
+
+    /**
+     * Whether the animation starts over when it ends.
+     */
     var ?looped:Bool;
+
+    /**
+     * How many frames the animation plays per second.
+     */
     var ?fps:Int;
+
+    /**
+     * Whether the animation is flipped on the x and y axis.
+     */
     var ?flip:Array<Bool>;
+
+    /**
+     * The frames to use and the order to play them in. Leave it empty to use all of them.
+     */
     var ?indices:Array<Int>;
 }
 
+/**
+ * Params used when playing an animation.
+ */
 typedef SpritePlayAnimParams =
 {
+    /**
+     * Whether to start the animation over if it is already the one playing.
+     */
     var ?force:Bool;
+
+    /**
+     * Whether the animation plays backwards.
+     */
     var ?reversed:Bool;
+
+    /**
+     * The frame the animation starts on.
+     */
     var ?frame:Int;
+
+    /**
+     * Called once the animation finishes.
+     */
     var ?onComplete:Void->Void;
 }
 
+/**
+ * An extension of FlxSprite, that supports auto-detected rendering modes and 
+ */
 class FunkinSprite extends FlxSprite implements ITaggable
 {
+    /**
+     * A name to look this sprite up by.
+     */
     public var tag:String = "";
 
+    /**
+     * The params this sprite was loaded with.
+     */
     public var spriteParams:SpriteParams;
+
+    /**
+     * The path this sprite was loaded from.
+     */
     public var spritePath:String;
+
+    /**
+     * The offset of every animation, by name.
+     */
     public var offsetMap:Map<String, Array<Int>> = new Map<String, Array<Int>>();
+
+    /**
+     * The animate atlas this sprite draws, or null on any other render type.
+     */
     public var atlasSpr:FlxAnimate;
+
+    /**
+     * How this sprite draws itself.
+     */
     public var renderType:RenderType = SPARROW;
+
+    /**
+     * The 3D model drawn into this sprite, or null if a 2D sprite is being rendered.
+     */
+    public var model:FunkinModel = null;
+
+    /**
+     * The viewport that renders the model into this sprite's bitmap.
+     */
+    public var viewport:FunkinViewport = null;
+
+    /**
+     * Whether the model gets re-rendered each frame. Turn off to freeze it on the current pose.
+     */
+    public var dirty3D:Bool = true;
+
+    /**
+     * The size of the bitmap a model renders into. Higher number means higher quality which decreases performance.
+     */
+    public static var modelRenderSize:Int = 768;
+
+    /**
+     * The margin left around a model so it doesn't cut off.
+     */
+    public static var modelFrameMargin:Float = 2.0;
+
+    /**
+     * How many times a second a model redraws itself.
+     */
+    public static var modelRenderFps:Int = 30;
+
+    /**
+     * The bitmap the model renders into, used as this sprite's graphic.
+     */
+    private var _modelBitmap:BitmapData = null;
+
+    /**
+     * Whether the model has already rendered this frame, so it only renders onces.
+     */
+    private var _rendered3D:Bool = false;
+
+    /**
+     * How long it has been since the model last redrew, kept so it can hold to the set framerate.
+     */
+    private var _modelTimer:Float = 0;
 
     public function new(?x:Float = 0, ?y:Float = 0, ?path:String, ?params:SpriteParams)
     {
@@ -61,6 +211,9 @@ class FunkinSprite extends FlxSprite implements ITaggable
             loadSprite(path, params);
     }
 
+    /**
+     * Loads a spritesheet or an atlas and sets the render type that fits what it found.
+     */
     public function loadSprite(path:String, ?params:SpriteParams):FunkinSprite
     {
         if (params == null) params = {};
@@ -119,18 +272,86 @@ class FunkinSprite extends FlxSprite implements ITaggable
         return this;
     }
 
+    /**
+     * Loads a model and renders it into this sprite's bitmap.
+     */
+    public function loadModel(path:String, ?params:ModelParams):FunkinSprite
+    {
+        disposeModel();
+
+        viewport = new FunkinViewport({width: modelRenderSize, height: modelRenderSize});
+        model = new FunkinModel(path, params);
+        viewport.add(model);
+        viewport.frame(model, modelFrameMargin);
+
+        _modelBitmap = new BitmapData(modelRenderSize, modelRenderSize, true, 0x00000000);
+        loadGraphic(_modelBitmap);
+
+        renderType = MODEL;
+        refreshModel();
+
+        return this;
+    }
+
+    /**
+     * Renders the model into the bitmap.
+     */
+    private function refreshModel():Void
+    {
+        if (viewport == null || _modelBitmap == null)
+            return;
+
+        viewport.render(_modelBitmap);
+
+        if (_modelBitmap.image != null)
+            _modelBitmap.image.version++;
+    }
+
+    /**
+     * Frees the model, its viewport and its bitmap.
+     */
+    public function disposeModel():Void
+    {
+        if (viewport != null)
+        {
+            viewport.destroy();
+            viewport = null;
+        }
+
+        model = null;
+
+        if (_modelBitmap != null)
+        {
+            if (graphic != null)
+                FlxG.bitmap.remove(graphic);
+            else
+                _modelBitmap.dispose();
+
+            _modelBitmap = null;
+        }
+    }
+
+    /**
+     * The same as FlxSprite's, only it returns a FunkinSprite instead of an FlxSprite.
+     */
     override public function loadGraphic(graphic:FlxGraphicAsset, animated = false, frameWidth = 0, frameHeight = 0, unique = false, ?key:String):FunkinSprite
     {
         super.loadGraphic(graphic, animated, frameWidth, frameHeight, unique, key);
         return this;
     }
 
+    /**
+     * The same as FlxSprite's, only it returns a FunkinSprite instead of an FlxSprite.
+     */
     override public function makeGraphic(width:Int, height:Int, color = FlxColor.WHITE, unique = false, ?key:String):FunkinSprite
     {
         super.makeGraphic(width, height, color, unique, key);
         return this;
     }
 
+    /**
+     * Adds an animation.
+     */
     public function addAnim(name:String, ?data:SpriteAddAnimParams):Void
     {
         if (data == null) data = {};
@@ -195,6 +416,9 @@ class FunkinSprite extends FlxSprite implements ITaggable
         offsetMap[name] = data.offsets;
     }
 
+    /**
+     * Plays an animation and applies any offsets given.
+     */
     public function playAnim(name:String, ?data:SpritePlayAnimParams):Void
     {
         if (data == null) data = {};
@@ -246,6 +470,9 @@ class FunkinSprite extends FlxSprite implements ITaggable
             offset.set(0, 0);
     }
 
+    /**
+     * Whether the sprite has an animation with that name.
+     */
     public function hasAnim(name:String):Bool
     {
         if (renderType == ATLAS)
@@ -254,17 +481,46 @@ class FunkinSprite extends FlxSprite implements ITaggable
             return (animation != null && animation.getByName(name) != null);
     }
 
+    /**
+     * Renders the model or an atlas sprite.
+     */
     override public function update(elapsed:Float):Void
     {
-        if (renderType == ATLAS && atlasSpr != null)
+        if (renderType == MODEL)
+        {
+            _modelTimer += elapsed;
+
+            if (modelRenderFps <= 0 || _modelTimer >= 1 / modelRenderFps)
+            {
+                _modelTimer = 0;
+                _rendered3D = false;
+            }
+
+            if (model != null)
+                model.update(elapsed);
+        }
+        else if (renderType == ATLAS && atlasSpr != null)
             atlasSpr.update(elapsed);
 
         super.update(elapsed);
     }
 
+    /**
+     * Draws the sprite.
+     */
     override public function draw():Void
     {
-        if (renderType == ATLAS && atlasSpr != null)
+        if (renderType == MODEL)
+        {
+            if (dirty3D && !_rendered3D)
+            {
+                refreshModel();
+                _rendered3D = true;
+            }
+
+            super.draw();
+        }
+        else if (renderType == ATLAS && atlasSpr != null)
         {
             atlasSpr.x = x;
             atlasSpr.y = y;
@@ -285,6 +541,9 @@ class FunkinSprite extends FlxSprite implements ITaggable
         }
     }
 
+    /**
+     * Destroy the atlas sprite or the model.
+     */
     override public function destroy():Void
     {
         if (atlasSpr != null)
@@ -292,6 +551,8 @@ class FunkinSprite extends FlxSprite implements ITaggable
             atlasSpr.destroy();
             atlasSpr = null;
         }
+
+        disposeModel();
 
         super.destroy();
     }

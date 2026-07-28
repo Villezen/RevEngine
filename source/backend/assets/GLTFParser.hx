@@ -144,6 +144,12 @@ class GLTFParser
     private static inline var CT_FLOAT = 5126;
 
     /**
+     * The glTF texture wrap modes, telling the engine whether a texture tiles or clamps at its edges.
+     */
+    private static inline var WRAP_CLAMP = 33071;
+    private static inline var WRAP_REPEAT = 10497;
+
+    /**
      * The framerate skeleton animations get resampled to.
      */
     private static inline var RESAMPLE_FPS = 30.0;
@@ -1124,12 +1130,18 @@ class GLTFParser
         {
             var pbr = def.pbrMetallicRoughness;
 
-            if (pbr.baseColorTexture != null) 
+            if (pbr.baseColorTexture != null)
             {
-                var tex = loadTexture(Std.int(pbr.baseColorTexture.index));
+                var texIndex = Std.int(pbr.baseColorTexture.index);
+                var tex = loadTexture(texIndex);
 
-                if (tex != null) 
-                    mat = new TextureMaterial(tex);
+                if (tex != null)
+                {
+                    var texMat = new TextureMaterial(tex);
+                    texMat.repeat = textureRepeats(texIndex);
+
+                    mat = texMat;
+                }
             }
             
             if (mat == null) 
@@ -1150,6 +1162,30 @@ class GLTFParser
 
         _materialCache.set(index, mat);
         return mat;
+    }
+
+    /**
+     * Whether a texture tiles instead of clamping at its edges.
+     */
+    private function textureRepeats(index:Int):Bool
+    {
+        var textures = getArray("textures");
+
+        if (index < 0 || index >= textures.length || textures[index].sampler == null)
+            return true;
+
+        var samplers = getArray("samplers");
+        var slot = Std.int(textures[index].sampler);
+
+        if (slot < 0 || slot >= samplers.length)
+            return true;
+
+        var sampler = samplers[slot];
+
+        var s = sampler.wrapS != null ? Std.int(sampler.wrapS) : WRAP_REPEAT;
+        var t = sampler.wrapT != null ? Std.int(sampler.wrapT) : WRAP_REPEAT;
+
+        return s != WRAP_CLAMP || t != WRAP_CLAMP;
     }
 
     /**

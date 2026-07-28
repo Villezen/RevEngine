@@ -63,8 +63,17 @@ typedef CharacterParams =
 }
 
 /**
+ * Links a character animation name to the model action it plays.
+ */
+typedef ModelAnim =
+{
+    var prefix:String;
+    var looped:Bool;
+}
+
+/**
  * A sprite object used as a player that shows up on the stage, that bops to the music and reacts to strumline behaviors.
- * Can be used for several other things such as debugging, visual display, etc. 
+ * Can be used for several other things such as debugging, visual display, etc.
  */
 class Character extends FunkinSprite implements IScriptedCharacterClass
 {
@@ -203,6 +212,16 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
      * Reused hold event so it doesn't get allocated each time.
      */
     private var _holdEvent:SustainHitScriptEvent;
+
+    /**
+     * Links each animation name to the model action it plays, for 3D characters.
+     */
+    private var _modelAnims:Map<String, ModelAnim> = new Map();
+
+    /**
+     * The animation a 3D character is playing, so the same one doesn't restart every frame.
+     */
+    private var _modelAnim:String = null;
 
     public function new(id:String)
     {
@@ -522,6 +541,11 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
             if (parent.onNoteMiss != null) parent.onNoteMiss.remove(miss);
         }
 
+        disposeModel();
+
+        _modelAnims.clear();
+        _modelAnim = null;
+
         data = null;
         params = null;
         parent = null;
@@ -584,6 +608,7 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
         {
             case "SPARROW": SPARROW;
             case "ATLAS": ATLAS;
+            case "3D": MODEL;
             default: SPARROW;
         };
 
@@ -602,6 +627,12 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
      */
     public function load_sprites()
     {
+        if (renderType == MODEL)
+        {
+            loadModel('characters/${name}/mesh', {folder: "models", extension: "glb"});
+            return;
+        }
+
         loadSprite('characters/${name}/char');
 
         if (renderType == ATLAS && atlasSpr != null)
@@ -613,6 +644,19 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
      */
     public function load_animations()
     {
+        if (renderType == MODEL)
+        {
+            for (entry in data.animations)
+                _modelAnims.set(entry.name, {prefix: entry.prefix, looped: entry.looped == true});
+
+            var idle = _modelAnims.get('idle');
+
+            if (idle != null && idle.looped)
+                idleType = LOOPED;
+
+            return;
+        }
+
         for (entry in data.animations)
         {
             var animName = entry.name;
@@ -652,6 +696,43 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
     public function play(name:String, ?force:Bool = false, ?reversed:Bool = false, ?frame:Int = 0):Void
     {
         playAnim(name, {force: force, reversed: reversed, frame: frame});
+    }
+
+    /**
+     * Plays an animation.
+     */
+    override public function playAnim(name:String, ?data:SpritePlayAnimParams):Void
+    {
+        if (renderType == MODEL)
+        {
+            playModelAnim(name, data != null && data.force == true);
+            return;
+        }
+
+        super.playAnim(name, data);
+    }
+
+    /**
+     * Plays the model action linked to an animation name.
+     */
+    private function playModelAnim(name:String, force:Bool = false):Void
+    {
+        if (model == null || !model.loaded)
+            return;
+
+        if (!force && name == _modelAnim)
+            return;
+
+        var anim = _modelAnims.get(name);
+
+        if (anim == null && StringTools.endsWith(name, "miss"))
+            anim = _modelAnims.get(name.substr(0, name.length - 4));
+
+        if (anim == null)
+            return;
+
+        _modelAnim = name;
+        model.play(anim.prefix, anim.looped);
     }
 
     /**
@@ -746,7 +827,9 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
 
         var curName:String = null;
 
-        if (renderType == ATLAS)
+        if (renderType == MODEL)
+            curName = _modelAnim;
+        else if (renderType == ATLAS)
         {
             if (atlasSpr.anim.curAnim != null)
                 curName = atlasSpr.anim.curAnim.name;

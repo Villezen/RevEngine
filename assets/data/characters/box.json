@@ -1,0 +1,39 @@
+{
+    "name": "Box",
+    "color": "#DC4646",
+
+    "renderType": "3D",
+
+    "placement": "OPPONENT",
+    "position": [0, 170],
+    "camera": [400, 300],
+
+    "scale": [1.2, 1.2],
+
+    "singDuration": 4.0,
+
+    "animations":
+    [
+        {
+            "name": "idle",
+            "prefix": "idle",
+            "looped": true
+        },
+        {
+            "name": "singLEFT",
+            "prefix": "left"
+        },
+        {
+            "name": "singDOWN",
+            "prefix": "down"
+        },
+        {
+            "name": "singUP",
+            "prefix": "up"
+        },
+        {
+            "name": "singRIGHT",
+            "prefix": "right"
+        }
+    ]
+}
