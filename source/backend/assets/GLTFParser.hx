@@ -30,50 +30,262 @@ import backend.assets.GLTFNodeAnimator.GLTFSampler;
 import backend.assets.GLTFNodeAnimator.GLTFNodeClip;
 import backend.assets.GLTFNodeAnimator.GLTFNodeTrack;
 
-typedef GLTFModel = 
+/**
+ * Everything a glTF model containts: its 3D object, meshes, textures and animations.
+ * 
+ * HUGE props to Khronos glTF registry i couldn't figure any of this without it 
+ * https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html
+ * 
+ */
+typedef GLTFModel =
 {
+    /**
+     * The root 3D object holding the whole model.
+     */
     var object:ObjectContainer3D;
+
+    /**
+     * Every mesh in the model.
+     */
     var meshes:Array<Mesh>;
+
+    /**
+     * Just the meshes that follow the skeleton.
+     */
     var skinnedMeshes:Array<Mesh>;
+
+    /**
+     * Every texture bitmap, kept so they can be freed later.
+     */
     var bitmaps:Array<BitmapData>;
+
+    /**
+     * The bone skeleton, or null if there isn't one.
+     */
     var skeleton:Skeleton;
+
+    /**
+     * The set of skeleton animations, or null if there aren't any.
+     */
     var animationSet:SkeletonAnimationSet;
+
+    /**
+     * The names of the skeleton animations.
+     */
     var animationNames:Array<String>;
+
+    /**
+     * The animator for models that move nodes around instead of bones.
+     */
     var nodeAnimator:GLTFNodeAnimator;
+}
+
+/**
+ * A group of meshes that share a material, merged so they draw as one.
+ */
+typedef GLTFBatch =
+{
+    /**
+     * The merged geometry all the pieces get added to.
+     */
+    var geom:Geometry;
+
+    /**
+     * The current chunk's vertex positions, three numbers each.
+     */
+    var verts:Vector<Float>;
+
+    /**
+     * The current chunk's normals, three numbers each.
+     */
+    var normals:Vector<Float>;
+
+    /**
+     * The current chunk's texture coordinates, two numbers each.
+     */
+    var uvs:Vector<Float>;
+
+    /**
+     * The current chunk's triangle indices.
+     */
+    var indices:Vector<UInt>;
+
+    /**
+     * How many vertices are in the current chunk.
+     */
+    var count:Int;
+
+    /**
+     * Whether every piece in the chunk so far had normals.
+     */
+    var hasNormals:Bool;
+
+    /**
+     * Whether any piece in the chunk had texture coordinates.
+     */
+    var hasUvs:Bool;
+
+    /**
+     * How many finished chunks this batch has made.
+     */
+    var subs:Int;
 }
 
 class GLTFParser 
 {
-    // ltf component types 
-    static inline var CT_BYTE = 5120;
-    static inline var CT_UBYTE = 5121;
-    static inline var CT_SHORT = 5122;
-    static inline var CT_USHORT = 5123;
-    static inline var CT_UINT = 5125;
-    static inline var CT_FLOAT = 5126;
+    /**
+     * The glTF component type IDs.
+     */
+    private static inline var CT_BYTE = 5120;
+    private static inline var CT_UBYTE = 5121;
+    private static inline var CT_SHORT = 5122;
+    private static inline var CT_USHORT = 5123;
+    private static inline var CT_UINT = 5125;
+    private static inline var CT_FLOAT = 5126;
 
-    static inline var RESAMPLE_FPS = 30.0;
+    /**
+     * The framerate skeleton animations get resampled to.
+     */
+    private static inline var RESAMPLE_FPS = 30.0;
 
-    var _json:Dynamic;
-    var _bin:Bytes;
+    /**
+     * How many vertices a merged chunk can hold before it gets split.
+     */
+    private static inline var CHUNK_LIMIT = 60000;
 
-    var _nodeContainers:Array<ObjectContainer3D> = [];
-    var _childToParent:Map<Int, Int> = new Map();
+    /**
+     * The most vertices a model can load before the rest is skipped.
+     */
+    private static inline var MAX_VERTS = 2500000;
 
-    var _skeleton:Skeleton;
-    var _skeletonAnimator:SkeletonAnimator;
-    var _activeSkinIndex:Int = -1; 
-    var _jointNodes:Array<Int> = []; 
-    var _jointNodeToIndex:Map<Int, Int> = new Map();
-    var _ibm:Array<Matrix3D> = [];
+    /**
+     * The parsed json part of the glTF.
+     */
+    private var _json:Dynamic;
 
-    var _outMeshes:Array<Mesh> = [];
-    var _outSkinnedMeshes:Array<Mesh> = [];
-    var _outBitmaps:Array<BitmapData> = [];
-    var _materialCache:Map<Int, MaterialBase> = new Map();
+    /**
+     * The raw binary part of the glTF, holding all the vertex and image data.
+     */
+    private var _bin:Bytes;
 
-    function new() {}
+    /**
+     * The glTF accessors, cached so the engine doesn't look them up over and over.
+     */
+    private var _accessors:Array<Dynamic>;
 
+    /**
+     * The glTF buffer views, cached the same way.
+     */
+    private var _bufferViews:Array<Dynamic>;
+
+    /**
+     * The glTF nodes, cached the same way.
+     */
+    private var _nodes:Array<Dynamic>;
+
+    /**
+     * The glTF mesh definitions, cached the same way.
+     */
+    private var _meshesDef:Array<Dynamic>;
+
+    /**
+     * One container per node, in the same order as the glTF nodes.
+     */
+    private var _nodeContainers:Array<ObjectContainer3D> = [];
+
+    /**
+     * Maps a node to its parent node.
+     */
+    private var _childToParent:Map<Int, Int> = new Map();
+
+    /**
+     * The merged geometry so far, one batch per material.
+     */
+    private var _batches:Map<Int, GLTFBatch> = new Map();
+
+    /**
+     * Every node that an animation moves directly.
+     */
+    private var _animatedNodes:Map<Int, Bool> = new Map();
+
+    /**
+     * How many vertices the engine has loaded so far, checked against the cap.
+     */
+    private var _totalVerts:Int = 0;
+
+    /**
+     * Whether the engine has already warned about the model being too big, so it only says it once.
+     */
+    private var _warned:Bool = false;
+
+    /**
+     * A spare vector the engine reuses so it doesn't make a new one per vertex.
+     */
+    private var _v1:Vector3D = new Vector3D();
+
+    /**
+     * A second spare vector, reused again by the engine.
+     */
+    private var _v2:Vector3D = new Vector3D();
+
+    /**
+     * The finished bone skeleton, or null if the model has none.
+     */
+    private var _skeleton:Skeleton;
+
+    /**
+     * The animator that plays skeleton clips.
+     */
+    private var _skeletonAnimator:SkeletonAnimator;
+
+    /**
+     * The skin the model uses, or -1 if there isn't one.
+     */
+    private var _activeSkinIndex:Int = -1;
+
+    /**
+     * The node index behind each bone, in bone order.
+     */
+    private var _jointNodes:Array<Int> = [];
+
+    /**
+     * The reverse of _jointNodes, a node index back to its bone slot.
+     */
+    private var _jointNodeToIndex:Map<Int, Int> = new Map();
+
+    /**
+     * Each bone's inverse bind matrix, its rest pose.
+     */
+    private var _ibm:Array<Matrix3D> = [];
+
+    /**
+     * Every mesh the engine made, handed back in the model.
+     */
+    private var _outMeshes:Array<Mesh> = [];
+
+    /**
+     * Just the skinned meshes, so the caller can attach the animator to them.
+     */
+    private var _outSkinnedMeshes:Array<Mesh> = [];
+
+    /**
+     * Every texture bitmap the engine made, kept so they can be freed later.
+     */
+    private var _outBitmaps:Array<BitmapData> = [];
+
+    /**
+     * Materials the engine has already built, determined by their index.
+     */
+    private var _materialCache:Map<Int, MaterialBase> = new Map();
+
+    /**
+     * Makes an empty parser. Use parseGLB instead of calling this.
+     */
+    private function new() {}
+
+    /**
+     * Reads a binary glTF (.glb) file and turns it into a model, or null if it isn't valid.
+     */
     public static function parseGLB(bytes:Bytes):GLTFModel 
     {
         if (bytes == null || bytes.length < 12) 
@@ -112,12 +324,21 @@ class GLTFParser
         return new GLTFParser().build(json, bin);
     }
 
-    function build(json:Dynamic, bin:Bytes):GLTFModel 
+    /**
+     * Reads the whole glTF and builds the finished model from it.
+     */
+    private function build(json:Dynamic, bin:Bytes):GLTFModel 
     {
         _json = json;
         _bin = bin;
 
+        _accessors = getArray("accessors");
+        _bufferViews = getArray("bufferViews");
+        _nodes = getArray("nodes");
+        _meshesDef = getArray("meshes");
+
         buildChildToParent();
+        buildAnimatedNodes();
         _activeSkinIndex = findActiveSkin();
 
         var root = new ObjectContainer3D();
@@ -150,25 +371,34 @@ class GLTFParser
             }
         }
 
-        var nodes = getArray("nodes");
-        for (i in 0...nodes.length) 
+        var nodes = _nodes;
+        for (i in 0...nodes.length)
         {
             var node = nodes[i];
 
-            if (node.mesh == null) 
+            if (node.mesh == null)
                 continue;
 
             var skinIndex = Reflect.hasField(node, "skin") ? Std.int(node.skin) : -1;
-            var meshDef = getArray("meshes")[Std.int(node.mesh)];
-            
-            if (meshDef.primitives == null) 
+            var meshDef = _meshesDef[Std.int(node.mesh)];
+
+            if (meshDef.primitives == null)
                 continue;
 
-            for (prim in (meshDef.primitives : Array<Dynamic>)) 
-                buildPrimitive(prim, skinIndex, i, root);
+            var moves = isAnimated(i);
+
+            for (prim in (meshDef.primitives : Array<Dynamic>))
+            {
+                if (moves || isSkinned(prim, skinIndex))
+                    buildPrimitive(prim, skinIndex, i, root);
+                else
+                    mergePrimitive(prim, i);
+            }
         }
 
-        return 
+        buildBatches(root);
+
+        return
         {
             object: root,
             meshes: _outMeshes,
@@ -181,7 +411,10 @@ class GLTFParser
         };
     }
 
-    function buildNodeContainers(root:ObjectContainer3D):Void 
+    /**
+     * Makes a container for every node and links them into their parent and child tree.
+     */
+    private function buildNodeContainers(root:ObjectContainer3D):Void 
     {
         var nodes = getArray("nodes");
         
@@ -219,7 +452,10 @@ class GLTFParser
         }
     }
 
-    function buildSkeleton(skin:Dynamic):Void 
+    /**
+     * Builds the bone skeleton from a skin, including each bone's rest pose.
+     */
+    private function buildSkeleton(skin:Dynamic):Void 
     {
         var joints:Array<Dynamic> = skin.joints;
         var ibmRaw:Array<Float> = skin.inverseBindMatrices != null ? readFloats(Std.int(skin.inverseBindMatrices)) : null;
@@ -261,7 +497,10 @@ class GLTFParser
         }
     }
 
-    function buildClip(anim:Dynamic, index:Int):SkeletonClipNode 
+    /**
+     * Turns one glTF animation into a finished skeleton clip by reading it at a steady framerate.
+     */
+    private function buildClip(anim:Dynamic, index:Int):SkeletonClipNode 
     {
         var channels:Array<Dynamic> = anim.channels;
         var samplers:Array<Dynamic> = anim.samplers;
@@ -334,7 +573,10 @@ class GLTFParser
         return clip;
     }
 
-    function buildPrimitive(prim:Dynamic, skinIndex:Int, nodeIndex:Int, root:ObjectContainer3D):Void 
+    /**
+     * Builds a single moving or skinned primitive into its own mesh under its node.
+     */
+    private function buildPrimitive(prim:Dynamic, skinIndex:Int, nodeIndex:Int, root:ObjectContainer3D):Void 
     {
         var attrs = prim.attributes;
         
@@ -345,11 +587,14 @@ class GLTFParser
         var normals = Reflect.hasField(attrs, "NORMAL") ? readFloats(Std.int(attrs.NORMAL)) : null;
         var uvs = Reflect.hasField(attrs, "TEXCOORD_0") ? readFloats(Std.int(attrs.TEXCOORD_0)) : null;
         var vertCount = Std.int(positions.length / 3);
-        
-        var isSkinned = (skinIndex == _activeSkinIndex && Reflect.hasField(attrs, "JOINTS_0") && Reflect.hasField(attrs, "WEIGHTS_0"));
+
+        if (!canAdd(vertCount))
+            return;
+
+        var skinned = (skinIndex == _activeSkinIndex && Reflect.hasField(attrs, "JOINTS_0") && Reflect.hasField(attrs, "WEIGHTS_0"));
         var boundJoint = -1;
 
-        if (isSkinned)
+        if (skinned)
         {
             var joints = readFloats(Std.int(attrs.JOINTS_0));
             var weights = readFloats(Std.int(attrs.WEIGHTS_0));
@@ -417,7 +662,280 @@ class GLTFParser
         _outMeshes.push(mesh);
     }
 
-    function dominantJoint(joints:Array<Float>, weights:Array<Float>, vertCount:Int):Int
+    /**
+     * Marks every node that an animation moves directly.
+     */
+    private function buildAnimatedNodes():Void
+    {
+        for (anim in getArray("animations"))
+        {
+            if (anim.channels == null)
+                continue;
+
+            for (ch in (anim.channels : Array<Dynamic>))
+            {
+                if (ch.target != null && ch.target.node != null)
+                    _animatedNodes.set(Std.int(ch.target.node), true);
+            }
+        }
+    }
+
+    /**
+     * Whether a node moves, either itself or through an animated parent above it.
+     */
+    private function isAnimated(node:Int):Bool
+    {
+        var n = node;
+        var guard = 0;
+
+        while (n >= 0 && guard++ < 100000)
+        {
+            if (_animatedNodes.exists(n))
+                return true;
+
+            n = _childToParent.exists(n) ? _childToParent.get(n) : -1;
+        }
+
+        return false;
+    }
+
+    /**
+     * Whether a primitive is tied to the skeleton and follows its bones.
+     */
+    private inline function isSkinned(prim:Dynamic, skin:Int):Bool
+    {
+        return _activeSkinIndex >= 0 && skin == _activeSkinIndex && prim.attributes != null
+            && Reflect.hasField(prim.attributes, "JOINTS_0") && Reflect.hasField(prim.attributes, "WEIGHTS_0");
+    }
+
+    /**
+     * Adds to the vertex total, or returns false once the model gets too big.
+     */
+    private function canAdd(count:Int):Bool
+    {
+        if (_totalVerts + count > MAX_VERTS)
+        {
+            if (!_warned)
+            {
+                _warned = true;
+                trace('Model has too many vertices, skipping the rest.', "WARNING");
+            }
+
+            return false;
+        }
+
+        _totalVerts += count;
+        return true;
+    }
+
+    /**
+     * Gets the batch for a material, making a new empty one the first time.
+     */
+    private function getBatch(mat:Int):GLTFBatch
+    {
+        if (_batches.exists(mat))
+            return _batches.get(mat);
+
+        var batch:GLTFBatch =
+        {
+            geom: new Geometry(),
+            verts: new Vector<Float>(),
+            normals: new Vector<Float>(),
+            uvs: new Vector<Float>(),
+            indices: new Vector<UInt>(),
+            count: 0,
+            hasNormals: true,
+            hasUvs: false,
+            subs: 0
+        };
+
+        _batches.set(mat, batch);
+        return batch;
+    }
+
+    /**
+     * Puts a non moving primitive in its final place and adds it to its material's batch.
+     */
+    private function mergePrimitive(prim:Dynamic, node:Int):Void
+    {
+        var attrs = prim.attributes;
+
+        if (attrs == null || !Reflect.hasField(attrs, "POSITION"))
+            return;
+
+        var positions = readFloats(Std.int(attrs.POSITION));
+        var vertCount = Std.int(positions.length / 3);
+
+        if (vertCount == 0)
+            return;
+
+        if (!canAdd(vertCount))
+            return;
+
+        var normals = Reflect.hasField(attrs, "NORMAL") ? readFloats(Std.int(attrs.NORMAL)) : null;
+        var uvs = Reflect.hasField(attrs, "TEXCOORD_0") ? readFloats(Std.int(attrs.TEXCOORD_0)) : null;
+        var indices:Array<Int> = Reflect.hasField(prim, "indices") ? readInts(Std.int(prim.indices)) : [for (i in 0...vertCount) i];
+
+        var mat = Reflect.hasField(prim, "material") ? Std.int(prim.material) : -1;
+        var batch = getBatch(mat);
+
+        if (batch.count > 0 && (vertCount > CHUNK_LIMIT || batch.count + vertCount > CHUNK_LIMIT))
+            flushBatch(batch);
+
+        var world = _nodeContainers[node].sceneTransform.clone();
+        var nmat = world.clone();
+        var ok = nmat.invert();
+
+        if (ok)
+            nmat.transpose();
+
+        var flip = world.determinant < 0;
+        var base = batch.count;
+
+        for (i in 0...vertCount)
+        {
+            _v1.x = positions[i * 3];
+            _v1.y = positions[i * 3 + 1];
+            _v1.z = -positions[i * 3 + 2];
+            world.transformVectorToOutput(_v1, _v2);
+
+            batch.verts.push(_v2.x);
+            batch.verts.push(_v2.y);
+            batch.verts.push(_v2.z);
+
+            if (normals != null)
+            {
+                _v1.x = normals[i * 3];
+                _v1.y = normals[i * 3 + 1];
+                _v1.z = -normals[i * 3 + 2];
+
+                if (ok)
+                    nmat.deltaTransformVectorToOutput(_v1, _v2);
+                else
+                {
+                    _v2.x = _v1.x;
+                    _v2.y = _v1.y;
+                    _v2.z = _v1.z;
+                }
+
+                var len = Math.sqrt(_v2.x * _v2.x + _v2.y * _v2.y + _v2.z * _v2.z);
+
+                if (len > 0)
+                {
+                    batch.normals.push(_v2.x / len);
+                    batch.normals.push(_v2.y / len);
+                    batch.normals.push(_v2.z / len);
+                }
+                else
+                {
+                    batch.normals.push(0);
+                    batch.normals.push(0);
+                    batch.normals.push(0);
+                }
+            }
+            else
+            {
+                batch.normals.push(0);
+                batch.normals.push(0);
+                batch.normals.push(0);
+                batch.hasNormals = false;
+            }
+
+            if (uvs != null)
+            {
+                batch.uvs.push(uvs[i * 2]);
+                batch.uvs.push(uvs[i * 2 + 1]);
+                batch.hasUvs = true;
+            }
+            else
+            {
+                batch.uvs.push(0);
+                batch.uvs.push(0);
+            }
+        }
+
+        var tris = Std.int(indices.length / 3);
+
+        for (t in 0...tris)
+        {
+            var a = base + indices[t * 3];
+            var b = base + indices[t * 3 + 1];
+            var c = base + indices[t * 3 + 2];
+
+            if (flip)
+            {
+                batch.indices.push(a);
+                batch.indices.push(b);
+                batch.indices.push(c);
+            }
+            else
+            {
+                batch.indices.push(a);
+                batch.indices.push(c);
+                batch.indices.push(b);
+            }
+        }
+
+        batch.count += vertCount;
+    }
+
+    /**
+     * Turns the batch's current chunk into a SubGeometry and starts a new one.
+     */
+    private function flushBatch(batch:GLTFBatch):Void
+    {
+        if (batch.count == 0)
+            return;
+
+        var sub = new SubGeometry();
+        sub.updateVertexData(batch.verts);
+        sub.updateIndexData(batch.indices);
+
+        if (batch.hasNormals)
+            sub.updateVertexNormalData(batch.normals);
+        else
+            sub.autoDeriveVertexNormals = true;
+
+        if (batch.hasUvs)
+            sub.updateUVData(batch.uvs);
+        else
+            sub.autoDeriveVertexTangents = true;
+
+        batch.geom.addSubGeometry(sub);
+        batch.subs++;
+
+        batch.verts = new Vector<Float>();
+        batch.normals = new Vector<Float>();
+        batch.uvs = new Vector<Float>();
+        batch.indices = new Vector<UInt>();
+        batch.count = 0;
+        batch.hasNormals = true;
+        batch.hasUvs = false;
+    }
+
+    /**
+     * Makes one mesh per material from the finished batches and adds them to the model.
+     */
+    private function buildBatches(root:ObjectContainer3D):Void
+    {
+        for (mat in _batches.keys())
+        {
+            var batch = _batches.get(mat);
+            flushBatch(batch);
+
+            if (batch.subs == 0)
+                continue;
+
+            var mesh = new Mesh(batch.geom, resolveMaterial(mat));
+            root.addChild(mesh);
+            _outMeshes.push(mesh);
+        }
+    }
+
+    /**
+     * Finds the bone with the most weight on a primitive, so the whole piece can follow that one bone.
+     */
+    private function dominantJoint(joints:Array<Float>, weights:Array<Float>, vertCount:Int):Int
     {
         var totals = new Map<Int, Float>();
 
@@ -450,7 +968,10 @@ class GLTFParser
         return best;
     }
 
-    function getLocalMatrix(node:Dynamic):Matrix3D 
+    /**
+     * Reads a node's own transform and converts it from glTF space into away3d space.
+     */
+    private function getLocalMatrix(node:Dynamic):Matrix3D 
     {
         var m = new Matrix3D();
         
@@ -475,7 +996,10 @@ class GLTFParser
         return m;
     }
 
-    function buildNodeAnimator():GLTFNodeAnimator 
+    /**
+     * Builds the animator that moves whole nodes around, used when there's no skeleton.
+     */
+    private function buildNodeAnimator():GLTFNodeAnimator 
     {
         var animator = new GLTFNodeAnimator();
         var anims = getArray("animations");
@@ -546,7 +1070,10 @@ class GLTFParser
         return animator;
     }
 
-    function getClipDuration(anim:Dynamic):Float 
+    /**
+     * Finds how long an animation runs, in seconds.
+     */
+    private function getClipDuration(anim:Dynamic):Float 
     {
         var maxT = 0.0;
 
@@ -561,7 +1088,10 @@ class GLTFParser
         return maxT;
     }
 
-    function readSampler(sampler:Dynamic):GLTFSampler 
+    /**
+     * Reads an animation sampler, its keyframe times, values and how it blends between them.
+     */
+    private function readSampler(sampler:Dynamic):GLTFSampler 
     {
         return 
         {
@@ -571,7 +1101,10 @@ class GLTFParser
         };
     }
 
-    function resolveMaterial(index:Int):MaterialBase 
+    /**
+     * Gets the material for an index, building it once and reusing it after that.
+     */
+    private function resolveMaterial(index:Int):MaterialBase 
     {
         if (index < 0) 
             return new ColorMaterial(0xcccccc);
@@ -619,7 +1152,10 @@ class GLTFParser
         return mat;
     }
 
-    function loadTexture(index:Int):BitmapTexture 
+    /**
+     * Loads a texture image out of the binary buffer and sizes it to a power of two.
+     */
+    private function loadTexture(index:Int):BitmapTexture 
     {
         var textures = getArray("textures");
         var images = getArray("images");
@@ -651,7 +1187,10 @@ class GLTFParser
         return new BitmapTexture(pot);
     }
 
-    function buildChildToParent():Void 
+    /**
+     * Records each node's parent so the engine can look it up later.
+     */
+    private function buildChildToParent():Void 
     {
         var nodes = getArray("nodes");
 
@@ -665,7 +1204,10 @@ class GLTFParser
         }
     }
 
-    function findActiveSkin():Int 
+    /**
+     * Finds the skin the model actually uses, or -1 if it has none.
+     */
+    private function findActiveSkin():Int 
     {
         var nodes = getArray("nodes");
 
@@ -678,14 +1220,17 @@ class GLTFParser
         return getArray("skins").length > 0 ? 0 : -1;
     }
 
-    function readFloats(accIndex:Int):Array<Float> 
+    /**
+     * Reads an accessor out of the binary buffer as a flat list of floats.
+     */
+    private function readFloats(accIndex:Int):Array<Float>
     {
-        var acc = getArray("accessors")[accIndex];
+        var acc = _accessors[accIndex];
 
-        if (acc.bufferView == null) 
+        if (acc.bufferView == null)
             return [];
 
-        var view = getArray("bufferViews")[Std.int(acc.bufferView)];
+        var view = _bufferViews[Std.int(acc.bufferView)];
         var comps = numComponents(acc.type);
         var compType = Std.int(acc.componentType);
         var count = Std.int(acc.count);
@@ -705,14 +1250,17 @@ class GLTFParser
         return out;
     }
 
-    function readInts(accIndex:Int):Array<Int> 
+    /**
+     * Reads an accessor out of the binary buffer as a flat list of ints, used for indices.
+     */
+    private function readInts(accIndex:Int):Array<Int>
     {
-        var acc = getArray("accessors")[accIndex];
+        var acc = _accessors[accIndex];
 
-        if (acc.bufferView == null) 
+        if (acc.bufferView == null)
             return [];
 
-        var view = getArray("bufferViews")[Std.int(acc.bufferView)];
+        var view = _bufferViews[Std.int(acc.bufferView)];
         var compType = Std.int(acc.componentType);
         var compSize = componentSize(compType);
         var count = Std.int(acc.count);
@@ -727,7 +1275,10 @@ class GLTFParser
         return out;
     }
 
-    inline function readComponent(type:Int, offset:Int):Float 
+    /**
+     * Reads one number from the binary buffer, matching how glTF stored it.
+     */
+    private inline function readComponent(type:Int, offset:Int):Float 
     {
         return switch (type) 
         {
@@ -752,12 +1303,18 @@ class GLTFParser
         }
     }
 
-    static inline function componentSize(type:Int):Int 
+    /**
+     * How many bytes one number of the given type takes.
+     */
+    private static inline function componentSize(type:Int):Int 
     {
         return (type == CT_BYTE || type == CT_UBYTE) ? 1 : (type == CT_SHORT || type == CT_USHORT) ? 2 : 4;
     }
 
-    static inline function numComponents(type:String):Int 
+    /**
+     * How many numbers make up one value of the given type, so a VEC3 is 3.
+     */
+    private static inline function numComponents(type:String):Int 
     {
         return switch (type) 
         { 
@@ -769,13 +1326,19 @@ class GLTFParser
         }
     }
 
-    static inline function clamp8(v:Float):Int 
+    /**
+     * Turns a 0 to 1 colour value into a 0 to 255 byte, keeping it in range.
+     */
+    private static inline function clamp8(v:Float):Int 
     {
         var i = Std.int(v * 255);
         return i < 0 ? 0 : (i > 255 ? 255 : i);
     }
     
-    inline function getArray(name:String):Array<Dynamic> 
+    /**
+     * Gets a top array from the json by name, or an empty one if it's missing.
+     */
+    private inline function getArray(name:String):Array<Dynamic> 
     {
         return Reflect.hasField(_json, name) ? cast Reflect.field(_json, name) : [];
     }
