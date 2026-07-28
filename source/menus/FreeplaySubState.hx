@@ -3,10 +3,14 @@ package menus;
 import flixel.FlxCamera;
 import flixel.group.FlxSpriteGroup;
 import flixel.math.FlxMath;
+import flixel.math.FlxPoint;
 import flixel.text.FlxText;
 
 import backend.MusicBeatSubState;
 import backend.Highscore;
+import backend.utils.ScoringUtil;
+import backend.utils.ScoringUtil.ScoringRank;
+import backend.utils.IntervalShake;
 import backend.shaders.AngleMask;
 import backend.shaders.StrokeShader;
 import backend.shaders.GaussianBlurShader;
@@ -122,6 +126,28 @@ class FreeplaySubState extends MusicBeatSubState
     var variations:Array<String> = [""];
     var diffCache:Map<String, Array<String>> = new Map();
 
+    public static var pendingResults:Null<FromResultsParams> = null;
+
+    var fromResults:Null<FromResultsParams> = null;
+    var prepForNewRank:Bool = false;
+
+    var rankCamera:FlxCamera;
+    var rankBg:FunkinSprite;
+    var rankVignette:FunkinSprite;
+
+    var sparks:FunkinSprite;
+    var sparksADD:FunkinSprite;
+
+    var originalPos:FlxPoint = new FlxPoint();
+
+    public function new(?fromResults:FromResultsParams)
+    {
+        super();
+
+        this.fromResults = fromResults;
+        this.prepForNewRank = fromResults?.playRankAnim == true;
+    }
+
     override function create():Void
     {
         BackingCardHandler.load();
@@ -137,6 +163,16 @@ class FreeplaySubState extends MusicBeatSubState
         camOverlay = new FlxCamera();
         camOverlay.bgColor = 0x00000000;
         FlxG.cameras.add(camOverlay, false);
+
+        rankCamera = new FlxCamera();
+        rankCamera.bgColor = 0x00000000;
+        FlxG.cameras.add(rankCamera, false);
+
+        if (fromResults != null)
+        {
+            curDifficulty = fromResults.difficultyId;
+            curFilter = "ALL";
+        }
 
         if (FlxG.sound.music != null && FlxG.sound.music.playing)
             FlxG.sound.music.fadeOut(0.3, 0);
@@ -217,17 +253,76 @@ class FreeplaySubState extends MusicBeatSubState
         bopper.addAnim("intro", {prefix: "Intro"});
         bopper.addAnim("idle", {prefix: "Idle"});
         bopper.addAnim("confirm", {prefix: "Confirm"});
-        bopper.playAnim("intro", {onComplete: () -> begin()});
+        bopper.addAnim("fistPump", {prefix: "Fist Pump"});
+        bopper.addAnim("fistPumpLoss", {prefix: "Fist Pump Loss"});
+
+        if (prepForNewRank)
+        {
+            bopper.playAnim("idle", {force: true});
+            FlxTimer.wait(0.1, () -> begin());
+        }
+        else
+            bopper.playAnim("intro", {onComplete: () -> begin()});
+
         add(bopper);
 
         loadAllSongs();
         buildLetterSort();
         buildDifficultySelector();
+
+        rankBg = new FunkinSprite(0, 0).makeGraphic(camUI.width, camUI.height, 0xD3000000);
+        rankBg.camera = rankCamera;
+        rankBg.alpha = 0;
+        add(rankBg);
+
         rebuildSongList();
+
+        if (fromResults != null)
+            selectSongById(fromResults.songId);
+
+        rankVignette = new FunkinSprite(0, 0, 'menus/freeplay/rankVignette');
+        rankVignette.setGraphicSize(camUI.width, camUI.height);
+        rankVignette.updateHitbox();
+        rankVignette.blend = BlendMode.ADD;
+        rankVignette.camera = camUI;
+        rankVignette.alpha = 0;
+        add(rankVignette);
+
+        sparks = new FunkinSprite(0, 0, 'menus/freeplay/sparks');
+        sparks.addAnim('sparks', {prefix: 'sparks'});
+        sparks.blend = BlendMode.ADD;
+        sparks.scale.set(0.5, 0.5);
+        sparks.visible = false;
+        sparks.camera = rankCamera;
+        add(sparks);
+
+        sparksADD = new FunkinSprite(0, 0, 'menus/freeplay/sparks_add');
+        sparksADD.addAnim('sparks add', {prefix: 'sparks add'});
+        sparksADD.blend = BlendMode.ADD;
+        sparksADD.scale.set(0.5, 0.5);
+        sparksADD.visible = false;
+        sparksADD.camera = rankCamera;
+        add(sparksADD);
+
+        if (prepForNewRank)
+            rankCamera.fade(0xFF000000, 0, false, null, true);
 
         activateCard();
 
         super.create();
+    }
+
+    function selectSongById(songId:String):Void
+    {
+        for (i in 0...songs.length)
+        {
+            if (songs[i].id == songId)
+            {
+                curSelected = i + 1;
+                changeSelection(0);
+                return;
+            }
+        }
     }
 
     function activateCard():Void
@@ -587,6 +682,7 @@ class FreeplaySubState extends MusicBeatSubState
             entering = true;
 
             PlayState.comingFromFreeplay = true;
+            PlayState.returnToFreeplay = true;
             TransitionLoader.skipTransIn = true;
             TransitionLoader.skipTransOut = true;
 
@@ -666,8 +762,11 @@ class FreeplaySubState extends MusicBeatSubState
         if (currentCard != null)
             currentCard.onIntroDone(this);
 
-        if (menuSong != null)
+        if (menuSong != null && !prepForNewRank)
             menuSong.play();
+
+        if (prepForNewRank && fromResults != null && capsules[curSelected] != null)
+            rankAnimStart(fromResults, capsules[curSelected]);
     }
 
     function revealHighscorePanel():Void
@@ -889,6 +988,7 @@ class FreeplaySubState extends MusicBeatSubState
             s.variation = variation;
             s.difficulties = diffs;
             s.difficultyRating = MetaRegistry.getRating(s.id, curDifficulty, variation);
+            s.scoringRank = rankFor(s.id, curDifficulty, variation);
 
             if (filter == "ALL")
             {
@@ -1032,6 +1132,12 @@ class FreeplaySubState extends MusicBeatSubState
     function ratingFor(item:SongMenuItem):Int
     {
         return (item != null && item.freeplayData != null) ? item.freeplayData.difficultyRating : 0;
+    }
+
+    function rankFor(songId:String, difficulty:String, variation:String):Null<ScoringRank>
+    {
+        var record = Highscore.getScore(songId, difficulty, variation);
+        return (record == null) ? null : ScoringUtil.calculateRank(record.tallies);
     }
 
     function updateAlbumRoll():Void
@@ -1308,6 +1414,219 @@ class FreeplaySubState extends MusicBeatSubState
         Preloader.start(song.id, curDifficulty, pendingVariation, () -> canEnter = true);
     }
 
+    function rankAnimStart(results:FromResultsParams, capsule:SongMenuItem):Void
+    {
+        busy = true;
+
+        capsule.sparkle.alpha = 0;
+
+        capsule.fakeRanking.visible = true;
+        capsule.fakeRanking.alpha = 0;
+
+        if (currentCard != null)
+            currentCard.onRankAnimStart(this, results.newRank);
+
+        rankCamera.fade(0xFF000000, 0.5, true, null, true);
+
+        rankBg.alpha = 1;
+
+        if (results.oldRank != null)
+        {
+            capsule.fakeRanking.rank = results.oldRank;
+            capsule.fakeBlurredRanking.rank = results.oldRank;
+
+            sparksADD.color = results.oldRank.getRankingFreeplayColor();
+            capsule.fakeRanking.alpha = 1.0;
+        }
+
+        capsule.doLerp = false;
+
+        originalPos.x = capsule.targetPos.x;
+        originalPos.y = capsule.targetPos.y;
+
+        capsule.ranking.visible = false;
+        capsule.blurredRanking.visible = false;
+
+        rankCamera.zoom = 1.85;
+        FlxTween.tween(rankCamera, {zoom: 1.8}, 0.6, {ease: FlxEase.sineIn});
+
+        camCapsules.zoom = 1.15;
+        FlxTween.tween(camCapsules, {zoom: 1.1}, 0.6, {ease: FlxEase.sineIn});
+
+        capsule.camera = rankCamera;
+        capsule.setPosition((FlxG.width / 2) - (capsule.capsule.width / 2), (FlxG.height / 2) - (capsule.capsule.height / 2));
+
+        FlxTimer.wait(0.5, () -> rankDisplayNew(results, capsule));
+    }
+
+    function rankDisplayNew(results:FromResultsParams, capsule:SongMenuItem):Void
+    {
+        capsule.ranking.visible = true;
+        capsule.blurredRanking.visible = true;
+        capsule.ranking.scale.set(20, 20);
+        capsule.blurredRanking.scale.set(20, 20);
+
+        var icon:String = results.newRank.getFreeplayRankIconAsset();
+        capsule.ranking.animation.play(icon, true);
+        capsule.blurredRanking.animation.play(icon, true);
+
+        FlxTween.tween(capsule.ranking.scale, {x: 0.9, y: 0.9}, 0.1);
+        FlxTween.tween(capsule.blurredRanking.scale, {x: 0.9, y: 0.9}, 0.1);
+
+        FlxTimer.wait(0.1, () ->
+        {
+            if (results.oldRank != null)
+            {
+                capsule.fakeRanking.visible = false;
+                capsule.fakeBlurredRanking.visible = false;
+
+                sparks.setPosition(capsule.ranking.x - 40, capsule.ranking.y - 40);
+                sparksADD.setPosition(capsule.ranking.x - 55, capsule.ranking.y - 55);
+
+                sparks.visible = true;
+                sparksADD.visible = true;
+
+                sparks.playAnim('sparks', {force: true, onComplete: () ->
+                {
+                    sparks.visible = false;
+                    sparksADD.visible = false;
+                }});
+
+                sparksADD.playAnim('sparks add', {force: true});
+            }
+
+            switch (results.newRank)
+            {
+                case SHIT: FunkinSound.playOnce(Paths.sound('menus/freeplay/ranks/place/bad'));
+                case PERFECT: FunkinSound.playOnce(Paths.sound('menus/freeplay/ranks/place/perfect'));
+                case PERFECT_GOLD: FunkinSound.playOnce(Paths.sound('menus/freeplay/ranks/place/perfect'));
+                default: FunkinSound.playOnce(Paths.sound('menus/freeplay/ranks/place/normal'));
+            }
+
+            rankCamera.zoom = 1.3;
+            FlxTween.tween(rankCamera, {zoom: 1.5}, 0.3, {ease: FlxEase.backInOut});
+
+            capsule.x -= 10;
+            capsule.y -= 20;
+
+            FlxTween.tween(camCapsules, {zoom: 1.05}, 0.3, {ease: FlxEase.elasticOut});
+
+            capsule.angle = -3;
+            FlxTween.tween(capsule, {angle: 0}, 0.5, {ease: FlxEase.backOut});
+
+            IntervalShake.shake(capsule, 0.3, 1 / 30, 0.1, 0, FlxEase.quadOut);
+        });
+
+        FlxTimer.wait(0.4, () ->
+        {
+            FlxTween.tween(camCapsules, {zoom: 1}, 0.8, {ease: FlxEase.sineIn});
+            FlxTween.tween(rankCamera, {zoom: 1.2}, 0.8, {ease: FlxEase.backIn});
+            FlxTween.tween(capsule, {x: originalPos.x - 7, y: originalPos.y - 80}, 0.8 + 0.5, {ease: FlxEase.quartIn});
+        });
+
+        FlxTimer.wait(0.6, () -> rankAnimSlam(results, capsule));
+    }
+
+    function rankAnimSlam(results:FromResultsParams, capsule:SongMenuItem):Void
+    {
+        FlxTween.tween(rankBg, {alpha: 0}, 0.5, {ease: FlxEase.expoIn});
+
+        switch (results.newRank)
+        {
+            case SHIT: FunkinSound.playOnce(Paths.sound('menus/freeplay/ranks/loss'));
+            case GOOD: FunkinSound.playOnce(Paths.sound('menus/freeplay/ranks/good'));
+            case GREAT: FunkinSound.playOnce(Paths.sound('menus/freeplay/ranks/great'));
+            case EXCELLENT: FunkinSound.playOnce(Paths.sound('menus/freeplay/ranks/excellent'));
+            case PERFECT: FunkinSound.playOnce(Paths.sound('menus/freeplay/ranks/perfect'));
+            case PERFECT_GOLD: FunkinSound.playOnce(Paths.sound('menus/freeplay/ranks/perfect'));
+            default: FunkinSound.playOnce(Paths.sound('menus/freeplay/ranks/loss'));
+        }
+
+        FlxTween.tween(capsule.targetPos, {x: originalPos.x, y: originalPos.y}, 0.5, {ease: FlxEase.expoOut});
+
+        FlxTimer.wait(0.5, () ->
+        {
+            camCapsules.shake(0.0045, 0.35);
+
+            var pumpAnim:String = results.newRank == SHIT ? "fistPumpLoss" : "fistPump";
+            
+            if (bopper.hasAnim(pumpAnim))
+                bopper.playAnim(pumpAnim, {force: true, onComplete: () -> finishRankCutscene(results)});
+            else
+                FlxTimer.wait(1.5, () -> finishRankCutscene(results));
+
+            if (currentCard != null)
+                currentCard.onRankSlam(this, results.newRank);
+
+            rankCamera.zoom = 0.8;
+            camCapsules.zoom = 0.8;
+            FlxTween.tween(rankCamera, {zoom: 1}, 1, {ease: FlxEase.elasticOut});
+            FlxTween.tween(camCapsules, {zoom: 1}, 0.8, {ease: FlxEase.elasticOut});
+
+            for (i in 0...capsules.length)
+            {
+                var item = capsules[i];
+                if (item == null) continue;
+
+                var distFromSelected:Float = Math.abs(i - curSelected) - 1;
+
+                if (distFromSelected >= 5) continue;
+
+                if (i == curSelected)
+                {
+                    FlxTween.cancelTweensOf(item);
+                    item.fadeAnim(results.newRank);
+
+                    rankVignette.color = item.getTrailColor();
+                    rankVignette.alpha = 1;
+                    FlxTween.tween(rankVignette, {alpha: 0}, 0.6, {ease: FlxEase.expoOut});
+
+                    item.doLerp = false;
+                    item.setPosition(originalPos.x, originalPos.y);
+                    IntervalShake.shake(item, 0.6, 1 / 24, 0.12, 0, FlxEase.quadOut, (_) ->
+                    {
+                        item.doLerp = true;
+                        item.camera = camCapsules;
+                        item.sparkle.alpha = 0.7;
+                    });
+
+                    FlxTween.tween(item, {angle: 0}, 0.5, {ease: FlxEase.backOut});
+                }
+                else
+                {
+                    FlxTimer.wait(distFromSelected / 20, () ->
+                    {
+                        item.doLerp = false;
+                        item.angle = FlxG.random.float(-10 + (distFromSelected * 2), 10 - (distFromSelected * 2));
+                        FlxTween.tween(item, {angle: 0}, 0.5, {ease: FlxEase.backOut});
+
+                        IntervalShake.shake(item, 0.6, 1 / 24, 0.12 / (distFromSelected + 1), 0, FlxEase.quadOut, (_) -> item.doLerp = true);
+                    });
+                }
+            }
+        });
+    }
+
+    function finishRankCutscene(results:FromResultsParams):Void
+    {
+        if (!prepForNewRank) return;
+
+        prepForNewRank = false;
+        busy = false;
+
+        bopper.playAnim("idle", {force: true});
+
+        if (menuSong != null)
+        {
+            menuSong.volume = 0;
+            menuSong.play();
+            FlxTween.tween(menuSong, {volume: 1}, 0.5);
+        }
+
+        if (currentCard != null)
+            currentCard.onRankDone(this, results.newRank);
+    }
+
     function isFavorite(id:String):Bool
     {
         return Configs.FAVORITE_SONGS.indexOf(id) != -1;
@@ -1351,6 +1670,23 @@ class FreeplaySubState extends MusicBeatSubState
             camOverlay = null;
         }
 
+        if (rankCamera != null)
+        {
+            FlxG.cameras.remove(rankCamera);
+            rankCamera = null;
+        }
+
         super.destroy();
     }
 }
+
+typedef FromResultsParams =
+{
+    var playRankAnim:Bool;
+    var newRank:ScoringRank;
+    var songId:String;
+    var difficultyId:String;
+
+    @:optional var oldRank:Null<ScoringRank>;
+    @:optional var variation:String;
+};

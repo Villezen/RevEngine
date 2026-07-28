@@ -304,12 +304,9 @@ class HealthIcon extends FunkinSprite
 
         this.updatePosition();
 
-        bopTween = FlxTween.num(bounceWidth, targetWidth, Math.min(Conductor.instance.stepLengthMs * 0.002, 0.175), {
-            onComplete: function(twn:FlxTween) { bopTween = null; }
-        }, function(value:Float) {
+        bopTween = FlxTween.num(bounceWidth, targetWidth, Math.min(Conductor.instance.stepLengthMs * 0.002, 0.175), {onComplete: function(twn:FlxTween) bopTween = null}, function(value:Float) {
             
             var ratio = (value - targetWidth) / (bounceWidth - targetWidth);
-            if (Math.isNaN(ratio)) ratio = 0;
             var curHeight = targetHeight + ((bounceHeight - targetHeight) * ratio);
 
             setGraphicSize(Std.int(value), Std.int(curHeight));

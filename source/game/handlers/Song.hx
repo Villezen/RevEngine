@@ -147,7 +147,6 @@ class Song extends FlxBasic
                 voices.set('globalVocalTrack', track);
             else
             {
-                trace('Vocals missing for character ' + character + '. Creating empty track...', "WARNING");
                 track = new FunkinSound();
                 track.volume = 0;
             }

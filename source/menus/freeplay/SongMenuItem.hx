@@ -4,8 +4,10 @@ import flixel.group.FlxGroup;
 import flixel.group.FlxSpriteGroup;
 import flixel.math.FlxMath;
 import flixel.math.FlxPoint;
+import flixel.addons.effects.FlxTrail;
 
 import backend.utils.MathUtil;
+import backend.utils.ScoringUtil.ScoringRank;
 import backend.registries.song.ChartRegistry;
 
 typedef FreeplaySongData =
@@ -20,6 +22,7 @@ typedef FreeplaySongData =
     @:optional var newlyAdded:Bool;
     @:optional var variation:String;
     @:optional var albumId:String;
+    @:optional var scoringRank:Null<ScoringRank>;
 }
 
 class SongMenuItem extends FlxSpriteGroup
@@ -37,6 +40,19 @@ class SongMenuItem extends FlxSpriteGroup
 
     public var favIcon:FunkinSprite;
     public var favIconBlurred:FunkinSprite;
+
+    public var ranking:FreeplayRank;
+    public var blurredRanking:FreeplayRank;
+
+    public var fakeRanking:FreeplayRank;
+    public var fakeBlurredRanking:FreeplayRank;
+
+    public var sparkle:FunkinSprite;
+    var sparkleTimer:FlxTimer;
+
+    var impactThing:FunkinSprite;
+    var evilTrail:FlxTrail;
+    public var hasTrail:Bool = false;
 
     public var isFav:Bool = false;
 
@@ -127,6 +143,29 @@ class SongMenuItem extends FlxSpriteGroup
         favIcon.visible = false;
         add(favIcon);
 
+        fakeRanking = new FreeplayRank(420, 41);
+        fakeRanking.visible = false;
+        add(fakeRanking);
+
+        fakeBlurredRanking = new FreeplayRank(fakeRanking.x, fakeRanking.y);
+        fakeBlurredRanking.visible = false;
+        add(fakeBlurredRanking);
+
+        ranking = new FreeplayRank(420, 41);
+        add(ranking);
+
+        blurredRanking = new FreeplayRank(ranking.x, ranking.y);
+        add(blurredRanking);
+
+        sparkle = new FunkinSprite(ranking.x, ranking.y, 'menus/freeplay/sparkle');
+        sparkle.addAnim('sparkle', {prefix: 'sparkle Export0'});
+        sparkle.playAnim('sparkle');
+        sparkle.scale.set(0.8, 0.8);
+        sparkle.blend = BlendMode.ADD;
+        sparkle.visible = false;
+        sparkle.alpha = 0.7;
+        add(sparkle);
+
         updateDifficultyRating(0);
 
         setVisibleGrp(false);
@@ -154,7 +193,7 @@ class SongMenuItem extends FlxSpriteGroup
             }
         }
 
-        if (freeplayData != null) songText.clipWidth = fav ? 245 : 290;
+        if (freeplayData != null) checkClip();
 
         updateSelected();
     }
@@ -179,13 +218,14 @@ class SongMenuItem extends FlxSpriteGroup
         refreshDisplay();
     }
 
-    public function refreshDisplay():Void
+    public function refreshDisplay(updateRank:Bool = true):Void
     {
         if (freeplayData == null)
         {
             songText.text = 'Random';
             newText.visible = false;
             pixelIcon.setCharacter("");
+            ranking.visible = false;
             setStatsVisible(false);
         }
         else
@@ -200,8 +240,9 @@ class SongMenuItem extends FlxSpriteGroup
             if (pixelIcon.char != iconChar) pixelIcon.visible = false;
 
             newText.visible = freeplayData.newlyAdded == true;
-            songText.clipWidth = isFav ? 245 : 290;
+            if (updateRank) updateScoringRank(freeplayData.scoringRank);
             setStatsVisible(true);
+            checkClip();
         }
 
         updateSelected();
@@ -212,6 +253,108 @@ class SongMenuItem extends FlxSpriteGroup
         if (freeplayData == null) return;
 
         updateDifficultyRating(freeplayData.difficultyRating);
+        updateScoringRank(freeplayData.scoringRank);
+        checkClip();
+    }
+
+    public function checkClip():Void
+    {
+        var clipSize:Int = 290;
+        var clipType:Int = 0;
+
+        if (ranking.visible || fakeRanking.visible)
+        {
+            favIconBlurred.x = this.x + 370;
+            favIcon.x = favIconBlurred.x;
+            clipType += 1;
+        }
+        else
+            favIconBlurred.x = favIcon.x = this.x + 405;
+
+        if (favIcon.visible) clipType += 1;
+
+        switch (clipType)
+        {
+            case 2: clipSize = 210;
+            case 1: clipSize = 245;
+        }
+
+        songText.clipWidth = clipSize;
+    }
+
+    public function updateScoringRank(newRank:Null<ScoringRank>):Void
+    {
+        if (sparkleTimer != null) sparkleTimer.cancel();
+        sparkle.visible = false;
+
+        ranking.rank = newRank;
+        blurredRanking.rank = newRank;
+
+        if (newRank == ScoringRank.PERFECT_GOLD)
+        {
+            sparkleTimer = new FlxTimer().start(1, sparkleEffect);
+            sparkle.visible = true;
+        }
+    }
+
+    function sparkleEffect(timer:FlxTimer):Void
+    {
+        sparkle.setPosition(FlxG.random.float(ranking.x - 20, ranking.x + 3), FlxG.random.float(ranking.y - 29, ranking.y + 4));
+        sparkle.playAnim('sparkle', {force: true});
+        sparkleTimer = new FlxTimer().start(FlxG.random.float(1.2, 4.5), sparkleEffect);
+    }
+
+    function clearUpTrail():Void
+    {
+        if (impactThing != null)
+        {
+            FlxTween.cancelTweensOf(impactThing);
+            remove(impactThing);
+            impactThing.destroy();
+            impactThing = null;
+        }
+
+        if (evilTrail != null)
+        {
+            FlxTween.cancelTweensOf(evilTrail);
+            remove(evilTrail);
+            evilTrail.destroy();
+            evilTrail = null;
+        }
+    }
+
+    public function fadeAnim(?newRank:ScoringRank):Void
+    {
+        if (hasTrail) clearUpTrail();
+        hasTrail = true;
+
+        impactThing = new FunkinSprite(0, 0);
+        impactThing.frames = capsule.frames;
+        impactThing.frame = capsule.frame;
+        impactThing.updateHitbox();
+        impactThing.alpha = 0;
+        add(impactThing);
+        FlxTween.tween(impactThing.scale, {x: 2.5, y: 2.5}, 0.5);
+
+        evilTrail = new FlxTrail(impactThing, null, 15, 0.03, 0.01, 0.069);
+        evilTrail.blend = BlendMode.ADD;
+        FlxTween.tween(evilTrail, {alpha: 0}, 0.6,
+        {
+            ease: FlxEase.quadOut,
+            onComplete: (_) ->
+            {
+                clearUpTrail();
+                hasTrail = false;
+            }
+        });
+        add(evilTrail);
+
+        evilTrail.color = (newRank ?? ranking.rank).getRankingFreeplayColor();
+    }
+
+    public function getTrailColor():FlxColor
+    {
+        return evilTrail.color;
     }
 
     public function staggerNew(index:Int):Void
@@ -530,6 +673,9 @@ class SongMenuItem extends FlxSpriteGroup
         favIcon.alpha = isSelected ? 1 : 0.6;
         favIconBlurred.alpha = isSelected ? 1 : 0;
 
+        ranking.alpha = isSelected ? 1 : 0.7;
+        ranking.color = isSelected ? 0xFFFFFFFF : 0xFFAAAAAA;
+
         if (songText.tooLong) songText.resetText();
 
         if (selected && songText.tooLong) songText.initMove();
@@ -554,5 +700,55 @@ class SongMenuItem extends FlxSpriteGroup
         doLerp = false;
         doJumpIn = false;
         doJumpOut = false;
+    }
+}
+
+class FreeplayRank extends FunkinSprite
+{
+    public var rank(default, set):Null<ScoringRank> = null;
+
+    public function new(x:Float, y:Float)
+    {
+        super(x, y, 'menus/freeplay/ranks');
+
+        addAnim('PERFECT', {prefix: 'PERFECT rank0'});
+        addAnim('EXCELLENT', {prefix: 'EXCELLENT rank0'});
+        addAnim('GOOD', {prefix: 'GOOD rank0'});
+        addAnim('PERFECTSICK', {prefix: 'PERFECT rank GOLD'});
+        addAnim('GREAT', {prefix: 'GREAT rank0'});
+        addAnim('LOSS', {prefix: 'LOSS rank0'});
+
+        blend = BlendMode.ADD;
+
+        this.rank = null;
+
+        scale.set(0.9, 0.9);
+        updateHitbox();
+    }
+
+    function set_rank(val:Null<ScoringRank>):Null<ScoringRank>
+    {
+        rank = val;
+
+        if (val == null)
+            visible = false;
+        else
+        {
+            visible = true;
+
+            playAnim(val.getFreeplayRankIconAsset(), {force: true});
+            centerOffsets(false);
+
+            switch (val)
+            {
+                case GOOD: offset.y -= 8;
+                case GREAT: offset.y -= 8;
+                default:
+            }
+
+            updateHitbox();
+        }
+
+        return rank = val;
     }
 }

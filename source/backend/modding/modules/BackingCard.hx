@@ -30,6 +30,10 @@ class BackingCard
 
     public function onSelect(freeplay:Dynamic, ?song:Dynamic):Void {}
 
+    public function onRankAnimStart(freeplay:Dynamic, ?rank:Dynamic):Void {}
+    public function onRankSlam(freeplay:Dynamic, ?rank:Dynamic):Void {}
+    public function onRankDone(freeplay:Dynamic, ?rank:Dynamic):Void {}
+
     public function onUpdate(freeplay:Dynamic, elapsed:Float):Void {}
     public function onDestroy(freeplay:Dynamic):Void {}
 

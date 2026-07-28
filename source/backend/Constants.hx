@@ -162,6 +162,26 @@ class Constants
     public static final SCORE_SIGMOID_SLOPE:Float = 0.08;
 
     /**
+     * The clear percentage required to earn a Perfect rank.
+     */
+    public static final RANK_PERFECT_THRESHOLD:Float = 1.00;
+
+    /**
+     * The clear percentage required to earn an Excellent rank.
+     */
+    public static final RANK_EXCELLENT_THRESHOLD:Float = 0.90;
+
+    /**
+     * The clear percentage required to earn a Great rank.
+     */
+    public static final RANK_GREAT_THRESHOLD:Float = 0.80;
+
+    /**
+     * The clear percentage required to earn a Good rank.
+     */
+    public static final RANK_GOOD_THRESHOLD:Float = 0.60;
+
+    /**
      * Map containing each rating's millisecond hit window.
      */
     public static final RATING_MAP:Map<NoteJudgement, Int> =

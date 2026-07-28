@@ -48,6 +48,8 @@ import backend.Highscore;
 import backend.Highscore.ScoreTallies;
 
 import backend.utils.MathUtil;
+import backend.utils.ScoringUtil;
+import backend.utils.ScoringUtil.ScoringRank;
 
 import game.handlers.Chart;
 import game.handlers.Meta;
@@ -73,6 +75,8 @@ import game.world.Character;
 import game.world.Character.PlacementType;
 
 import game.PlayMetrics.NoteJudgement;
+
+import menus.FreeplaySubState;
 
 import backend.MusicBeatState;
 
@@ -143,6 +147,11 @@ class PlayState extends MusicBeatState
      * Whether the player is coming from the Freeplay menu to ensure the fade out transition occurs.
      */
     public static var comingFromFreeplay:Bool = false;
+
+    /**
+     * Whether the song should return to Freeplay and play the rank cutscene once it ends.
+     */
+    public static var returnToFreeplay:Bool = false;
 
     /**
 	 * Which week the player is playing.
@@ -859,21 +868,48 @@ class PlayState extends MusicBeatState
         if (song != null)
             song.stop();
 
-        saveHighscore();
+        var previous = Highscore.getScore(name, difficulty, variation);
+        var oldRank:Null<ScoringRank> = (previous == null) ? null : ScoringUtil.calculateRank(previous.tallies);
+
+        var tallies:Null<ScoreTallies> = saveHighscore();
+        var newRank:Null<ScoringRank> = ScoringUtil.calculateRank(tallies);
 
         FunkinSound.stopAllAudio(true);
-        Manager.switchState(new menus.MainMenuState(), "stickers");
+
+        if (returnToFreeplay && newRank != null)
+        {
+            returnToFreeplay = false;
+
+            var isNewRank:Bool = newRank > oldRank;
+
+            FreeplaySubState.pendingResults =
+            {
+                playRankAnim: isNewRank,
+                oldRank: oldRank,
+                newRank: newRank,
+                songId: name,
+                difficultyId: difficulty,
+                variation: variation
+            };
+
+            TransitionLoader.skipTransOut = isNewRank;
+            Manager.switchState(new menus.MainMenuState());
+        }
+        else
+        {
+            returnToFreeplay = false;
+            Manager.switchState(new menus.MainMenuState(), "stickers");
+        }
     }
 
     /**
      * Records the score and tallies for the song that just finished and saves it.
+     * @return The tallies from this playthrough, or null if there were no metrics.
      */
-    function saveHighscore()
+    function saveHighscore():Null<ScoreTallies>
     {
         if (metrics == null)
-        {
-            return;
-        }
+            return null;
 
         var tallies:ScoreTallies =
         {
@@ -889,6 +925,7 @@ class PlayState extends MusicBeatState
         };
 
         Highscore.saveScore(name, difficulty, variation, {score: Std.int(metrics.score), tallies: tallies});
+        return tallies;
     }
 
     /**
@@ -937,7 +974,10 @@ class PlayState extends MusicBeatState
         if (scoreText == null || metrics == null)
             return;
 
-        scoreText.text = "Score: " + Std.string(FlxStringUtil.formatMoney(Std.int(metrics.score), false, true)) + " | Misses: " + Std.int(metrics.misses) + " | Accuracy: " + FlxMath.roundDecimal(metrics.accuracy, 2) + "% | P+";
+        var liveRank:Null<ScoringRank> = ScoringUtil.calculateRankLive(metrics.sick, metrics.good, metrics.bad, metrics.shit, metrics.misses);
+        var rankLabel:String = (liveRank == null) ? "N/A" : liveRank.getScoreLabel();
+
+        scoreText.text = "Score: " + Std.string(FlxStringUtil.formatMoney(Std.int(metrics.score), false, true)) + " | Misses: " + Std.int(metrics.misses) + " | Accuracy: " + FlxMath.roundDecimal(metrics.accuracy, 2) + "% | " + rankLabel;
         scoreText.screenCenter(X);
     }
 
@@ -967,15 +1007,20 @@ class PlayState extends MusicBeatState
     function manageDebugKeybinds(devMode:Bool):Void
     {
         if (FlxG.keys.justPressed.SEVEN)
+        {
+            returnToFreeplay = false;
             Manager.switchState(new menus.ChartingState(name, difficulty, variation));
+        }
 
         if (!devMode) return;
 
         if (FlxG.keys.justPressed.ESCAPE && songStarted)
         {
             updateConductor = false;
-            
+
             song?.stop();
+
+            returnToFreeplay = false;
 
             FunkinSound.stopAllAudio(true);
             Manager.switchState(new menus.MainMenuState(), "stickers");

@@ -82,8 +82,7 @@ class MathUtil
      * @see https://twitter.com/FreyaHolmer/status/1757918211679650262
      *
      * @return A value between the current value and the target value.
-     * 
-     * 
+     *
      * TODO: Test out the lerp above this one to determine if this one is worth keeping or not?
      */
     public static function smoothLerp(current:Float, target:Float, elapsed:Float, duration:Float, precision:Float = 1 / 100):Float
@@ -100,17 +99,17 @@ class MathUtil
     }
 
     /**
-     * Linearly interpolates a float that's framerate-independent. 
+     * Linearly interpolates a float that's framerate-independent.
      * @param base The base value of the float.
      * @param target The current value.
      * @param ratio A normalized value to use for calculate the new float.
      * @return A value between the target, and base value.
      */
-    public static function linearLerp(base:Float, target:Float, elapsed:Float, ratio:Float):Float 
+    public static function linearLerp(base:Float, target:Float, elapsed:Float, ratio:Float):Float
     {
         return base + (ratio * (elapsed / (1 / 60))) * (target - base);
     }
-    
+
     /**
      * Specifically made to adapt lerps designed for 144 FPS to any framerate.
      * @param base The base value of the float.
@@ -119,7 +118,7 @@ class MathUtil
      * @param mult A multipler used while calculating the lerp.
      * @return A value between the target, and base value that's framerate-independent.
      */
-    public static function framerateLerp(base:Float, target:Float, ratio:Float, elapsed:Float, mult:Float = 1.0):Float 
+    public static function framerateLerp(base:Float, target:Float, ratio:Float, elapsed:Float, mult:Float = 1.0):Float
     {
         return FlxMath.lerp(base, target, (FlxMath.bound((ratio * mult) * 60 * elapsed, 0, 1.0)));
     }
@@ -141,25 +140,24 @@ class MathUtil
      * @param max The maximum value to bind 'value' from.
      * @return A real number bounded to the minimum and maximum value.
      */
-    public static function limitFloat(value:Float, ?min:Float, ?max:Float):Float 
+    public static function limitFloat(value:Float, ?min:Float, ?max:Float):Float
     {
         var lowerBound:Float = (min != null && value < min) ? min : value;
-		return (max != null && lowerBound > max) ? max : lowerBound;
+        return (max != null && lowerBound > max) ? max : lowerBound;
     }
 
     /**
-     * Binds a float value  so that in the case that it goes below or above its minimum or maximum value
+     * Binds a float value so that in the case that it goes below or above its minimum or maximum value
      * it returns back to the maximum or the minimum value.
      * @param value Value to loop
      * @param min The minimum value to bind 'value' from.
      * @param max The maximum value to bind 'value' from.
      * @return An interger bounded according to its limits.
-    }
-    */
-    public static function limitInt(value:Int, ?min:Int, ?max:Int):Int 
+     */
+    public static function limitInt(value:Int, ?min:Int, ?max:Int):Int
     {
         var lowerBound:Int = (min != null && value < min) ? min : value;
-		return (max != null && lowerBound > max) ? max : lowerBound;
+        return (max != null && lowerBound > max) ? max : lowerBound;
     }
 
     /**
@@ -169,9 +167,8 @@ class MathUtil
      * @param min The minimum value to bind 'value' from.
      * @param max The maximum value to bind 'value' from.
      * @return A real number bounded according to its limits.
-    }
-    */
-    public static function clampFloat(value:Float, min:Float, max:Float):Float 
+     */
+    public static function clampFloat(value:Float, min:Float, max:Float):Float
     {
         return Math.max(min, Math.min(max, value));
     }

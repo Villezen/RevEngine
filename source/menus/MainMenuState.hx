@@ -139,6 +139,14 @@ class MainMenuState extends MusicBeatState
         add(versionText);
 
         super.create();
+
+        if (FreeplaySubState.pendingResults != null)
+        {
+            var params = FreeplaySubState.pendingResults;
+            FreeplaySubState.pendingResults = null;
+
+            Manager.openSubState(new FreeplaySubState(params));
+        }
     }
 
     override public function update(elapsed:Float):Void
@@ -360,7 +368,7 @@ class MainMenuState extends MusicBeatState
 
     function checkSong()
     {
-        if (PlayState.comingFromFreeplay) return;
+        if (PlayState.comingFromFreeplay || FreeplaySubState.pendingResults != null) return;
 
         if (FlxG.sound.music == null || !FlxG.sound.music.playing)
         {
