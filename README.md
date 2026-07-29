@@ -28,3 +28,15 @@
  
 > [!NOTE]
 > The [Issues](https://github.com/Villezen/RevEngine/issues) tab can also be used to submit feature suggestions. If you're an experienced programmer, we welcome you to implement your ideas and submit a [Pull Request](https://github.com/Villezen/RevEngine/pulls) for consideration. To increase the chances of your pull request being accepted, please ensure your code is clean, properly formatted, and well-documented.
+
+***
+
+<p align="center"> 
+  <img src="https://drive.usercontent.google.com/download?id=1o0NSYBKy-pZSp_FG5SghX8bGnMSAG4hb" style="width:50%; height:auto;">
+</p>
+
+<div align="center">
+
+#### *Concept Art of RevEngine's Official Mascot! (Designed by [lucy98](https://x.com/lucybanana9))*
+
+</div>
