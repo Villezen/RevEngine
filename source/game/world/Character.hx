@@ -629,7 +629,24 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
     {
         if (renderType == MODEL)
         {
+            if (data.model != null)
+            {
+                modelRenderSize = data.model.renderSize;
+                modelFrameMargin = data.model.frameMargin;
+                modelRenderFps = data.model.renderFramerate;
+            }
+
             loadModel('characters/${name}/mesh', {folder: "models", extension: "glb"});
+
+            if (data.model != null && model != null)
+            {
+                model.rotationX = data.model.rotation[0];
+                model.rotationY = data.model.rotation[1];
+                model.rotationZ = data.model.rotation[2];
+
+                viewport.frame(model, modelFrameMargin);
+            }
+
             return;
         }
 
@@ -720,15 +737,15 @@ class Character extends FunkinSprite implements IScriptedCharacterClass
         if (model == null || !model.loaded)
             return;
 
-        if (!force && name == _modelAnim)
-            return;
-
         var anim = _modelAnims.get(name);
 
         if (anim == null && StringTools.endsWith(name, "miss"))
             anim = _modelAnims.get(name.substr(0, name.length - 4));
 
         if (anim == null)
+            return;
+
+        if (name == _modelAnim && (!force || anim.looped))
             return;
 
         _modelAnim = name;

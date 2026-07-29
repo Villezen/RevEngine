@@ -6,6 +6,8 @@ typedef CharacterData =
     @:optional @:def("#FFFFFF") var color:String;
     @:optional @:def("SPARROW") var renderType:String;
 
+    @:optional @:def(null) var model:CharacterModelProperties;
+
     @:optional @:def(true) var applyStageMatrix:Null<Bool>;
 
     @:optional @:def(4.0) var singDuration:Null<Float>;
@@ -32,6 +34,14 @@ typedef CharacterAnimation =
     @:optional @:def([0, 0]) var offsets:Array<Int>;
     @:optional var indices:Array<Int>;
     @:optional @:def([false, false]) var flip:Array<Bool>;
+}
+
+typedef CharacterModelProperties =
+{
+    @:optional @:def([0, 0, 0]) var rotation:Null<Array<Int>>;
+    @:optional @:def(768) var renderSize:Null<Int>;
+    @:optional @:def(30) var renderFramerate:Null<Int>;
+    @:optional @:def(2) var frameMargin:Null<Int>;
 }
 
 @:folder("data/characters")

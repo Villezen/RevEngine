@@ -8,6 +8,14 @@
     "position": [0, 170],
     "camera": [400, 300],
 
+    "model":
+    {
+        "rotation": [0, 0, 0],
+        "renderSize": 768,
+        "renderFramerate": 30,
+        "frameMargin": 2.0
+    },
+
     "scale": [1.2, 1.2],
 
     "singDuration": 4.0,

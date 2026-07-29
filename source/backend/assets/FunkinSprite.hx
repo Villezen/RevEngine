@@ -176,17 +176,17 @@ class FunkinSprite extends FlxSprite implements ITaggable
     /**
      * The size of the bitmap a model renders into. Higher number means higher quality which decreases performance.
      */
-    public static var modelRenderSize:Int = 768;
+    public var modelRenderSize:Int = 768;
 
     /**
      * The margin left around a model so it doesn't cut off.
      */
-    public static var modelFrameMargin:Float = 2.0;
+    public var modelFrameMargin:Float = 2.0;
 
     /**
      * How many times a second a model redraws itself.
      */
-    public static var modelRenderFps:Int = 30;
+    public var modelRenderFps:Int = 30;
 
     /**
      * The bitmap the model renders into, used as this sprite's graphic.
@@ -203,6 +203,18 @@ class FunkinSprite extends FlxSprite implements ITaggable
      */
     private var _modelTimer:Float = 0;
 
+    /**
+     * The keyframe the model was on when it last redrew, so a pose that hasn't moved isn't drawn twice.
+     */
+    private var _modelFrame:Int = -1;
+
+    /**
+     * Makes the object.
+     * @param x The sprite's X position.
+     * @param y The sprite's Y position.
+     * @param path The sprite to load
+     * @param params Additional params.
+     */
     public function new(?x:Float = 0, ?y:Float = 0, ?path:String, ?params:SpriteParams)
     {
         super(x, y);
@@ -213,6 +225,9 @@ class FunkinSprite extends FlxSprite implements ITaggable
 
     /**
      * Loads a spritesheet or an atlas and sets the render type that fits what it found.
+     * @param path The sprite to load.
+     * @param params Additional params.
+     * @return The loaded sprite.
      */
     public function loadSprite(path:String, ?params:SpriteParams):FunkinSprite
     {
@@ -274,6 +289,9 @@ class FunkinSprite extends FlxSprite implements ITaggable
 
     /**
      * Loads a model and renders it into this sprite's bitmap.
+     * @param path The model to load.
+     * @param params Additional params.
+     * @return The loaded bitmap with the model rendered on it.
      */
     public function loadModel(path:String, ?params:ModelParams):FunkinSprite
     {
@@ -284,11 +302,15 @@ class FunkinSprite extends FlxSprite implements ITaggable
         viewport.add(model);
         viewport.frame(model, modelFrameMargin);
 
+
         _modelBitmap = new BitmapData(modelRenderSize, modelRenderSize, true, 0x00000000);
         loadGraphic(_modelBitmap);
 
         renderType = MODEL;
+
+
         refreshModel();
+
 
         return this;
     }
@@ -351,6 +373,8 @@ class FunkinSprite extends FlxSprite implements ITaggable
 
     /**
      * Adds an animation.
+     * @param name The name to give the animation.
+     * @param data Additional Params.
      */
     public function addAnim(name:String, ?data:SpriteAddAnimParams):Void
     {
@@ -418,6 +442,8 @@ class FunkinSprite extends FlxSprite implements ITaggable
 
     /**
      * Plays an animation and applies any offsets given.
+     * @param name The animation to play.
+     * @param data Additional params.
      */
     public function playAnim(name:String, ?data:SpritePlayAnimParams):Void
     {
@@ -472,6 +498,8 @@ class FunkinSprite extends FlxSprite implements ITaggable
 
     /**
      * Whether the sprite has an animation with that name.
+     * @param name The animation to look for.
+     * @return Whether the sprite has it.
      */
     public function hasAnim(name:String):Bool
     {
@@ -482,22 +510,30 @@ class FunkinSprite extends FlxSprite implements ITaggable
     }
 
     /**
-     * Renders the model or an atlas sprite.
+     * Renders any sprite that needs additional setting up.
      */
     override public function update(elapsed:Float):Void
     {
         if (renderType == MODEL)
         {
+            if (model != null)
+                model.update(elapsed);
+
+            var wait = modelRenderFps > 0 ? 1 / modelRenderFps : 0.0;
+
             _modelTimer += elapsed;
 
-            if (modelRenderFps <= 0 || _modelTimer >= 1 / modelRenderFps)
+            if (_modelTimer > wait)
+                _modelTimer = wait;
+
+            var frame = model != null ? model.frame : -1;
+
+            if (_modelTimer >= wait && (frame < 0 || frame != _modelFrame))
             {
+                _modelFrame = frame;
                 _modelTimer = 0;
                 _rendered3D = false;
             }
-
-            if (model != null)
-                model.update(elapsed);
         }
         else if (renderType == ATLAS && atlasSpr != null)
             atlasSpr.update(elapsed);

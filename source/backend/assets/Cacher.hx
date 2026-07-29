@@ -10,6 +10,11 @@ import openfl.display.BitmapData;
 import openfl.text.Font;
 import flixel.graphics.FlxGraphic;
 
+import away3d.materials.TextureMaterial;
+import away3d.textures.Texture2DBase;
+import away3d.materials.utils.DefaultMaterialManager;
+import backend.assets.GLTFParser.GLTFModel;
+
 import backend.utils.MemoryUtil;
 #if lime
 import lime.utils.Assets as LimeAssets;
@@ -46,6 +51,8 @@ class Cacher
 
     public var permanentIds:Map<String, Bool> = [];
     public var preloadedIds:Map<String, Int> = [];
+
+    public var models:Map<String, GLTFModel> = [];
 
     public var activeStreams:Array<Sound> = [];
     private var streamGeneration:Map<Sound, Int> = new Map();
@@ -88,6 +95,77 @@ class Cacher
     {
         if (id != null)
             preloadedIds.set(id, survivals);
+    }
+
+    public function takeModel(id:String):GLTFModel
+    {
+        var model = models.get(id);
+
+        if (model == null)
+            return null;
+
+        models.remove(id);
+
+        if (isFileStale(id))
+        {
+            freeModel(model);
+            fileStamps.remove(id);
+
+            return null;
+        }
+
+        return model;
+    }
+
+    public function putModel(id:String, model:GLTFModel):Void
+    {
+        if (id == null || model == null)
+            return;
+
+        if (models.exists(id))
+        {
+            freeModel(model);
+            return;
+        }
+
+        models.set(id, model);
+    }
+
+    public function freeModel(model:GLTFModel):Void
+    {
+        if (model == null)
+            return;
+
+        var defaultTex = DefaultMaterialManager.getDefaultTexture();
+        var freed:Array<Texture2DBase> = [];
+
+        for (mesh in model.meshes)
+        {
+            if (!Std.isOfType(mesh.material, TextureMaterial))
+                continue;
+
+            var tex = cast(mesh.material, TextureMaterial).texture;
+
+            if (tex == null || tex == defaultTex || freed.contains(tex))
+                continue;
+
+            freed.push(tex);
+            tex.dispose();
+        }
+
+        for (bmp in model.bitmaps)
+            bmp.dispose();
+
+        if (model.object != null)
+            model.object.disposeWithChildren();
+    }
+
+    public function clearModels():Void
+    {
+        for (model in models)
+            freeModel(model);
+
+        models = [];
     }
 
     public function registerStream(snd:Sound, permanent:Bool = false):Void
@@ -229,6 +307,7 @@ class Cacher
         if (rev != null) rev.demoteMerge();
 
         preloadedIds.clear();
+        clearModels();
 
         sweepAged();
         MemoryUtil.freeUnusedMemory();

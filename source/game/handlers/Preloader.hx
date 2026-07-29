@@ -77,9 +77,52 @@ class Preloader
         var _chart = ChartRegistry.get(name, difficulty, variation);
         var _meta = MetaRegistry.get(name, variation);
 
+        var queueModel = function(_name:String)
+        {
+            if (_name == null || _name == "") return;
+
+            if (Paths.exists('models/$_name.glb'))
+            {
+                var _path:String = 'models/$_name.glb';
+
+                addToQueue(_path, function()
+                {
+                    AsyncPaths.bytes('assets/$_path', "", true, function(b)
+                    {
+                        checkDone('(Model) Preloaded: $_name.glb');
+                    });
+                });
+            }
+            else if (Paths.exists('models/$_name.obj'))
+            {
+                var _tex:String = 'models/$_name.png';
+
+                if (Paths.exists(_tex))
+                {
+                    addToQueue(_tex, function()
+                    {
+                        AsyncPaths.image('assets/$_tex', "", "", true, false, true, function(g)
+                        {
+                            checkDone('(Model) Preloaded texture: $_name.png');
+                        });
+                    });
+                }
+                else
+                    trace('Model "$_name" has no preloadable texture, skipping.', "WARNING");
+            }
+            else
+                trace('Could not find model to preload: models/$_name', "WARNING");
+        };
+
         var queueCharacter = function(_name:String)
         {
             if (_name == null || _name == "") return;
+
+            CharacterRegistry.reload(_name);
+            var _charData = CharacterRegistry.get(_name);
+
+            if (_charData != null && _charData.renderType == "3D")
+                queueModel('characters/$_name/mesh');
 
             var _path:String = 'images/characters/$_name';
 
@@ -155,43 +198,6 @@ class Preloader
                     }
                 }
             }
-        };
-
-        var queueModel = function(_name:String)
-        {
-            if (_name == null || _name == "") return;
-
-            if (Paths.exists('models/$_name.glb'))
-            {
-                var _path:String = 'models/$_name.glb';
-
-                addToQueue(_path, function()
-                {
-                    AsyncPaths.bytes('assets/$_path', "", true, function(b)
-                    {
-                        checkDone('(Model) Preloaded: $_name.glb');
-                    });
-                });
-            }
-            else if (Paths.exists('models/$_name.obj'))
-            {
-                var _tex:String = 'models/$_name.png';
-
-                if (Paths.exists(_tex))
-                {
-                    addToQueue(_tex, function()
-                    {
-                        AsyncPaths.image('assets/$_tex', "", "", true, false, true, function(g)
-                        {
-                            checkDone('(Model) Preloaded texture: $_name.png');
-                        });
-                    });
-                }
-                else
-                    trace('Model "$_name" has no preloadable texture, skipping.', "WARNING");
-            }
-            else
-                trace('Could not find model to preload: models/$_name', "WARNING");
         };
 
         if (data.general.characters)

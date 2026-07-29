@@ -14,66 +14,197 @@ import away3d.loaders.parsers.OBJParser;
 import away3d.materials.ColorMaterial;
 import away3d.materials.MaterialBase;
 import away3d.materials.TextureMaterial;
+import away3d.textures.Texture2DBase;
 import away3d.materials.utils.DefaultMaterialManager;
 import openfl.Lib;
 import openfl.display.BitmapData;
 import flixel.FlxBasic;
+import backend.assets.GLTFParser.GLTFModel;
 import backend.utils.BitmapUtil;
 import backend.utils.MtlUtil;
 import backend.utils.tools.TagTools.ITaggable;
 
+/**
+ * Params used when loading a model.
+ */
 typedef ModelParams =
 {
+	/**
+	 * The folder the model sits in. Defaults to models.
+	 */
 	var ?folder:String;
+
+	/**
+	 * The file extension. If left out, it loads a .glb if there's one sitting there, and .obj if there isn't.
+	 */
 	var ?extension:String;
+
+	/**
+	 * Whether the path is somewhere outside the game's assets.
+	 */
 	var ?absolute:Bool;
+
+	/**
+	 * The scale of the model.
+	 */
 	var ?scale:Float;
+
+	/**
+	 * A flat color to paint the whole model. Overwrites materials if there are any.
+	 */
 	var ?color:Null<FlxColor>;
+
+	/**
+	 * Whether faces show from behind as well as in front.
+	 */
 	var ?bothSides:Bool;
+
+	/**
+	 * Called once the model has finished loading.
+	 */
 	var ?onLoad:FunkinModel->Void;
 }
 
+/**
+ * A 3D model. Pretty cool...
+ */
 class FunkinModel extends FlxBasic implements ITaggable
 {
+	/**
+	 * A name to look this model up by.
+	 */
 	public var tag:String = "";
 
+	/**
+	 * The 3D object holding the whole model.
+	 */
 	public var object3D(default, null):ObjectContainer3D;
+
+	/**
+	 * The viewport drawing this model, or null while it isn't in one.
+	 */
 	public var viewport(default, null):FunkinViewport;
+
+	/**
+	 * Whether the model has finished loading.
+	 */
 	public var loaded(default, null):Bool = false;
 
+	/**
+	 * Base positions of the model.
+	 */
 	public var x(get, set):Float;
 	public var y(get, set):Float;
 	public var z(get, set):Float;
 
+	/**
+	 * Base rotations of the model.
+	 */
 	public var rotationX(get, set):Float;
 	public var rotationY(get, set):Float;
 	public var rotationZ(get, set):Float;
 
+	/**
+	 * Base scale of the model.
+	 */
 	public var scaleX(get, set):Float;
 	public var scaleY(get, set):Float;
 	public var scaleZ(get, set):Float;
 
+	/**
+	 * The path the model was loaded from.
+	 */
 	public var modelPath(default, null):String;
+
+	/**
+	 * The params the model was loaded with.
+	 */
 	public var modelParams:ModelParams;
 
+	/**
+	 * Every mesh in the model.
+	 */
 	public var meshes(default, null):Array<Mesh> = [];
+
+	/**
+	 * The names of every animation the model has.
+	 */
 	public var animations(default, null):Array<String> = [];
+
+	/**
+	 * The animation playing right now.
+	 */
 	public var currentAnimation(default, null):String;
 
-	var _loader:Loader3D;
-	var _onLoad:FunkinModel->Void;
-	var _color:Null<FlxColor>;
-	var _bothSides:Bool = false;
+	/**
+	 * Which keyframe the model's animation is at.
+	 */
+	public var frame(get, never):Int;
 
-	var _mappedBitmaps:Array<BitmapData> = [];
-	var _gltfContainer:ObjectContainer3D;
+	/**
+	 * The loader that reads the models. 
+	 */
+	private var _loader:Loader3D;
 
-	var _animator:SkeletonAnimator; 
-	var _animationSet:SkeletonAnimationSet;
-	var _skeletonAnims:Array<String> = []; 
-	var _nodeAnimator:GLTFNodeAnimator;
+	/**
+	 * Called once the model has finished loading.
+	 */
+	private var _onLoad:FunkinModel->Void;
 
-	var _ownedMaterials:Array<MaterialBase> = [];
+	/**
+	 * The color to paint the model with. Overwrites existing materials.
+	 */
+	private var _color:Null<FlxColor>;
+
+	/**
+	 * Whether faces show from behind as well as in front.
+	 */
+	private var _bothSides:Bool = false;
+
+	/**
+	 * Every texture bitmap the model made, kept so they can be cleared later.
+	 */
+	private var _mappedBitmaps:Array<BitmapData> = [];
+
+	/**
+	 * The object holding a .glb model's meshes.
+	 */
+	private var _gltfContainer:ObjectContainer3D;
+
+	/**
+	 * Everything the glb reader handed back, kept so the whole lot can go into the cache instead of being thrown away.
+	 */
+	private var _gltfResult:GLTFModel;
+
+	/**
+	 * The path the glb was read from, which is what the cache keeps it under.
+	 */
+	private var _gltfKey:String;
+
+	/**
+	 * The animator that moves the model's armature.
+	 */
+	private var _animator:SkeletonAnimator;
+
+	/**
+	 * The set of bone animations the animator plays from.
+	 */
+	private var _animationSet:SkeletonAnimationSet;
+
+	/**
+	 * The names of the bone animations.
+	 */
+	private var _skeletonAnims:Array<String> = [];
+
+	/**
+	 * The animator that moves whole nodes, used by models that animate without bones.
+	 */
+	private var _nodeAnimator:GLTFNodeAnimator;
+
+	/**
+	 * Materials the model made itself, kept so they can be cleared later.
+	 */
+	private var _ownedMaterials:Array<MaterialBase> = [];
 
 	public function new(?path:String, ?params:ModelParams)
 	{
@@ -84,19 +215,32 @@ class FunkinModel extends FlxBasic implements ITaggable
 			loadModel(path, params);
 	}
 
+	/**
+	 * Attaches the model up to a viewport, so it gets lit by that viewport's light.
+	 * @param vp The viewport taking the model.
+	 */
 	@:allow(backend.assets.FunkinViewport)
-	function attach(vp:FunkinViewport):Void
+	private function attach(vp:FunkinViewport):Void
 	{
 		viewport = vp;
 		configureMaterials();
 	}
 
+	/**
+	 * Detaches the model from its viewport.
+	 */
 	@:allow(backend.assets.FunkinViewport)
-	function detach():Void
+	private function detach():Void
 	{
 		viewport = null;
 	}
 
+	/**
+	 * Loads a model.
+	 * @param path The model to load.
+	 * @param params Additional params, if any are given. 
+	 * @return The loaded model.
+	 */
 	public function loadModel(path:String, ?params:ModelParams):FunkinModel
 	{
 		if (params == null) params = {};
@@ -151,7 +295,15 @@ class FunkinModel extends FlxBasic implements ITaggable
 		return this;
 	}
 
-	function loadGLTF(path:String, ext:String, folder:String, absolute:Bool, scale:Float):Void
+	/**
+	 * Loads a glb model and sets up whatever animations came with it.
+	 * @param path The model to load.
+	 * @param ext The file extension, glb or gltf.
+	 * @param folder The folder its located in.
+	 * @param absolute Whether the path is outside the game's assets.
+	 * @param scale The scale of the model.
+	 */
+	private function loadGLTF(path:String, ext:String, folder:String, absolute:Bool, scale:Float):Void
 	{
 		var file = '$path.$ext';
 
@@ -161,15 +313,25 @@ class FunkinModel extends FlxBasic implements ITaggable
 			return;
 		}
 
-		var bytes = Paths.bytes(file, folder, absolute);
-		if (bytes == null) return;
+		var key = absolute ? file : 'assets/$folder/$file';
+		var result = Cacher.instance.takeModel(key);
 
-		var result = GLTFParser.parseGLB(bytes);
 		if (result == null)
 		{
-			trace('Failed to parse glTF: $folder/$file', "ERROR");
-			return;
+			var bytes = Paths.bytes(file, folder, absolute);
+			if (bytes == null) return;
+
+			result = GLTFParser.parseGLB(bytes);
+
+			if (result == null)
+			{
+				trace('Failed to parse glTF: $folder/$file', "ERROR");
+				return;
+			}
 		}
+
+		_gltfResult = result;
+		_gltfKey = key;
 
 		_gltfContainer = result.object;
 		_gltfContainer.scaleX = _gltfContainer.scaleY = _gltfContainer.scaleZ = scale;
@@ -192,7 +354,7 @@ class FunkinModel extends FlxBasic implements ITaggable
 
 			var firstAnim = cast(_animationSet.getAnimation(_skeletonAnims[0]), SkeletonClipNode);
 			if (firstAnim != null) firstAnim.looping = true;
-			
+
 			_animator.play(_skeletonAnims[0], null, 0);
 		}
 
@@ -209,6 +371,11 @@ class FunkinModel extends FlxBasic implements ITaggable
 			_onLoad(this);
 	}
 
+	/**
+	 * Plays one of the model's animations.
+	 * @param name The animation to play.
+	 * @param loop Whether it loops.
+	 */
 	public function play(name:String, loop:Bool = true):Void
 	{
 		var played = false;
@@ -237,7 +404,14 @@ class FunkinModel extends FlxBasic implements ITaggable
 			trace('Model animation not found: $name', "WARNING");
 	}
 
-	function buildDependencyContext(objText:String, folder:String, absolute:Bool):AssetLoaderContext
+	/**
+	 * Gets the mtl file and the textures an obj model asks for, so the loader can find them.
+	 * @param objText The text of the obj file.
+	 * @param folder The folder it sits in.
+	 * @param absolute Whether the path is outside the game's assets.
+	 * @return The context holding the mtl and the textures the loader needs.
+	 */
+	private function buildDependencyContext(objText:String, folder:String, absolute:Bool):AssetLoaderContext
 	{
 		var mtlName = MtlUtil.findMtlLib(objText);
 		if (mtlName == null) return null;
@@ -261,13 +435,21 @@ class FunkinModel extends FlxBasic implements ITaggable
 		return context;
 	}
 
-	function onMeshComplete(event:Asset3DEvent):Void
+	/**
+	 * Keeps every mesh the obj loader hands over.
+	 * @param event The loader event holding the mesh.
+	 */
+	private function onMeshComplete(event:Asset3DEvent):Void
 	{
 		if (event.asset != null && event.asset.assetType == Asset3DType.MESH)
 			meshes.push(cast event.asset);
 	}
 
-	function onResourceComplete(_):Void
+	/**
+	 * Finishes an obj load once everything it needed has come in.
+	 * @param event The loader event.
+	 */
+	private function onResourceComplete(event):Void
 	{
 		loaded = true;
 		configureMaterials();
@@ -276,12 +458,19 @@ class FunkinModel extends FlxBasic implements ITaggable
 			_onLoad(this);
 	}
 
-	function onLoadError(event:LoaderEvent):Void
+	/**
+	 * Traces an error that may occur while loading a mode.
+	 * @param event The loader event, containing info about the error.
+	 */
+	private function onLoadError(event:LoaderEvent):Void
 	{
 		trace('Failed to load model $modelPath: ${event.message}', "ERROR");
 	}
 
-	function configureMaterials():Void
+	/**
+	 * Gives every mesh the light of the viewport it sits in.
+	 */
+	private function configureMaterials():Void
 	{
 		for (mat in _ownedMaterials)
 			mat.dispose();
@@ -308,17 +497,31 @@ class FunkinModel extends FlxBasic implements ITaggable
 		}
 	}
 
+	/**
+	 * Paints the whole model one color.
+	 * @param color The color to paint it.
+	 */
 	public function setColor(color:FlxColor):Void
 	{
 		_color = color;
 		configureMaterials();
 	}
 
+	/**
+	 * Sets how big the model is.
+	 * @param value The scale to set on every axis.
+	 */
 	public function setScale(value:Float):Void
 	{
 		object3D.scaleX = object3D.scaleY = object3D.scaleZ = value;
 	}
 
+	/**
+	 * Moves the model.
+	 * @param x Target X Axis.
+	 * @param y Target Y Axis.
+	 * @param z Target Z Axis.
+	 */
 	public function setPosition(x:Float = 0, y:Float = 0, z:Float = 0):Void
 	{
 		object3D.x = x;
@@ -326,34 +529,69 @@ class FunkinModel extends FlxBasic implements ITaggable
 		object3D.z = z;
 	}
 
-	function get_x():Float return object3D.x;
-	function set_x(value:Float):Float return object3D.x = value;
+	private function get_frame():Int return _nodeAnimator != null ? _nodeAnimator.frame : -1;
 
-	function get_y():Float return object3D.y;
-	function set_y(value:Float):Float return object3D.y = value;
+	private function get_x():Float return object3D.x;
+	private function set_x(value:Float):Float return object3D.x = value;
 
-	function get_z():Float return object3D.z;
-	function set_z(value:Float):Float return object3D.z = value;
+	private function get_y():Float return object3D.y;
+	private function set_y(value:Float):Float return object3D.y = value;
 
-	function get_rotationX():Float return object3D.rotationX;
-	function set_rotationX(value:Float):Float return object3D.rotationX = value;
+	private function get_z():Float return object3D.z;
+	private function set_z(value:Float):Float return object3D.z = value;
 
-	function get_rotationY():Float return object3D.rotationY;
-	function set_rotationY(value:Float):Float return object3D.rotationY = value;
+	private function get_rotationX():Float return object3D.rotationX;
+	private function set_rotationX(value:Float):Float return object3D.rotationX = value;
 
-	function get_rotationZ():Float return object3D.rotationZ;
-	function set_rotationZ(value:Float):Float return object3D.rotationZ = value;
+	private function get_rotationY():Float return object3D.rotationY;
+	private function set_rotationY(value:Float):Float return object3D.rotationY = value;
 
-	function get_scaleX():Float return object3D.scaleX;
-	function set_scaleX(value:Float):Float return object3D.scaleX = value;
+	private function get_rotationZ():Float return object3D.rotationZ;
+	private function set_rotationZ(value:Float):Float return object3D.rotationZ = value;
 
-	function get_scaleY():Float return object3D.scaleY;
-	function set_scaleY(value:Float):Float return object3D.scaleY = value;
+	private function get_scaleX():Float return object3D.scaleX;
+	private function set_scaleX(value:Float):Float return object3D.scaleX = value;
 
-	function get_scaleZ():Float return object3D.scaleZ;
-	function set_scaleZ(value:Float):Float return object3D.scaleZ = value;
+	private function get_scaleY():Float return object3D.scaleY;
+	private function set_scaleY(value:Float):Float return object3D.scaleY = value;
 
-	function clearModel():Void
+	private function get_scaleZ():Float return object3D.scaleZ;
+	private function set_scaleZ(value:Float):Float return object3D.scaleZ = value;
+
+	/**
+	 * Puts a glb model into the cache instead of freeing it.
+	 * @return Whether the model went into the cache.
+	 */
+	private function keepModel():Bool
+	{
+		if (_gltfResult == null || _gltfKey == null || _color != null)
+			return false;
+
+		for (mat in _ownedMaterials)
+			mat.dispose();
+
+		if (object3D != null && object3D.contains(_gltfContainer))
+			object3D.removeChild(_gltfContainer);
+
+		Cacher.instance.stampFile(_gltfKey, Paths.getPath(_gltfKey));
+		Cacher.instance.putModel(_gltfKey, _gltfResult);
+
+		_gltfResult = null;
+		_gltfKey = null;
+		_gltfContainer = null;
+
+		_ownedMaterials = [];
+		_mappedBitmaps = [];
+		meshes = [];
+		loaded = false;
+
+		return true;
+	}
+
+	/**
+	 * Frees everything the model currently has loaded.
+	 */
+	private function clearModel():Void
 	{
 		if (_animator != null)
 		{
@@ -367,16 +605,24 @@ class FunkinModel extends FlxBasic implements ITaggable
 		animations = [];
 		currentAnimation = null;
 
+		if (keepModel())
+			return;
+
 		var defaultTex = DefaultMaterialManager.getDefaultTexture();
+		var freed:Array<Texture2DBase> = [];
+
 		for (mesh in meshes)
 		{
-			if (Std.isOfType(mesh.material, TextureMaterial))
-			{
-				var tex = cast(mesh.material, TextureMaterial).texture;
+			if (!Std.isOfType(mesh.material, TextureMaterial))
+				continue;
 
-				if (tex != null && tex != defaultTex)
-					tex.dispose();
-			}
+			var tex = cast(mesh.material, TextureMaterial).texture;
+
+			if (tex == null || tex == defaultTex || freed.contains(tex))
+				continue;
+
+			freed.push(tex);
+			tex.dispose();
 		}
 
 		for (mat in _ownedMaterials) mat.dispose();
@@ -411,6 +657,9 @@ class FunkinModel extends FlxBasic implements ITaggable
 		loaded = false;
 	}
 
+	/**
+	 * Updates the model's animation.
+	 */
 	override public function update(elapsed:Float):Void
 	{
 		super.update(elapsed);
@@ -424,6 +673,11 @@ class FunkinModel extends FlxBasic implements ITaggable
 			_nodeAnimator.update(time);
 	}
 
+	/**
+	 * Shows or hides the model.
+	 * @param value Whether the model shows.
+	 * @return The value that was set.
+	 */
 	override function set_visible(value:Bool):Bool
 	{
 		if (object3D != null)
@@ -432,6 +686,9 @@ class FunkinModel extends FlxBasic implements ITaggable
 		return super.set_visible(value);
 	}
 
+	/**
+	 * Frees the model and takes it out of the viewport it was in.
+	 */
 	override public function destroy():Void
 	{
 		clearModel();

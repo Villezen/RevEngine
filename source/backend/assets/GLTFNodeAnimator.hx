@@ -22,18 +22,22 @@ typedef GLTFNodeTrack =
     var s:GLTFSampler;
 }
 
-typedef GLTFNodeClip = 
+typedef GLTFNodeClip =
 {
     var name:String;
     var startTime:Float;
     var duration:Float;
+    var step:Float;
+
     var tracks:Array<GLTFNodeTrack>;
 }
 
-class GLTFNodeAnimator 
+class GLTFNodeAnimator
 {
     public var names(get, never):Array<String>;
-    
+
+    public var frame(default, null):Int = -1;
+
     var _clips:Map<String, GLTFNodeClip> = new Map();
     var _names:Array<String> = [];
     var _active:GLTFNodeClip;
@@ -85,22 +89,28 @@ class GLTFNodeAnimator
         _absTime += (timeMs - _lastTime);
         _lastTime = timeMs;
 
-        var durMs = _active.duration * 1000;
+        var period = _active.duration + (_loop ? _active.step : 0);
+        var durMs = period * 1000;
         var phase = 0.0;
-        
-        if (durMs > 0) 
+
+        if (durMs > 0)
             phase = _loop ? (_absTime % durMs) : Math.min(_absTime, durMs);
+
+        frame = _active.step > 0 ? Std.int((phase / 1000) / _active.step) : 0;
 
         applyAt(_active.startTime + (phase / 1000));
     }
 
-    function applyAt(t:Float):Void 
+    function applyAt(t:Float):Void
     {
-        for (track in _active.tracks) 
+        var clipEnd = _active.startTime + _active.duration;
+        var wrapEnd = _loop ? clipEnd + _active.step : -1;
+
+        for (track in _active.tracks)
         {
-            var trans = track.t != null ? eval(track.t, 3, false, t) : track.base.slice(0, 3);
-            var rot = track.r != null ? eval(track.r, 4, true, t) : track.base.slice(3, 7);
-            var scale = track.s != null ? eval(track.s, 3, false, t) : track.base.slice(7, 10);
+            var trans = track.t != null ? sample(track.t, 3, false, t, clipEnd, wrapEnd) : track.base.slice(0, 3);
+            var rot = track.r != null ? sample(track.r, 4, true, t, clipEnd, wrapEnd) : track.base.slice(3, 7);
+            var scale = track.s != null ? sample(track.s, 3, false, t, clipEnd, wrapEnd) : track.base.slice(7, 10);
 
             var q = new Quaternion(-rot[0], -rot[1], rot[2], rot[3]);
             var m = q.toMatrix3D();
@@ -111,7 +121,29 @@ class GLTFNodeAnimator
         }
     }
 
-    public static function eval(s:GLTFSampler, comps:Int, isQuat:Bool, t:Float):Array<Float> 
+    public static function sample(s:GLTFSampler, comps:Int, isQuat:Bool, t:Float, clipEnd:Float, wrapEnd:Float):Array<Float>
+    {
+        if (wrapEnd <= clipEnd || t <= clipEnd)
+            return eval(s, comps, isQuat, t);
+
+        var from = eval(s, comps, isQuat, clipEnd);
+        var to = getKeyValue(s, 0, comps);
+        var f = (t - clipEnd) / (wrapEnd - clipEnd);
+
+        if (isQuat)
+        {
+            var q1 = new Quaternion(from[0], from[1], from[2], from[3]);
+            var q2 = new Quaternion(to[0], to[1], to[2], to[3]);
+            var result = new Quaternion();
+
+            result.slerp(q1, q2, f);
+            return [result.x, result.y, result.z, result.w];
+        }
+
+        return [for (c in 0...comps) from[c] + (to[c] - from[c]) * f];
+    }
+
+    public static function eval(s:GLTFSampler, comps:Int, isQuat:Bool, t:Float):Array<Float>
     {
         var times = s.times;
         var n = times.length;

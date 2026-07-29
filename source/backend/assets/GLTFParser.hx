@@ -121,14 +121,19 @@ typedef GLTFBatch =
     var hasNormals:Bool;
 
     /**
-     * Whether any piece in the chunk had texture coordinates.
-     */
-    var hasUvs:Bool;
-
-    /**
      * How many finished chunks this batch has made.
      */
     var subs:Int;
+
+    /**
+     * The parent node ID. All positions are relative to this node.
+     */
+    var anchor:Int;
+
+    /**
+     * The material every piece in this batch shares.
+     */
+    var mat:Int;
 }
 
 class GLTFParser 
@@ -170,9 +175,14 @@ class GLTFParser
     private var _json:Dynamic;
 
     /**
-     * The raw binary part of the glTF, holding all the vertex and image data.
+     * The whole glTF file, holding all the vertex and image data.
      */
     private var _bin:Bytes;
+
+    /**
+     * The byte offset where binary data starts in the file.
+     */
+    private var _binStart:Int = 0;
 
     /**
      * The glTF accessors, cached so the engine doesn't look them up over and over.
@@ -207,7 +217,7 @@ class GLTFParser
     /**
      * The merged geometry so far, one batch per material.
      */
-    private var _batches:Map<Int, GLTFBatch> = new Map();
+    private var _batches:Map<String, GLTFBatch> = new Map();
 
     /**
      * Every node that an animation moves directly.
@@ -285,6 +295,11 @@ class GLTFParser
     private var _materialCache:Map<Int, MaterialBase> = new Map();
 
     /**
+     * Textures the engine has already decoded.
+     */
+    private var _textureCache:Map<Int, BitmapTexture> = new Map();
+
+    /**
      * Makes an empty parser. Use parseGLB instead of calling this.
      */
     private function new() {}
@@ -292,7 +307,7 @@ class GLTFParser
     /**
      * Reads a binary glTF (.glb) file and turns it into a model, or null if it isn't valid.
      */
-    public static function parseGLB(bytes:Bytes):GLTFModel 
+    public static function parseGLB(bytes:Bytes):GLTFModel
     {
         if (bytes == null || bytes.length < 12) 
             return null;
@@ -304,44 +319,46 @@ class GLTFParser
         }
 
         var json:Dynamic = null;
-        var bin:Bytes = null;
+        var binStart = -1;
         var pos = 12;
 
-        while (pos + 8 <= bytes.length) 
+        while (pos + 8 <= bytes.length)
         {
             var chunkLength = bytes.getInt32(pos);
             var chunkType = bytes.getInt32(pos + 4);
             var dataStart = pos + 8;
 
-            if (chunkType == 0x4E4F534A) 
+            if (chunkType == 0x4E4F534A)
                 json = Json.parse(bytes.getString(dataStart, chunkLength));
-            else if (chunkType == 0x004E4942) 
-                bin = bytes.sub(dataStart, chunkLength);
+            else if (chunkType == 0x004E4942)
+                binStart = dataStart;
 
             pos = dataStart + chunkLength;
         }
 
-        if (json == null) 
+        if (json == null)
         {
             trace("Parser has founded no JSON chunk.", "WARNING");
             return null;
         }
 
-        return new GLTFParser().build(json, bin);
+        return new GLTFParser().build(json, bytes, binStart < 0 ? 0 : binStart);
     }
 
     /**
      * Reads the whole glTF and builds the finished model from it.
      */
-    private function build(json:Dynamic, bin:Bytes):GLTFModel 
+    private function build(json:Dynamic, bin:Bytes, binStart:Int):GLTFModel
     {
         _json = json;
         _bin = bin;
+        _binStart = binStart;
 
         _accessors = getArray("accessors");
         _bufferViews = getArray("bufferViews");
         _nodes = getArray("nodes");
         _meshesDef = getArray("meshes");
+
 
         buildChildToParent();
         buildAnimatedNodes();
@@ -349,6 +366,7 @@ class GLTFParser
 
         var root = new ObjectContainer3D();
         buildNodeContainers(root);
+
 
         var animationSet:SkeletonAnimationSet = null;
         var animationNames:Array<String> = [];
@@ -377,7 +395,9 @@ class GLTFParser
             }
         }
 
+        var built = 0;
         var nodes = _nodes;
+
         for (i in 0...nodes.length)
         {
             var node = nodes[i];
@@ -385,24 +405,30 @@ class GLTFParser
             if (node.mesh == null)
                 continue;
 
+            if (built % 25 == 0)
+
+            built++;
+
             var skinIndex = Reflect.hasField(node, "skin") ? Std.int(node.skin) : -1;
             var meshDef = _meshesDef[Std.int(node.mesh)];
 
             if (meshDef.primitives == null)
                 continue;
 
-            var moves = isAnimated(i);
+            var anchor = animatedAnchor(i);
 
             for (prim in (meshDef.primitives : Array<Dynamic>))
             {
-                if (moves || isSkinned(prim, skinIndex))
+                if (isSkinned(prim, skinIndex))
                     buildPrimitive(prim, skinIndex, i, root);
                 else
-                    mergePrimitive(prim, i);
+                    mergePrimitive(prim, i, anchor);
             }
         }
 
+
         buildBatches(root);
+
 
         return
         {
@@ -626,8 +652,16 @@ class GLTFParser
             }
         }
 
-        var uvVec = uvs != null ? Vector.ofArray(uvs) : null;
-        
+        var uvVec = new Vector<Float>();
+
+        if (uvs != null)
+            uvVec = Vector.ofArray(uvs);
+        else
+        {
+            for (i in 0...vertCount * 2)
+                uvVec.push(0);
+        }
+
         var indices:Array<Int> = Reflect.hasField(prim, "indices") ? readInts(Std.int(prim.indices)) : [for (i in 0...vertCount) i];
         var idxVec = new Vector<UInt>();
 
@@ -646,10 +680,7 @@ class GLTFParser
         else 
             subGeom.autoDeriveVertexNormals = true;
 
-        if (uvVec != null) 
-            subGeom.updateUVData(uvVec); 
-        else 
-            subGeom.autoDeriveVertexTangents = true;
+        subGeom.updateUVData(uvVec);
         
         var geom = new Geometry();
         geom.addSubGeometry(subGeom);
@@ -687,9 +718,9 @@ class GLTFParser
     }
 
     /**
-     * Whether a node moves, either itself or through an animated parent above it.
+     * The closest node at or above this one that an animation moves.
      */
-    private function isAnimated(node:Int):Bool
+    private function animatedAnchor(node:Int):Int
     {
         var n = node;
         var guard = 0;
@@ -697,12 +728,12 @@ class GLTFParser
         while (n >= 0 && guard++ < 100000)
         {
             if (_animatedNodes.exists(n))
-                return true;
+                return n;
 
             n = _childToParent.exists(n) ? _childToParent.get(n) : -1;
         }
 
-        return false;
+        return -1;
     }
 
     /**
@@ -737,10 +768,12 @@ class GLTFParser
     /**
      * Gets the batch for a material, making a new empty one the first time.
      */
-    private function getBatch(mat:Int):GLTFBatch
+    private function getBatch(anchor:Int, mat:Int):GLTFBatch
     {
-        if (_batches.exists(mat))
-            return _batches.get(mat);
+        var key = '$anchor|$mat';
+
+        if (_batches.exists(key))
+            return _batches.get(key);
 
         var batch:GLTFBatch =
         {
@@ -751,18 +784,19 @@ class GLTFParser
             indices: new Vector<UInt>(),
             count: 0,
             hasNormals: true,
-            hasUvs: false,
-            subs: 0
+            subs: 0,
+            anchor: anchor,
+            mat: mat
         };
 
-        _batches.set(mat, batch);
+        _batches.set(key, batch);
         return batch;
     }
 
     /**
-     * Puts a non moving primitive in its final place and adds it to its material's batch.
+     * Bakes a primitive into place and adds it to the batch for its material and anchor.
      */
-    private function mergePrimitive(prim:Dynamic, node:Int):Void
+    private function mergePrimitive(prim:Dynamic, node:Int, anchor:Int):Void
     {
         var attrs = prim.attributes;
 
@@ -783,12 +817,21 @@ class GLTFParser
         var indices:Array<Int> = Reflect.hasField(prim, "indices") ? readInts(Std.int(prim.indices)) : [for (i in 0...vertCount) i];
 
         var mat = Reflect.hasField(prim, "material") ? Std.int(prim.material) : -1;
-        var batch = getBatch(mat);
+        var batch = getBatch(anchor, mat);
 
         if (batch.count > 0 && (vertCount > CHUNK_LIMIT || batch.count + vertCount > CHUNK_LIMIT))
             flushBatch(batch);
 
         var world = _nodeContainers[node].sceneTransform.clone();
+
+        if (anchor >= 0)
+        {
+            var back = _nodeContainers[anchor].inverseSceneTransform.clone();
+            back.prepend(world);
+
+            world = back;
+        }
+
         var nmat = world.clone();
         var ok = nmat.invert();
 
@@ -851,7 +894,6 @@ class GLTFParser
             {
                 batch.uvs.push(uvs[i * 2]);
                 batch.uvs.push(uvs[i * 2 + 1]);
-                batch.hasUvs = true;
             }
             else
             {
@@ -902,10 +944,7 @@ class GLTFParser
         else
             sub.autoDeriveVertexNormals = true;
 
-        if (batch.hasUvs)
-            sub.updateUVData(batch.uvs);
-        else
-            sub.autoDeriveVertexTangents = true;
+        sub.updateUVData(batch.uvs);
 
         batch.geom.addSubGeometry(sub);
         batch.subs++;
@@ -916,24 +955,27 @@ class GLTFParser
         batch.indices = new Vector<UInt>();
         batch.count = 0;
         batch.hasNormals = true;
-        batch.hasUvs = false;
     }
 
     /**
-     * Makes one mesh per material from the finished batches and adds them to the model.
+     * Makes a mesh out of every finished batch and gives it to the node it was baked against.
      */
     private function buildBatches(root:ObjectContainer3D):Void
     {
-        for (mat in _batches.keys())
+        for (batch in _batches)
         {
-            var batch = _batches.get(mat);
             flushBatch(batch);
 
             if (batch.subs == 0)
                 continue;
 
-            var mesh = new Mesh(batch.geom, resolveMaterial(mat));
-            root.addChild(mesh);
+            var mesh = new Mesh(batch.geom, resolveMaterial(batch.mat));
+
+            if (batch.anchor >= 0)
+                _nodeContainers[batch.anchor].addChild(mesh);
+            else
+                root.addChild(mesh);
+
             _outMeshes.push(mesh);
         }
     }
@@ -1062,13 +1104,16 @@ class GLTFParser
             }
             
             var tracks = [for (t in byNode) t];
-            if (tracks.length > 0) 
+            if (tracks.length > 0)
             {
+                var range = getClipRange(anim);
+
                 animator.addClip(
                 {
                     name: anim.name != null ? anim.name : 'clip_$i',
-                    startTime: 0,
-                    duration: getClipDuration(anim),
+                    startTime: range.start,
+                    duration: range.end - range.start,
+                    step: range.step,
                     tracks: tracks
                 });
             }
@@ -1077,21 +1122,43 @@ class GLTFParser
     }
 
     /**
-     * Finds how long an animation runs, in seconds.
+     * Finds when an animation's first and last keyframes.
      */
-    private function getClipDuration(anim:Dynamic):Float 
+    private function getClipRange(anim:Dynamic):{start:Float, end:Float, step:Float}
     {
-        var maxT = 0.0;
+        var first = Math.POSITIVE_INFINITY;
+        var last = 0.0;
+        var step = Math.POSITIVE_INFINITY;
 
-        for (s in (anim.samplers : Array<Dynamic>)) 
+        for (s in (anim.samplers : Array<Dynamic>))
         {
             var times = readFloats(Std.int(s.input));
 
-            if (times.length > 0 && times[times.length - 1] > maxT) 
-                maxT = times[times.length - 1];
+            if (times.length == 0)
+                continue;
+
+            if (times[0] < first)
+                first = times[0];
+
+            if (times[times.length - 1] > last)
+                last = times[times.length - 1];
+
+            for (i in 1...times.length)
+            {
+                var gap = times[i] - times[i - 1];
+
+                if (gap > 0 && gap < step)
+                    step = gap;
+            }
         }
 
-        return maxT;
+        if (!Math.isFinite(first))
+            first = 0.0;
+
+        if (!Math.isFinite(step))
+            step = 1 / RESAMPLE_FPS;
+
+        return {start: first, end: last, step: step};
     }
 
     /**
@@ -1197,30 +1264,39 @@ class GLTFParser
         var images = getArray("images");
         var views = getArray("bufferViews");
 
-        if (index < 0 || index >= textures.length || textures[index].source == null) 
+        if (index < 0 || index >= textures.length || textures[index].source == null)
             return null;
-        
-        var img = images[Std.int(textures[index].source)];
 
-        if (img.bufferView == null) 
+        var source = Std.int(textures[index].source);
+
+        if (_textureCache.exists(source))
+            return _textureCache.get(source);
+
+        var img = images[source];
+
+        if (img.bufferView == null)
             return null;
 
         var view = views[Std.int(img.bufferView)];
         var offset = view.byteOffset != null ? Std.int(view.byteOffset) : 0;
         var length = Std.int(view.byteLength);
 
-        var bmp = BitmapData.fromBytes(_bin.sub(offset, length));
+        var bmp = BitmapData.fromBytes(_bin.sub(_binStart + offset, length));
 
-        if (bmp == null) 
+        if (bmp == null)
             return null;
 
         var pot = BitmapUtil.toPowerOfTwo(bmp);
 
-        if (pot != bmp) 
+        if (pot != bmp)
             bmp.dispose();
-        
+
         _outBitmaps.push(pot);
-        return new BitmapTexture(pot);
+
+        var tex = new BitmapTexture(pot);
+        _textureCache.set(source, tex);
+
+        return tex;
     }
 
     /**
@@ -1314,9 +1390,11 @@ class GLTFParser
     /**
      * Reads one number from the binary buffer, matching how glTF stored it.
      */
-    private inline function readComponent(type:Int, offset:Int):Float 
+    private inline function readComponent(type:Int, at:Int):Float
     {
-        return switch (type) 
+        var offset = _binStart + at;
+
+        return switch (type)
         {
             case CT_FLOAT: _bin.getFloat(offset);
             case CT_UBYTE: _bin.get(offset);

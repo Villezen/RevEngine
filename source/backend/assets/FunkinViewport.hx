@@ -2,8 +2,10 @@ package backend.assets;
 
 import away3d.cameras.Camera3D;
 import away3d.cameras.lenses.PerspectiveLens;
+import away3d.containers.ObjectContainer3D;
 import away3d.containers.Scene3D;
 import away3d.containers.View3D;
+import away3d.entities.Mesh;
 import away3d.lights.DirectionalLight;
 import away3d.materials.lightpickers.StaticLightPicker;
 
@@ -41,7 +43,7 @@ typedef ViewportParams =
 	var ?fov:Float;
 
 	/**
-	 * Self explanatory. 
+	 * Wheater the model is aliased or not.
 	 */
 	var ?antiAlias:Int;
 
@@ -97,7 +99,7 @@ class FunkinViewport extends FlxBasic
 	public var followCamera:FlxCamera;
 
 	/**
-	 * How far the camera of a direct view sits from what it looks at.
+	 * Offset values for positioning this viewport. Mainly used while its is attached to a game camera.
 	 */
 	public var offsetX:Float = 0;
 	public var offsetY:Float = 0;
@@ -114,7 +116,20 @@ class FunkinViewport extends FlxBasic
 	private var _autoSize:Bool = false;
 
 	/**
+	 * The lowest and highest corner a model reaches.
+	 */
+	private var _min:Vector3D = new Vector3D();
+	private var _max:Vector3D = new Vector3D();
+
+	/**
+	 * Backup vectors reused while measuring, so a new one isn't made for every corner.
+	 */
+	private var _corner:Vector3D = new Vector3D();
+	private var _moved:Vector3D = new Vector3D();
+
+	/**
 	 * Builds the scene.
+	 * @param params How to set the viewport up.
 	 */
 	public function new(?params:ViewportParams)
 	{
@@ -193,7 +208,9 @@ class FunkinViewport extends FlxBasic
 	}
 
 	/**
-	 * Keeps a direct view the size of the screen when the window changes.
+	 * Keeps a direct view the of the size of the screen when the window changes.
+	 * @param width The new width of the screen.
+	 * @param height The new height of the screen.
 	 */
 	private function onResize(width:Int, height:Int):Void
 	{
@@ -233,6 +250,8 @@ class FunkinViewport extends FlxBasic
 
 	/**
 	 * Adds a model to the scene.
+	 * @param model The model to add.
+	 * @return The model that was added.
 	 */
 	public function add(model:FunkinModel):FunkinModel
 	{
@@ -250,6 +269,8 @@ class FunkinViewport extends FlxBasic
 
 	/**
 	 * Removes a model from the scene.
+	 * @param model The model to take out.
+	 * @return The model that was taken out.
 	 */
 	public function remove(model:FunkinModel):FunkinModel
 	{
@@ -266,19 +287,63 @@ class FunkinViewport extends FlxBasic
 	}
 
 	/**
+	 * Calculates the model's actual size by converting all mesh corners to the viewport's coordinates.
+	 * @param obj The object to go width.
+	 */
+	private function measure(obj:ObjectContainer3D):Void
+	{
+		if (Std.isOfType(obj, Mesh))
+		{
+			var bounds = cast(obj, Mesh).bounds;
+			var world = obj.sceneTransform;
+
+			if (bounds != null && Math.isFinite(bounds.min.x) && Math.isFinite(bounds.max.x))
+			{
+				for (i in 0...8)
+				{
+					_corner.x = (i & 1) == 0 ? bounds.min.x : bounds.max.x;
+					_corner.y = (i & 2) == 0 ? bounds.min.y : bounds.max.y;
+					_corner.z = (i & 4) == 0 ? bounds.min.z : bounds.max.z;
+
+					world.transformVectorToOutput(_corner, _moved);
+
+					if (_moved.x < _min.x) _min.x = _moved.x;
+					if (_moved.y < _min.y) _min.y = _moved.y;
+					if (_moved.z < _min.z) _min.z = _moved.z;
+
+					if (_moved.x > _max.x) _max.x = _moved.x;
+					if (_moved.y > _max.y) _max.y = _moved.y;
+					if (_moved.z > _max.z) _max.z = _moved.z;
+				}
+			}
+		}
+
+		for (i in 0...obj.numChildren)
+			measure(obj.getChildAt(i));
+	}
+
+	/**
 	 * Points the camera at a model and backs off far enough that it stays in frame.
+	 * @param model The model to look at.
+	 * @param margin The spare margin left around it to ensure it doesn't cut off.
 	 */
 	public function frame(model:FunkinModel, margin:Float = 2.0):Void
 	{
-		var o = model.object3D;
+		_min.setTo(Math.POSITIVE_INFINITY, Math.POSITIVE_INFINITY, Math.POSITIVE_INFINITY);
+		_max.setTo(Math.NEGATIVE_INFINITY, Math.NEGATIVE_INFINITY, Math.NEGATIVE_INFINITY);
 
-		var cx = (o.minX + o.maxX) / 2;
-		var cy = (o.minY + o.maxY) / 2;
-		var cz = (o.minZ + o.maxZ) / 2;
+		measure(model.object3D);
 
-		var halfW = (o.maxX - o.minX) / 2;
-		var halfH = (o.maxY - o.minY) / 2;
-		var halfD = (o.maxZ - o.minZ) / 2;
+		if (!Math.isFinite(_min.x))
+			return;
+
+		var cx = (_min.x + _max.x) / 2;
+		var cy = (_min.y + _max.y) / 2;
+		var cz = (_min.z + _max.z) / 2;
+
+		var halfW = (_max.x - _min.x) / 2;
+		var halfH = (_max.y - _min.y) / 2;
+		var halfD = (_max.z - _min.z) / 2;
 
 		var radius = Math.sqrt(halfW * halfW + halfH * halfH + halfD * halfD);
 
@@ -298,6 +363,7 @@ class FunkinViewport extends FlxBasic
 
 	/**
 	 * Renders the viewport into the given bitmap.
+	 * @param target The bitmap the scene gets drawn onto.
 	 */
 	public function render(target:BitmapData):Void
 	{
@@ -307,16 +373,8 @@ class FunkinViewport extends FlxBasic
 		if (view.parent == null)
 			FlxG.stage.addChildAt(view, 0);
 
-		var old = FlxG.game.filters;
-		FlxG.game.filters = null;
-
 		view.renderer.queueSnapshot(target);
 		view.render();
-
-		FlxG.game.filters = old;
-
-		if (view.parent != null)
-			FlxG.stage.removeChild(view);
 	}
 
 	/**
