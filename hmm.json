@@ -37,8 +37,8 @@
       "name": "hxcpp",
       "type": "git",
       "dir": null,
-      "ref": "2e969d0154ac536c1b5a5c89d2c2b73d7126bd2e",
-      "url": "https://github.com/FunkinCrew/hxcpp"
+      "ref": "rev",
+      "url": "https://github.com/Villezen/hxcpp-Rev"
     },
     {
       "name": "hxjsonast",
