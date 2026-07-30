@@ -32,9 +32,10 @@ jobs:
           sudo apt-get install -y libgl1-mesa-dev libglu1-mesa-dev libpulse-dev libasound2-dev libx11-dev libxext-dev libxi-dev libxrandr-dev libxinerama-dev libdbus-1-dev libudev-dev libdrm-dev libgbm-dev libxcursor-dev libxfixes-dev libxss-dev
 
       - name: Restore library cache
+        id: haxelib-cache
         uses: actions/cache@v4
         with:
-          key: haxelib-linux-${{ hashFiles('hmm.json') }}
+          key: haxelib-linux-v2-${{ hashFiles('hmm.json') }}
           path: .haxelib/
 
       - name: Restore build cache
@@ -107,9 +108,10 @@ jobs:
           sudo apt-get install -y libgl1-mesa-dev libglu1-mesa-dev libpulse-dev libasound2-dev libx11-dev libxext-dev libxi-dev libxrandr-dev libxinerama-dev libdbus-1-dev libudev-dev libdrm-dev libgbm-dev libxcursor-dev libxfixes-dev libxss-dev
 
       - name: Restore library cache
+        id: haxelib-cache
         uses: actions/cache@v4
         with:
-          key: haxelib-linux-${{ hashFiles('hmm.json') }}
+          key: haxelib-linux-v2-${{ hashFiles('hmm.json') }}
           path: .haxelib/
 
       - name: Restore build cache
